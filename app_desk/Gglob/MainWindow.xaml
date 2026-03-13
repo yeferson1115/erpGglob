@@ -158,8 +158,36 @@
                     </StackPanel>
                 </Border>
 
-                <Border Grid.Row="2" Margin="0,12,0,0" Background="White" CornerRadius="12" Padding="14" BorderBrush="#e2e8f3" BorderThickness="1">
-                    <TabControl x:Name="GglobPayTabControl">
+                <Grid Grid.Row="2" Margin="0,12,0,0">
+                    <Border x:Name="DefaultPanel" Background="White" CornerRadius="12" Padding="14" BorderBrush="#e2e8f3" BorderThickness="1">
+                        <StackPanel>
+                            <TextBlock Text="Resumen operativo" FontSize="18" FontWeight="SemiBold" Foreground="#1f2937" Margin="0,0,0,10" />
+                            <TextBlock Text="Selecciona un servicio del menú lateral para abrir su módulo. Gglob Pay se mostrará al hacer clic en su opción." Foreground="#6b7280" TextWrapping="Wrap" Margin="0,0,0,12" />
+                            <UniformGrid Columns="3" Rows="1">
+                                <Border Margin="0,0,8,0" Padding="12" Background="#f8fbff" CornerRadius="8" BorderBrush="#d9e4ff" BorderThickness="1">
+                                    <StackPanel>
+                                        <TextBlock Text="Pagos del día" Foreground="#6b7280" />
+                                        <TextBlock Text="$0" FontSize="20" FontWeight="Bold" Foreground="#234ea0" />
+                                    </StackPanel>
+                                </Border>
+                                <Border Margin="0,0,8,0" Padding="12" Background="#f8fbff" CornerRadius="8" BorderBrush="#d9e4ff" BorderThickness="1">
+                                    <StackPanel>
+                                        <TextBlock Text="Servicios activos" Foreground="#6b7280" />
+                                        <TextBlock x:Name="SummaryServicesText" Text="0" FontSize="20" FontWeight="Bold" Foreground="#234ea0" />
+                                    </StackPanel>
+                                </Border>
+                                <Border Padding="12" Background="#f8fbff" CornerRadius="8" BorderBrush="#d9e4ff" BorderThickness="1">
+                                    <StackPanel>
+                                        <TextBlock Text="Estado actual" Foreground="#6b7280" />
+                                        <TextBlock Text="Listo" FontSize="20" FontWeight="Bold" Foreground="#15803d" />
+                                    </StackPanel>
+                                </Border>
+                            </UniformGrid>
+                        </StackPanel>
+                    </Border>
+
+                    <Border x:Name="GglobPayPanel" Visibility="Collapsed" Background="White" CornerRadius="12" Padding="14" BorderBrush="#e2e8f3" BorderThickness="1">
+                        <TabControl x:Name="GglobPayTabControl">
                         <TabItem Header="Datos de cuenta destino">
                             <Grid Margin="10">
                                 <Grid.ColumnDefinitions>
@@ -292,8 +320,9 @@
                                 </DataGrid>
                             </StackPanel>
                         </TabItem>
-                    </TabControl>
-                </Border>
+                        </TabControl>
+                    </Border>
+                </Grid>
             </Grid>
         </Grid>
     </Grid>

@@ -15,6 +15,7 @@ use App\Http\Controllers\API\IngresoController;
 use App\Http\Controllers\API\IngresoImageController;
 use App\Http\Controllers\API\AvaluoController;
 use App\Http\Controllers\API\InspeccionController;
+use App\Http\Controllers\API\GglobPayController;
 
 
 Route::post('/register', [AuthController::class, 'register']);
@@ -77,9 +78,14 @@ Route::middleware(['auth:api'])->group(function () {
         Route::post('/imagenes/delete', [IngresoImageController::class, 'delete']);
     });
     Route::post('ingreso/import', [IngresoController::class, 'import']);
+
+    Route::get('gglob-pay/destination-accounts', [GglobPayController::class, 'destinationAccounts']);
+    Route::post('gglob-pay/destination-accounts', [GglobPayController::class, 'storeDestinationAccount']);
+    Route::get('gglob-pay/payments', [GglobPayController::class, 'payments']);
+    Route::post('gglob-pay/payments', [GglobPayController::class, 'storePayment']);
+    Route::get('gglob-pay/report', [GglobPayController::class, 'report']);
   
 });
 
 Route::middleware('auth:api')->post('/refresh', [AuthController::class, 'refresh']);
-
 
