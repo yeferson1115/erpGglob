@@ -3,214 +3,96 @@
 @section('title', 'Usuarios')
 @section('page_title', 'Usuarios')
 @section('page_subtitle', 'Editar')
+
 @section('content')
-
-
 <div class="content-header row mt-5">
     <div class="content-header-left col-md-9 col-12 mb-2">
-        <div class="row breadcrumbs-top">
-            <div class="col-12">
-                <h2 class="content-header-title float-start mb-0">Editar: {{ Auth::user()->display_name }}</h2>
-                
-            </div>
-        </div>
+        <h2 class="content-header-title float-start mb-0">Editar: {{ $user->name }} {{ $user->last_name }}</h2>
     </div>
 </div>
+
 <div class="content-body">
     <section id="multiple-column-form">
         <div class="row">
             <div class="col-12">
-                <div class="card">
-                    <div class="card-header">
-                        <h4 class="card-title">Editar Usuario</h4>
-                    </div>
+                <div class="card mb-3">
+                    <div class="card-header"><h4 class="card-title">Editar Usuario</h4></div>
                     <div class="card-body">
                         <form class="form" role="form" id="main-form" autocomplete="off">
                             @method('PUT')
                             <input type="hidden" id="_url" value="{{ url('users',[$user->id]) }}">
                             <input type="hidden" id="_token" value="{{ csrf_token() }}">
                             <div class="row">
-                                <div class="col-md-6 col-12">
-                                    <div class="mb-1">
-                                        <label class="form-label" for="name">Nombres</label>
-                                        <input type="text" class="form-control @error('name') is-invalid @enderror" id="name" name="name" value="{{ $user->name }}" autocomplete="name" autofocus placeholder="Nombres">
-                                        @error('name')
-                                            <span class="invalid-feedback text-center" role="alert">
-                                                <strong>{{ $message }}</strong>
-                                            </span>
-                                        @enderror
+                                <div class="col-md-6"><label class="form-label">Nombres</label><input type="text" class="form-control" id="name" name="name" value="{{ $user->name }}"></div>
+                                <div class="col-md-6"><label class="form-label">Apellidos</label><input type="text" class="form-control" id="last_name" name="last_name" value="{{ $user->last_name }}"></div>
+                                <div class="col-md-6 mt-2"><label class="form-label">Teléfono</label><input type="text" class="form-control" id="phone" name="phone" value="{{ $user->phone }}"></div>
+                                <div class="col-md-6 mt-2"><label class="form-label">Correo</label><input type="email" class="form-control" id="email" name="email" value="{{ $user->email }}"></div>
+                                <div class="col-md-6 mt-2">
+                                    <label class="form-label">Género</label>
+                                    <div>
+                                        <label class="me-2"><input type="radio" name="gender" value="M" {{ $user->gender=='M' ? 'checked' : '' }}> Masculino</label>
+                                        <label><input type="radio" name="gender" value="F" {{ $user->gender=='F' ? 'checked' : '' }}> Femenino</label>
                                     </div>
                                 </div>
-                                <div class="col-md-6 col-12">
-                                    <div class="mb-1">
-                                        <label class="form-label" for="last_name">Apellidos</label>
-                                        <input type="text" id="last_name" name="last_name" class="form-control @error('last_name') is-invalid @enderror" value="{{ $user->last_name }}" autocomplete="last_name" autofocus placeholder="Apellidos">
-                                        @error('last_name')
-                                            <span class="invalid-feedback text-center" role="alert">
-                                                <strong>{{ $message }}</strong>
-                                            </span>
-                                        @enderror
-                                    </div>
-                                </div>
-                                 <div class="col-md-6 col-12 mt-2">
-                                    <div class="mb-1">
-                                        <label class="form-label" for="phone">Teléfono</label>
-                                        <input type="text" id="phone" name="phone" class="form-control @error('phone') is-invalid @enderror" value="{{ $user->phone }}" autocomplete="phone" autofocus placeholder="Teléfono">
-                                        @error('phone')
-                                            <span class="invalid-feedback text-center" role="alert">
-                                                <strong>{{ $message }}</strong>
-                                            </span>
-                                        @enderror
-                                    </div>
-                                </div>                                
-                                <div class="col-md-6 col-12 mt-2">
-                                    <div class="mb-1">
-                                        <label class="form-label" for="city-column">Género</label>
-                                        <div class="demo-inline-spacing">
-                                            <div class="form-check form-check-inline">
-                                                <input class="form-check-input" type="radio" name="gender" id="inlineRadio1" value="M" {{ ($user->gender=="M")? "checked" : "" }} >
-                                                <label class="form-check-label" for="inlineRadio1">Masculino</label>
-                                            </div>
-                                            <div class="form-check form-check-inline">
-                                                <input class="form-check-input" type="radio" name="gender" id="inlineRadio2" value="F" {{ ($user->gender=="F")? "checked" : "" }}>
-                                                <label class="form-check-label" for="inlineRadio2">Femenino</label>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-                                
-
-                                <div class="col-md-6 col-12 mt-2">
-                                    <div class="mb-1">
-                                        <label class="form-label" for="email">Correo Electrónico</label>
-                                        <input type="email" class="form-control @error('email') is-invalid @enderror" id="email" name="email" value="{{ $user->email }}"  autocomplete="email" autofocus placeholder="Correo Electrónico">
-                                        @error('email')
-                                            <span class="invalid-feedback text-center" role="alert">
-                                                <strong>{{ $message }}</strong>
-                                            </span>
-                                        @enderror
-                                    </div>
-                                </div>
-
-                                
-
-                                
-                               
-                                <div class="col-md-6 col-12 mt-2">
-                                    <div class="mb-1">
-                                        <label class="form-label" for="city-column">Tipo de usuario</label>
-                                        <div class="demo-inline-spacing">
-                                            <input type="hidden" value="{{$roles = Spatie\Permission\Models\Role::get()}}">
-                                            @foreach ($roles as $role)
-                                            <div class="form-check form-check-inline">
-                                                <input class="form-check-input" type="radio" name="role" id="role{{ $role->id }}" value="{{ $role->id }}" {{ $user->hasRole($role->name) ? "checked" : "" }}>
-                                                <label class="form-check-label" for="role{{ $role->id }}">{{ $role->name }}</label>
-                                            </div>
-                                            
-                                            @endforeach
-                                        </div>
-                                    </div>
-                                </div>
-                                
-                                <div class="col-md-6 col-12 mt-2">
-                                    <div class="mb-1">
-                                        <label class="form-label" for="password">Nueva Contraseña</label>
-                                        <div class="input-group">
-                                            <input type="password"  class="form-control @error('password') is-invalid @enderror" id="password" name="password" value="{{ old('password') }}"  autocomplete="password" autofocus placeholder="Contraseña">
-                                            <button type="button" class="btn btn-outline-secondary" id="toggle-password" style="cursor: pointer;">
-                                                <i class="fa-solid fa-eye"></i>
-                                            </button>
-                                        </div>
-                                        @error('password')
-                                            <span class="invalid-feedback text-center" role="alert">
-                                                <strong>{{ $message }}</strong>
-                                            </span>
-                                        @enderror
-                                    </div>
-                                </div>
-
-                                <div class="col-md-6 col-12 mt-2">
-                                    <div class="mb-1">
-                                        <label class="form-label" for="password_confirmation">Confirmar Nueva Contraseña</label>
-                                        <div class="input-group">
-                                            <input type="password"  class="form-control @error('password_confirmation') is-invalid @enderror" id="password_confirmation" name="password_confirmation" value="{{ old('password_confirmation') }}"  autocomplete="password_confirmation" placeholder="Confirmar Contraseña">
-                                            <button type="button" class="btn btn-outline-secondary" id="toggle-password-confirm" style="cursor: pointer;">
-                                                <i class="fa-solid fa-eye"></i>
-                                            </button>
-                                        </div>
-                                        @error('password_confirmation')
-                                            <span class="invalid-feedback text-center" role="alert">
-                                                <strong>{{ $message }}</strong>
-                                            </span>
-                                        @enderror
-                                    </div>
-                                </div>
-                                @if(Auth::user()->hasrole('Administrador') && Auth::user()->id != $user->id)
-                                <div class="col-md-6 col-12 mt-2">
-                                    <div class="mb-1">
-                                        <label class="form-label" for="city-column">Acceso al sistema</label>
-                                        <div class="demo-inline-spacing">
-                                            <div class="form-check form-check-inline">
-                                                <input class="form-check-input" type="radio" name="status" id="status1" value="1" {{ ($user->status=="1")? "checked" : "" }} >
-                                                <label class="form-check-label" for="status1">Activo</label>
-                                            </div>
-                                            <div class="form-check form-check-inline">
-                                                <input class="form-check-input" type="radio" name="status" id="status2" value="0" {{ ($user->status=="0")? "checked" : "" }} >
-                                                <label class="form-check-label" for="status2">Inactivo</label>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-                                @endif
-                                
-                                <div class="col-12 mt-5">
-                                    <button type="submit" class="btn btn-primary me-1 waves-effect waves-float waves-light ajax" id="submit"><i id="ajax-icon" style="margin-right: 10px;" class="fa fa-save"></i> Guardar</button>
+                                <div class="col-md-6 mt-2"><label class="form-label">Nueva contraseña</label><input type="password" class="form-control" id="password" name="password"></div>
+                                <div class="col-md-6 mt-2"><label class="form-label">Confirmar contraseña</label><input type="password" class="form-control" id="password_confirmation" name="password_confirmation"></div>
+                                <div class="col-12 mt-3">
+                                    <button type="submit" class="btn btn-primary" id="submit"><i id="ajax-icon" class="fa fa-save me-1"></i> Guardar datos del usuario</button>
                                 </div>
                             </div>
                         </form>
                     </div>
                 </div>
+
+                <div class="card">
+                    <div class="card-header">
+                        <h4 class="card-title">Activación de servicios y estado del cliente</h4>
+                        <small class="text-muted">Usa este bloque para activar Nube, Pay, POS, Contable y controlar activo/inactivo/suspendido.</small>
+                    </div>
+                    <div class="card-body">
+                        <form method="POST" action="{{ route('users.services.update', $user) }}" class="row g-2">
+                            @csrf
+                            @method('PUT')
+                            <div class="col-md-3"><label class="form-label">Plan</label><input class="form-control" name="plan_name" value="{{ old('plan_name', $platformCustomer->plan_name ?? 'Sin plan') }}" required></div>
+                            <div class="col-md-3">
+                                <label class="form-label">Estado del servicio</label>
+                                <select class="form-select" name="subscription_status">
+                                    @foreach(['active'=>'Activo','inactive'=>'Inactivo','suspended'=>'Suspendido'] as $value=>$label)
+                                        <option value="{{ $value }}" @selected(old('subscription_status', $platformCustomer->subscription_status ?? 'inactive')===$value)>{{ $label }}</option>
+                                    @endforeach
+                                </select>
+                            </div>
+                            <div class="col-md-3"><label class="form-label">Activo desde</label><input type="date" class="form-control" name="started_at" value="{{ old('started_at', optional($platformCustomer?->started_at)->format('Y-m-d')) }}"></div>
+                            <div class="col-md-3"><label class="form-label">Activo hasta</label><input type="date" class="form-control" name="active_until" value="{{ old('active_until', optional($platformCustomer?->active_until)->format('Y-m-d')) }}"></div>
+
+                            <div class="col-md-2"><input type="hidden" name="gglob_cloud_enabled" value="0"><label><input type="checkbox" name="gglob_cloud_enabled" value="1" @checked(old('gglob_cloud_enabled', $platformCustomer->gglob_cloud_enabled ?? false))> Activar Gglob Nube</label></div>
+                            <div class="col-md-2"><input type="hidden" name="gglob_pay_enabled" value="0"><label><input type="checkbox" name="gglob_pay_enabled" value="1" @checked(old('gglob_pay_enabled', $platformCustomer->gglob_pay_enabled ?? false))> Activar Gglob Pay</label></div>
+                            <div class="col-md-2"><input type="hidden" name="gglob_pos_enabled" value="0"><label><input type="checkbox" name="gglob_pos_enabled" value="1" @checked(old('gglob_pos_enabled', $platformCustomer->gglob_pos_enabled ?? false))> Activar Gglob POS</label></div>
+                            <div class="col-md-2"><input type="hidden" name="gglob_accounting_enabled" value="0"><label><input type="checkbox" name="gglob_accounting_enabled" value="1" @checked(old('gglob_accounting_enabled', $platformCustomer->gglob_accounting_enabled ?? false))> Activar Gglob Contable</label></div>
+                            <div class="col-md-2"><input type="hidden" name="is_paid" value="0"><label><input type="checkbox" name="is_paid" value="1" @checked(old('is_paid', $platformCustomer->is_paid ?? false))> Cliente pago</label></div>
+
+                            <div class="col-md-2">
+                                <label class="form-label">POS</label>
+                                <select class="form-select" name="pos_mode">
+                                    <option value="mono" @selected(old('pos_mode', $platformCustomer->pos_mode ?? 'mono')==='mono')>MonoCaja</option>
+                                    <option value="multi" @selected(old('pos_mode', $platformCustomer->pos_mode ?? 'mono')==='multi')>MultiCaja</option>
+                                </select>
+                            </div>
+                            <div class="col-md-2"><label class="form-label">Cantidad de cajas</label><input type="number" class="form-control" min="1" max="30" name="pos_boxes" value="{{ old('pos_boxes', $platformCustomer->pos_boxes ?? 1) }}"></div>
+
+                            <div class="col-12 mt-2">
+                                <button class="btn btn-outline-primary">Guardar activación de servicios</button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+
             </div>
         </div>
     </section>
 </div>
-
 @endsection
+
 @push('scripts')
-<script>
-        // Toggle password visibility for the 'Nueva Contraseña' field
-        document.getElementById('toggle-password').addEventListener('click', function () {
-            const passwordField = document.getElementById('password');
-            const toggleIcon = document.getElementById('toggle-icon');
-
-            // Toggle password visibility
-            if (passwordField.type === 'password') {
-                passwordField.type = 'text';
-                toggleIcon.classList.remove('bi-eye-slash');
-                toggleIcon.classList.add('bi-eye');
-            } else {
-                passwordField.type = 'password';
-                toggleIcon.classList.remove('bi-eye');
-                toggleIcon.classList.add('bi-eye-slash');
-            }
-        });
-
-        // Toggle password visibility for the 'Confirmar Nueva Contraseña' field
-        document.getElementById('toggle-password-confirm').addEventListener('click', function () {
-            const confirmPasswordField = document.getElementById('password_confirmation');
-            const toggleIconConfirm = document.getElementById('toggle-icon-confirm');
-
-            // Toggle password visibility
-            if (confirmPasswordField.type === 'password') {
-                confirmPasswordField.type = 'text';
-                toggleIconConfirm.classList.remove('bi-eye-slash');
-                toggleIconConfirm.classList.add('bi-eye');
-            } else {
-                confirmPasswordField.type = 'password';
-                toggleIconConfirm.classList.remove('bi-eye');
-                toggleIconConfirm.classList.add('bi-eye-slash');
-            }
-        });
-    </script>
-    <script src="{{ asset('js/admin/user/edit.js') }}"></script>
+<script src="{{ asset('js/admin/user/edit.js') }}"></script>
 @endpush

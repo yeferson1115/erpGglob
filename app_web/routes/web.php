@@ -11,6 +11,7 @@ use App\Http\Controllers\CreditApplicationController;
 use App\Http\Controllers\CompanyController;
 use App\Http\Controllers\AdminCreditApplicationController;
 use App\Http\Controllers\AdminCreditPaymentController;
+use App\Http\Controllers\AdminPlatformController;
 use App\Http\Controllers\PublicCreditPortalController;
 
 Route::get('/login', [LoginController::class, 'showLoginForm'])->name('login');
@@ -44,11 +45,16 @@ Route::middleware('auth')->group(function () {
   // Resources
     
     Route::resource('users', UserController::class);
+    Route::put('users/{user}/services', [UserController::class, 'updateServices'])->name('users.services.update');
     Route::resource('permission', PermissionController::class);
     Route::get('/roles/{roleId}/permissions/edit', [PermissionController::class, 'edit'])->name('permissions.edit');
     Route::put('/roles/{roleId}/permissions', [PermissionController::class, 'update'])->name('permissions.update');
     
     Route::resource('companies', CompanyController::class)->except(['show']);
+    Route::post('companies/{company}/cashiers', [CompanyController::class, 'storeCashier'])->name('companies.cashiers.store');
+    Route::delete('companies/{company}/users/{user}', [CompanyController::class, 'unassignBusinessUser'])->name('companies.users.unassign');
+    Route::put('companies/{company}/users/{user}/role', [CompanyController::class, 'updateBusinessUserRole'])->name('companies.users.role.update');
+    Route::post('companies/{company}/assign-user', [CompanyController::class, 'assignExistingUser'])->name('companies.users.assign');
 
     Route::get('admin/credit-applications', [AdminCreditApplicationController::class, 'index'])->name('admin.credit-applications.index');
     Route::get('admin/credit-applications/{creditApplication}', [AdminCreditApplicationController::class, 'show'])->name('admin.credit-applications.show');
@@ -56,6 +62,12 @@ Route::middleware('auth')->group(function () {
     Route::get('admin/credit-payments', [AdminCreditPaymentController::class, 'index'])->name('admin.credit-payments.index');
     Route::get('admin/credit-payments/export', [AdminCreditPaymentController::class, 'export'])->name('admin.credit-payments.export');
     Route::patch('admin/credit-payments/{payment}/status', [AdminCreditPaymentController::class, 'updateStatus'])->name('admin.credit-payments.update-status');
+
+
+    Route::get('admin/platform', [AdminPlatformController::class, 'index'])->name('admin.platform.index');
+    Route::post('admin/platform/marketing', [AdminPlatformController::class, 'storeMarketing'])->name('admin.platform.marketing.store');
+    Route::post('admin/platform/promotions', [AdminPlatformController::class, 'storePromotion'])->name('admin.platform.promotions.store');
+    Route::post('admin/platform/catalog', [AdminPlatformController::class, 'storeCatalog'])->name('admin.platform.catalog.store');
 
 });
 
