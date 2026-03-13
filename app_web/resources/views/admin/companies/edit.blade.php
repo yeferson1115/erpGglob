@@ -1,6 +1,12 @@
 @extends('layouts.app')
 
 @section('content')
+@php
+    $isAdmin = $currentUser?->hasRole('admin');
+    $isOwner = $currentUser?->business_role === 'owner';
+@endphp
+
+@if($isAdmin)
 <div class="card mb-4">
     <h5 class="card-header">Editar negocio + activación de servicios</h5>
     <form method="POST" action="{{ route('companies.update', $company) }}" class="card-body">
@@ -19,7 +25,7 @@
             <div class="col-md-3"><label class="form-label">Activo desde</label><input type="date" name="started_at" class="form-control" value="{{ old('started_at', optional($company->started_at)->format('Y-m-d')) }}"></div>
             <div class="col-md-3"><label class="form-label">Activo hasta</label><input type="date" name="active_until" class="form-control" value="{{ old('active_until', optional($company->active_until)->format('Y-m-d')) }}"></div>
 
-            
+
         </div>
 
         <div class="pt-4 d-flex gap-2">
@@ -28,8 +34,10 @@
         </div>
     </form>
 </div>
+@endif
 
 <div class="row g-3">
+    @if($isAdmin)
     <div class="col-md-6">
         <div class="card">
             <div class="card-header">Asignar usuario existente al negocio</div>
@@ -55,6 +63,7 @@
             </div>
         </div>
     </div>
+    @endif
 
     <div class="col-md-6">
         <div class="card">
@@ -76,10 +85,10 @@
 
     <div class="col-12">
         <div class="card">
-            <div class="card-header">Usuarios del negocio (cómo identificar dueño/cajero)</div>
+            <div class="card-header">Usuarios del negocio</div>
             <div class="card-body table-responsive">
                 <table class="table table-sm mb-0">
-                    <thead><tr><th>Nombre</th><th>Email</th><th>Teléfono</th><th>Rol negocio</th><th>Acciones</th></tr></thead>
+                    <thead><tr><th>Nombre</th><th>Email</th><th>Teléfono</th><th>Rol negocio</th><th>Permisos cajero</th><th>Acciones</th></tr></thead>
                     <tbody>
                     @forelse($company->users as $businessUser)
                         <tr>
@@ -91,7 +100,27 @@
                                     {{ strtoupper($businessUser->business_role ?? 'N/A') }}
                                 </span>
                             </td>
+                            <td>
+                                @if($businessUser->business_role === 'cashier')
+                                    <form method="POST" action="{{ route('companies.cashiers.permissions.update', [$company, $businessUser]) }}">
+                                        @csrf
+                                        @method('PUT')
+                                        <div class="d-flex flex-wrap gap-2">
+                                            @foreach($cashierPermissions as $permission)
+                                                <label class="form-check-label border rounded px-2 py-1">
+                                                    <input class="form-check-input me-1" type="checkbox" name="permissions[]" value="{{ $permission->name }}" @checked($businessUser->hasDirectPermission($permission->name))>
+                                                    {{ $permission->name }}
+                                                </label>
+                                            @endforeach
+                                        </div>
+                                        <button class="btn btn-sm btn-outline-primary mt-2">Guardar permisos</button>
+                                    </form>
+                                @else
+                                    <span class="text-muted">No aplica</span>
+                                @endif
+                            </td>
                             <td class="d-flex gap-2">
+                                @if($isAdmin)
                                 <form method="POST" action="{{ route('companies.users.role.update', [$company, $businessUser]) }}" class="d-flex gap-1">
                                     @csrf
                                     @method('PUT')
@@ -101,15 +130,21 @@
                                     </select>
                                     <button class="btn btn-sm btn-outline-primary">Guardar</button>
                                 </form>
-                                <form method="POST" action="{{ route('companies.users.unassign', [$company, $businessUser]) }}" onsubmit="return confirm('¿Desasignar usuario del negocio?')">
+                                @elseif($isOwner)
+                                    <span class="text-muted">Solo administración de cajeros</span>
+                                @endif
+
+                                @if($isAdmin || ($isOwner && $businessUser->business_role === 'cashier'))
+                                <form method="POST" action="{{ route('companies.users.unassign', [$company, $businessUser]) }}" onsubmit="return confirm('¿Eliminar usuario del negocio?')">
                                     @csrf
                                     @method('DELETE')
-                                    <button class="btn btn-sm btn-outline-danger">Desasignar</button>
+                                    <button class="btn btn-sm btn-outline-danger">Eliminar</button>
                                 </form>
+                                @endif
                             </td>
                         </tr>
                     @empty
-                        <tr><td colspan="5">No hay usuarios asociados.</td></tr>
+                        <tr><td colspan="6">No hay usuarios asociados.</td></tr>
                     @endforelse
                     </tbody>
                 </table>

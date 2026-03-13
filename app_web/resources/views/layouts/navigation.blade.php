@@ -2,6 +2,9 @@
 <aside id="layout-menu" class="layout-menu-horizontal menu-horizontal menu flex-grow-0">
               <div class="container-xxl d-flex h-100">
                 <ul class="menu-inner">
+                  @php
+                    $currentUser = auth()->user();
+                  @endphp
                   <!-- Dashboards -->
                   <li class="menu-item">
                     <a href="/dashboard" class="menu-link">
@@ -10,7 +13,7 @@
                     </a>
                   </li>
                   
-                  @can('Administracion')
+                  @if($currentUser?->hasRole('admin'))
                   <li class="menu-item">
                     <a href="javascript:void(0)" class="menu-link menu-toggle">
                       <i class="menu-icon fa-solid fa-sliders"></i>
@@ -52,9 +55,9 @@
 
                     </ul>
                   </li>
-                  @endcan
+                  @endif
                  
-                  @can('Gestionar Configuracion')
+                  @if($currentUser?->hasRole('admin'))
                   <!-- Layouts -->
                   <li class="menu-item">
                     <a href="javascript:void(0)" class="menu-link menu-toggle">
@@ -84,9 +87,25 @@
                       </li>
                     </ul>
                   </li>
-                  @endcan
+                  @endif
+
+                  @if($currentUser?->hasRole('admin'))
+                  <li class="menu-item">
+                    <a href="{{ route('inventories.index') }}" class="menu-link">
+                      <i class="menu-icon fa-solid fa-boxes-stacked"></i>
+                      <div data-i18n="Inventarios">Inventarios</div>
+                    </a>
+                  </li>
+                  @endif
+
+                  @if($currentUser?->business_role === 'owner' && $currentUser?->company_id)
+                  <li class="menu-item">
+                    <a href="{{ route('companies.edit', $currentUser->company_id) }}" class="menu-link">
+                      <i class="menu-icon fa-solid fa-users-gear"></i>
+                      <div data-i18n="Gestión de Cajeros">Gestión de Cajeros</div>
+                    </a>
+                  </li>
+                  @endif
                 </ul>
               </div>
             </aside>
-
-

@@ -7,14 +7,19 @@ use App\Models\Plan;
 use App\Models\User;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Validation\Rule;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\View\View;
+use Spatie\Permission\Models\Permission;
 use Spatie\Permission\Models\Role;
 
 class CompanyController extends Controller
 {
     public function index(Request $request): View
     {
+        $this->ensureAdmin();
+
         $status = $request->get('service_status');
 
         $companies = Company::with(['owners', 'cashiers', 'plan'])
@@ -30,6 +35,8 @@ class CompanyController extends Controller
 
     public function create(): View
     {
+        $this->ensureAdmin();
+
         $plans = Plan::orderBy('name')->get();
 
         return view('admin.companies.create', compact('plans'));
@@ -37,6 +44,8 @@ class CompanyController extends Controller
 
     public function store(Request $request): RedirectResponse
     {
+        $this->ensureAdmin();
+
         $data = $request->validate([
             'name' => ['required', 'string', 'max:255'],
             'nit' => ['required', 'string', 'max:60'],
@@ -89,15 +98,21 @@ class CompanyController extends Controller
 
     public function edit(Company $company): View
     {
+        $this->ensureAdminOrCompanyOwner($company);
+
         $company->load(['owners', 'cashiers', 'users']);
         $availableUsers = User::whereNull('company_id')->orderBy('name')->get();
         $plans = Plan::orderBy('name')->get();
+        $cashierPermissions = Permission::orderBy('name')->get();
+        $currentUser = Auth::user();
 
-        return view('admin.companies.edit', compact('company', 'availableUsers', 'plans'));
+        return view('admin.companies.edit', compact('company', 'availableUsers', 'plans', 'cashierPermissions', 'currentUser'));
     }
 
     public function update(Request $request, Company $company): RedirectResponse
     {
+        $this->ensureAdmin();
+
         $data = $request->validate([
             'name' => ['required', 'string', 'max:255'],
             'nit' => ['required', 'string', 'max:60'],
@@ -129,6 +144,8 @@ class CompanyController extends Controller
 
     public function storeCashier(Request $request, Company $company): RedirectResponse
     {
+        $this->ensureAdminOrCompanyOwner($company);
+
         $data = $request->validate([
             'name' => ['required', 'string', 'max:255'],
             'last_name' => ['nullable', 'string', 'max:255'],
@@ -156,12 +173,18 @@ class CompanyController extends Controller
 
     public function assignExistingUser(Request $request, Company $company): RedirectResponse
     {
+        $this->ensureAdminOrCompanyOwner($company);
+
         $data = $request->validate([
             'user_id' => ['required', 'exists:users,id'],
             'business_role' => ['required', 'in:owner,cashier'],
         ]);
 
         $user = User::findOrFail($data['user_id']);
+
+        if ($this->isOwner() && $data['business_role'] !== 'cashier') {
+            return back()->with('error', 'Como dueño solo puedes asignar usuarios cajeros.');
+        }
 
         if ($data['business_role'] === 'owner') {
             User::where('company_id', $company->id)->where('business_role', 'owner')->update(['business_role' => 'cashier']);
@@ -177,11 +200,17 @@ class CompanyController extends Controller
 
     public function updateBusinessUserRole(Request $request, Company $company, User $user): RedirectResponse
     {
+        $this->ensureAdminOrCompanyOwner($company);
+
         abort_unless($user->company_id === $company->id, 404);
 
         $data = $request->validate([
             'business_role' => ['required', 'in:owner,cashier'],
         ]);
+
+        if ($this->isOwner() && $data['business_role'] !== 'cashier') {
+            return back()->with('error', 'Como dueño solo puedes gestionar usuarios con rol cajero.');
+        }
 
         if ($data['business_role'] === 'owner') {
             User::where('company_id', $company->id)->where('business_role', 'owner')->where('id', '!=', $user->id)->update(['business_role' => 'cashier']);
@@ -194,7 +223,13 @@ class CompanyController extends Controller
 
     public function unassignBusinessUser(Company $company, User $user): RedirectResponse
     {
+        $this->ensureAdminOrCompanyOwner($company);
+
         abort_unless($user->company_id === $company->id, 404);
+
+        if ($this->isOwner() && $user->business_role !== 'cashier') {
+            return back()->with('error', 'Como dueño solo puedes eliminar cajeros.');
+        }
 
         $user->update([
             'company_id' => null,
@@ -206,6 +241,8 @@ class CompanyController extends Controller
 
     public function destroy(Company $company): RedirectResponse
     {
+        $this->ensureAdmin();
+
         $company->delete();
 
         return redirect()->route('companies.index')->with('success', 'Empresa eliminada correctamente.');
@@ -223,5 +260,44 @@ class CompanyController extends Controller
             'pos_boxes' => $plan->pos_boxes,
             'gglob_accounting_enabled' => $plan->gglob_accounting_enabled,
         ];
+    }
+
+    public function updateCashierPermissions(Request $request, Company $company, User $user): RedirectResponse
+    {
+        $this->ensureAdminOrCompanyOwner($company);
+        abort_unless($user->company_id === $company->id, 404);
+        abort_unless($user->business_role === 'cashier', 403);
+
+        $permissionNames = Permission::pluck('name')->all();
+        $data = $request->validate([
+            'permissions' => ['nullable', 'array'],
+            'permissions.*' => ['string', Rule::in($permissionNames)],
+        ]);
+
+        $user->syncPermissions($data['permissions'] ?? []);
+
+        return back()->with('success', 'Permisos del cajero actualizados correctamente.');
+    }
+
+    private function ensureAdmin(): void
+    {
+        abort_unless(Auth::user()?->hasRole('admin'), 403);
+    }
+
+    private function ensureAdminOrCompanyOwner(Company $company): void
+    {
+        $user = Auth::user();
+
+        $isAdmin = $user?->hasRole('admin');
+        $isOwner = $user && $user->company_id === $company->id && $user->business_role === 'owner';
+
+        abort_unless($isAdmin || $isOwner, 403);
+    }
+
+    private function isOwner(): bool
+    {
+        $user = Auth::user();
+
+        return (bool) ($user && $user->business_role === 'owner' && !$user->hasRole('admin'));
     }
 }
