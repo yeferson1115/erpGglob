@@ -15,6 +15,7 @@ use App\Http\Controllers\AdminCreditApplicationController;
 use App\Http\Controllers\AdminCreditPaymentController;
 use App\Http\Controllers\AdminPlatformController;
 use App\Http\Controllers\PublicCreditPortalController;
+use App\Http\Controllers\InventoryController;
 
 Route::get('/login', [LoginController::class, 'showLoginForm'])->name('login');
 Route::post('/login', [LoginController::class, 'login']);
@@ -46,6 +47,7 @@ Route::middleware('auth')->group(function () {
     Route::resource('companies', CompanyController::class)->except(['show']);
     Route::resource('plans', PlanController::class)->except(['show']);
     Route::post('companies/{company}/cashiers', [CompanyController::class, 'storeCashier'])->name('companies.cashiers.store');
+    Route::put('companies/{company}/cashiers/{user}/permissions', [CompanyController::class, 'updateCashierPermissions'])->name('companies.cashiers.permissions.update');
     Route::delete('companies/{company}/users/{user}', [CompanyController::class, 'unassignBusinessUser'])->name('companies.users.unassign');
     Route::put('companies/{company}/users/{user}/role', [CompanyController::class, 'updateBusinessUserRole'])->name('companies.users.role.update');
     Route::post('companies/{company}/assign-user', [CompanyController::class, 'assignExistingUser'])->name('companies.users.assign');
@@ -55,6 +57,11 @@ Route::middleware('auth')->group(function () {
     Route::post('admin/platform/marketing', [AdminPlatformController::class, 'storeMarketing'])->name('admin.platform.marketing.store');
     Route::post('admin/platform/promotions', [AdminPlatformController::class, 'storePromotion'])->name('admin.platform.promotions.store');
     Route::post('admin/platform/catalog', [AdminPlatformController::class, 'storeCatalog'])->name('admin.platform.catalog.store');
+
+    Route::get('inventories', [InventoryController::class, 'index'])->name('inventories.index');
+    Route::post('inventories', [InventoryController::class, 'store'])->name('inventories.store');
+    Route::get('inventories/{inventory}/edit', [InventoryController::class, 'edit'])->name('inventories.edit');
+    Route::put('inventories/{inventory}', [InventoryController::class, 'update'])->name('inventories.update');
 
 });
 
