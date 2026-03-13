@@ -484,19 +484,23 @@ namespace Gglob
             var cashier = QrCashierComboBox.SelectedItem?.ToString() ?? "Caja Principal";
             var referenceCode = $"GGPAY-{DateTime.Now:yyyyMMdd-HHmmss}-{Guid.NewGuid().ToString()[..4].ToUpperInvariant()}";
 
-            var payload = $"""
-                {
-                  "reference": "{referenceCode}",
-                  "channel": "{accountOption.Channel}",
-                  "amount": {amount.ToString("0.##", CultureInfo.InvariantCulture)},
-                  "currency": "COP",
-                  "cashier": "{cashier}",
-                  "destination_bank": "{accountOption.Account.Bank}",
-                  "destination_account": "{accountOption.Account.AccountNumber}",
-                  "destination_type": "{accountOption.Account.AccountType}",
-                  "verification": "instant_bank_callback"
-                }
-                """;
+            var payloadObject = new
+            {
+                reference = referenceCode,
+                channel = accountOption.Channel,
+                amount = decimal.Round(amount, 2),
+                currency = "COP",
+                cashier,
+                destination_bank = accountOption.Account.Bank,
+                destination_account = accountOption.Account.AccountNumber,
+                destination_type = accountOption.Account.AccountType,
+                verification = "instant_bank_callback"
+            };
+
+            var payload = JsonSerializer.Serialize(payloadObject, new JsonSerializerOptions
+            {
+                WriteIndented = true
+            });
 
             QrPayloadTextBox.Text = payload;
             QrStatusTextBlock.Text = $"QR generado con referencia {referenceCode}. Verificación inmediata configurada para {accountOption.Account.Bank}.";
