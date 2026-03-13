@@ -81,6 +81,13 @@
                           <div data-i18n="Pagos Crédito">Pagos Crédito</div>
                         </a>
                       </li>
+
+                      <li class="menu-item">
+                        <a href="{{ route('admin.platform.index') }}" class="menu-link">
+                          <i class="menu-icon fa-solid fa-chart-pie"></i>
+                          <div data-i18n="Panel Plataforma">Panel Plataforma</div>
+                        </a>
+                      </li>
                     </ul>
                   </li>
                   @endcan

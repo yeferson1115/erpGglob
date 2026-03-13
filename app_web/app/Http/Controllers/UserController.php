@@ -2,87 +2,94 @@
 
 namespace App\Http\Controllers;
 
-use Illuminate\Http\Request;
+use App\Models\PlatformCustomer;
 use App\Models\User;
-use App\Http\Requests\StoreUser;
-use App\Http\Requests\UpdateUser;
-use App\Models\Log\LogSistema;
+use Illuminate\Http\RedirectResponse;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Schema;
 use Spatie\Permission\Models\Role;
-
 
 class UserController extends Controller
 {
-     public function __construct()
+    public function __construct()
     {
-        /*$this->middleware('permission:Ver Usuario')->only('index');
-        $this->middleware('permission:Registrar Usuario')->only('create');
-        $this->middleware('permission:Registrar Usuario')->only('store');
-        $this->middleware('permission:Editar Usuario')->only('edit');
-        $this->middleware('permission:Editar Usuario')->only('update');
-        $this->middleware('permission:Ver Usuario')->only('show');*/
-
+        // Middlewares deshabilitados por configuración actual del proyecto.
     }
 
     public function index(Request $request)
     {
-        $users = User::with('roles')->with('permissions')
-                       ->orderBy('created_at', 'desc')
-                       ->get();
+        $statusFilter = $request->get('service_status');
 
+        $usersQuery = User::with('roles')->with('permissions')->orderBy('created_at', 'desc');
 
+        if (Schema::hasTable('platform_customers')) {
+            $usersQuery->with('platformCustomer');
 
-        return view('admin.usuarios.index', ['users' => $users]);
+            if (in_array($statusFilter, ['active', 'inactive', 'suspended'], true)) {
+                $usersQuery->whereHas('platformCustomer', function ($query) use ($statusFilter) {
+                    $query->where('subscription_status', $statusFilter);
+                });
+            }
+        }
+
+        $users = $usersQuery->get();
+
+        return view('admin.usuarios.index', [
+            'users' => $users,
+            'statusFilter' => $statusFilter,
+        ]);
     }
-
-
-
 
     public function create()
     {
-
         return view('admin.usuarios.create');
     }
 
+    public function store(Request $request)
+    {
+        $request->validate([
+            'name' => 'required|string|max:255',
+            'last_name' => 'required|string|max:255',
+            'email' => 'required|email|unique:users,email',
+            'password' => 'required|string|min:8|confirmed',
+            'phone' => 'nullable|string',
+        ]);
 
+        $user = new User();
+        $user->name = $request->name;
+        $user->last_name = $request->last_name;
+        $user->email = $request->email;
+        $user->password = Hash::make($request->password);
+        $user->gender = $request->gender ?? null;
+        $user->phone = $request->phone;
+        $user->save();
 
-public function store(Request $request)
-{
-    $request->validate([
-        'name'      => 'required|string|max:255',
-        'last_name' => 'required|string|max:255',        
-        'email'     => 'required|email|unique:users,email',
-        'password'  => 'required|string|min:8|confirmed',            
-        'phone'  => 'nullable|string'
-    ]);
+        if ($request->has('role')) {
+            $user->assignRole($request->role);
+        }
 
-    // Crear el usuario
-    $user = new User();
-    $user->name      = $request->name;
-    $user->last_name = $request->last_name;    
-    $user->email     = $request->email;
-    $user->password  = Hash::make($request->password);
-    $user->gender    = $request->gender ?? null;   
-    $user->phone    = $request->phone;
-    
+        if (Schema::hasTable('platform_customers')) {
+            PlatformCustomer::firstOrCreate(
+                ['user_id' => $user->id],
+                [
+                    'plan_name' => 'Sin plan',
+                    'subscription_status' => 'inactive',
+                    'contact_phone' => $user->phone,
+                    'pos_mode' => 'mono',
+                    'pos_boxes' => 1,
+                    'electronic_billing_scope' => 'single_branch',
+                    'electronic_billing_boxes' => 1,
+                    'electronic_billing_status' => 'pending',
+                ]
+            );
+        }
 
-
-    $user->save();
-
-    // Asignar rol si se seleccionó
-    if ($request->has('role')) {
-        $user->assignRole($request->role);
+        return response()->json([
+            'success' => true,
+            'user_id' => $user->id,
+        ]);
     }
-
-    return response()->json([
-        'success' => true,
-        'user_id' => $user->id
-    ]);
-}
-
-
-
-
 
     public function show($id)
     {
@@ -90,36 +97,48 @@ public function store(Request $request)
         return view('admin.usuarios.edit', ['user' => $user]);
     }
 
-
-
-
     public function edit($id)
     {
         $user = User::with('roles')->with('permissions')->find($id);
-        
 
-        return view('admin.usuarios.edit', ['user' => $user]);
+        $platformCustomer = null;
+        if ($user && Schema::hasTable('platform_customers')) {
+            $platformCustomer = PlatformCustomer::firstOrCreate(
+                ['user_id' => $user->id],
+                [
+                    'plan_name' => 'Sin plan',
+                    'subscription_status' => 'inactive',
+                    'contact_phone' => $user->phone,
+                    'pos_mode' => 'mono',
+                    'pos_boxes' => 1,
+                    'electronic_billing_scope' => 'single_branch',
+                    'electronic_billing_boxes' => 1,
+                    'electronic_billing_status' => 'pending',
+                ]
+            );
+        }
+
+        return view('admin.usuarios.edit', [
+            'user' => $user,
+            'platformCustomer' => $platformCustomer,
+        ]);
     }
-
-
-
 
     public function update(Request $request, $id)
     {
         $request->validate([
-            'name' => 'required|string|max:255',            
+            'name' => 'required|string|max:255',
             'email' => 'required|email|unique:users,email,' . $id,
-            'password' => 'nullable|string|min:8|confirmed',            
-            'phone'  => 'nullable|string'
-            
+            'password' => 'nullable|string|min:8|confirmed',
+            'phone' => 'nullable|string',
         ]);
 
         $user = User::findOrFail($id);
         $user->name = $request->name;
-        $user->last_name = $request->last_name;        
+        $user->last_name = $request->last_name;
         $user->email = $request->email;
         $user->phone = $request->phone;
-        $user->gender=$request->gender;
+        $user->gender = $request->gender;
 
         if ($request->password) {
             $user->password = Hash::make($request->password);
@@ -133,22 +152,63 @@ public function store(Request $request)
             }
         }
 
+        if (Schema::hasTable('platform_customers')) {
+            PlatformCustomer::where('user_id', $user->id)->update([
+                'contact_phone' => $user->phone,
+            ]);
+        }
+
         return json_encode(['success' => true]);
     }
 
+    public function updateServices(Request $request, User $user): RedirectResponse
+    {
+        if (!Schema::hasTable('platform_customers')) {
+            return back()->with('error', 'La tabla platform_customers no existe. Ejecuta migraciones.');
+        }
 
+        $validated = $request->validate([
+            'plan_name' => 'required|string|max:80',
+            'subscription_status' => 'required|in:active,inactive,suspended',
+            'started_at' => 'nullable|date',
+            'active_until' => 'nullable|date',
+            'is_paid' => 'nullable|boolean',
+            'gglob_cloud_enabled' => 'nullable|boolean',
+            'gglob_pay_enabled' => 'nullable|boolean',
+            'gglob_pos_enabled' => 'nullable|boolean',
+            'pos_mode' => 'required|in:mono,multi',
+            'pos_boxes' => 'required|integer|min:1|max:30',
+            'gglob_accounting_enabled' => 'nullable|boolean',
+        ]);
 
+        $customer = PlatformCustomer::firstOrCreate(
+            ['user_id' => $user->id],
+            [
+                'electronic_billing_scope' => 'single_branch',
+                'electronic_billing_boxes' => 1,
+                'electronic_billing_status' => 'pending',
+            ]
+        );
 
+        $customer->update([
+            ...$validated,
+            'is_paid' => (bool) ($validated['is_paid'] ?? false),
+            'gglob_cloud_enabled' => (bool) ($validated['gglob_cloud_enabled'] ?? false),
+            'gglob_pay_enabled' => (bool) ($validated['gglob_pay_enabled'] ?? false),
+            'gglob_pos_enabled' => (bool) ($validated['gglob_pos_enabled'] ?? false),
+            'gglob_accounting_enabled' => (bool) ($validated['gglob_accounting_enabled'] ?? false),
+            'contact_phone' => $user->phone,
+        ]);
+
+        return back()->with('status', 'Servicios del cliente actualizados correctamente.');
+    }
 
     public function destroy($id)
     {
-
         $user = User::find($id)->delete();
 
         return json_encode(['success' => true]);
     }
-
-
 
     public function autocomplete(Request $request)
     {
