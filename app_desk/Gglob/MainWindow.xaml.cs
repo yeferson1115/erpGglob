@@ -167,7 +167,56 @@ namespace Gglob
                 return new AccessValidation(false, "Tu acceso está inactivo. El estado del negocio no está activo.");
             }
 
+            if (!HasActivePlan(user.Company))
+            {
+                return new AccessValidation(false, "La empresa no tiene un plan activo asignado. Contacta al administrador.");
+            }
+
+            var dateValidation = ValidatePlanDates(user.Company);
+            if (!dateValidation.IsValid)
+            {
+                return dateValidation;
+            }
+
             return new AccessValidation(true, "OK");
+        }
+
+        private static bool HasActivePlan(ApiCompany company)
+        {
+            if (company.PlanId is null || company.PlanId <= 0)
+            {
+                return false;
+            }
+
+            return !string.IsNullOrWhiteSpace(company.PlanName)
+                && !string.Equals(company.PlanName.Trim(), "Sin plan", StringComparison.OrdinalIgnoreCase);
+        }
+
+        private static AccessValidation ValidatePlanDates(ApiCompany company)
+        {
+            var today = DateTime.Today;
+
+            if (TryParseDate(company.StartedAt, out var startedAt) && startedAt.Date > today)
+            {
+                return new AccessValidation(false, $"El plan de la empresa inicia el {startedAt:yyyy-MM-dd}. Aún no está vigente.");
+            }
+
+            if (!TryParseDate(company.ActiveUntil, out var activeUntil))
+            {
+                return new AccessValidation(false, "No se pudo validar la vigencia del plan (fecha final no configurada).");
+            }
+
+            if (activeUntil.Date < today)
+            {
+                return new AccessValidation(false, $"El plan de la empresa venció el {activeUntil:yyyy-MM-dd}. Renueva la vigencia para ingresar.");
+            }
+
+            return new AccessValidation(true, "OK");
+        }
+
+        private static bool TryParseDate(string? value, out DateTime parsedDate)
+        {
+            return DateTime.TryParse(value, out parsedDate);
         }
 
         private void ShowDashboard(ApiUser user, List<ApiPermission>? permissionsList, string statusMessage)
@@ -495,6 +544,15 @@ namespace Gglob
 
         [JsonPropertyName("service_status")]
         public string? ServiceStatus { get; set; }
+
+        [JsonPropertyName("plan_id")]
+        public int? PlanId { get; set; }
+
+        [JsonPropertyName("started_at")]
+        public string? StartedAt { get; set; }
+
+        [JsonPropertyName("active_until")]
+        public string? ActiveUntil { get; set; }
 
         [JsonPropertyName("gglob_cloud_enabled")]
         public bool GglobCloudEnabled { get; set; }
