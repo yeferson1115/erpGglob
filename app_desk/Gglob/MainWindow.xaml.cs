@@ -365,7 +365,7 @@ namespace Gglob
                     Cursor = System.Windows.Input.Cursors.Hand
                 };
 
-                button.Click += ServiceMenuButton_Click;
+                button.Click += (_, _) => SetSelectedModule(service.Key);
 
                 var panel = new StackPanel();
                 panel.Children.Add(new TextBlock
@@ -384,24 +384,6 @@ namespace Gglob
 
                 button.Content = panel;
                 ServicesMenuPanel.Children.Add(button);
-            }
-        }
-
-        private void ServiceMenuButton_Click(object sender, RoutedEventArgs e)
-        {
-            if (sender is not Button button)
-            {
-                return;
-            }
-
-            SetSelectedModule(button.Tag?.ToString());
-        }
-
-        private void ServiceMenuButton_Click(object sender, RoutedEventArgs e)
-        {
-            if (sender is not Button button)
-            {
-                return;
             }
 
             SetSelectedModule(button.Tag?.ToString());
