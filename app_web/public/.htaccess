@@ -1,0 +1,51 @@
+#------------------------------------------------------------------------------
+# Server root folder www .htaccess
+# This file provides server security limiting access to the localhost only.
+# Comment next four lines to deactivate. (Allows external access)
+#------------------------------------------------------------------------------
+
+Order Deny,Allow
+Deny from all
+Allow from 127.0.0.1
+Allow from ::1
+
+#------------------------------------------------------------------------------
+# To allow execution of cgi scripts in this directory uncomment next two lines.
+#------------------------------------------------------------------------------
+
+AddHandler cgi-script .pl .cgi
+Options +ExecCGI +FollowSymLinks
+
+#------------------------------------------------------------------------------
+# Activate this section to use the Private Server Feature!
+# Defaults: Username - root; Password - root
+# Note AuthUserFile: File path is relative to server root
+# To lock server, uncomment the next 4 lines. (A name and password is required)
+#------------------------------------------------------------------------------
+
+#AuthName "Uniform Server - Server Access"
+#AuthType Basic
+#AuthUserFile ../../htpasswd/www/.htpasswd
+#Require valid-user
+
+<IfModule mod_rewrite.c>
+    <IfModule mod_negotiation.c>
+        Options -MultiViews -Indexes
+    </IfModule>
+
+    RewriteEngine On
+
+    # Handle Authorization Header
+    RewriteCond %{HTTP:Authorization} .
+    RewriteRule .* - [E=HTTP_AUTHORIZATION:%{HTTP:Authorization}]
+
+    # Redirect Trailing Slashes If Not A Folder...
+    RewriteCond %{REQUEST_FILENAME} !-d
+    RewriteCond %{REQUEST_URI} (.+)/$
+    RewriteRule ^ %1 [L,R=301]
+
+    # Send Requests To Front Controller...
+    RewriteCond %{REQUEST_FILENAME} !-d
+    RewriteCond %{REQUEST_FILENAME} !-f
+    RewriteRule ^ index.php [L]
+</IfModule>
