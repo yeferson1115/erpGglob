@@ -63,6 +63,10 @@
                         
                         <button type="submit" class="btn btn-primary d-grid w-100">Ingresar</button>
                     </form>
+                    <p class="text-center mb-0">
+                        <span class="text-muted">¿Aún no tienes negocio registrado?</span>
+                        <a href="{{ route('business.register') }}">Regístrate</a>
+                    </p>
 
                 </div>
             </div>

@@ -145,7 +145,10 @@
                     <small class="text-muted">Tienda virtual al alcance de todos</small>
                 </div>
             </div>
-            <a href="{{ route('credit-applications.create') }}" class="btn btn-brand rounded-pill px-4">Solicitar crédito</a>
+            <div class="d-flex gap-2">
+                <a href="{{ route('business.register') }}" class="btn btn-outline-dark rounded-pill px-4">Regístrate</a>
+                <a href="{{ route('credit-applications.create') }}" class="btn btn-brand rounded-pill px-4">Solicitar crédito</a>
+            </div>
         </div>
     </header>
 
@@ -158,6 +161,7 @@
                         <h2 class="display-5 fw-bold mb-3">Impulsamos tus compras con estilo, cercanía y confianza.</h2>
                         <p class="lead mb-4">En B&B Store reunimos productos de calidad y alternativas de financiación fáciles para que compres desde casa de forma segura, rápida y profesional.</p>
                         <div class="d-flex flex-wrap gap-3">
+                            <a href="{{ route('business.register') }}" class="btn btn-light btn-lg rounded-pill px-4 btn-motion">Regístrate</a>
                             <a href="{{ route('credit-applications.create') }}" class="btn btn-brand btn-lg rounded-pill px-4 btn-motion">Solicitar crédito</a>
                             <a href="{{ route('credit-portal.index') }}" class="btn btn-outline-brand btn-lg rounded-pill px-4 btn-motion">Consultar y pagar</a>
                         </div>
