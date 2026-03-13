@@ -14,11 +14,11 @@
   "project": {
     "version": "1.0.0",
     "restore": {
-      "projectUniqueName": "D:\\develoment\\cursos\\Gglob\\Gglob\\Gglob\\Gglob.csproj",
+      "projectUniqueName": "D:\\develoment\\cursos\\UniServerZ\\www\\erpGglob\\app_desk\\Gglob\\Gglob.csproj",
       "projectName": "Gglob",
-      "projectPath": "D:\\develoment\\cursos\\Gglob\\Gglob\\Gglob\\Gglob.csproj",
+      "projectPath": "D:\\develoment\\cursos\\UniServerZ\\www\\erpGglob\\app_desk\\Gglob\\Gglob.csproj",
       "packagesPath": "C:\\Users\\ysossa\\.nuget\\packages\\",
-      "outputPath": "D:\\develoment\\cursos\\Gglob\\Gglob\\Gglob\\obj\\",
+      "outputPath": "D:\\develoment\\cursos\\UniServerZ\\www\\erpGglob\\app_desk\\Gglob\\obj\\",
       "projectStyle": "PackageReference",
       "fallbackFolders": [
         "C:\\Program Files (x86)\\Microsoft Visual Studio\\Shared\\NuGetPackages"

@@ -3,7 +3,7 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>B&B Store | Tienda virtual al alcance de todos</title>
+    <title>Gglob</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
     <style>
@@ -138,16 +138,15 @@
         <div class="container py-3 d-flex align-items-center justify-content-between">
             <div class="d-flex align-items-center gap-3">
                 <div class="logo-wrap">
-                    <img src="{{ asset('imagenes/logo.png') }}" alt="Logo B&B Store" class="img-fluid rounded-3">
+                    <img src="{{ asset('imagenes/logo.png') }}" alt="Logo Gglob Store" class="img-fluid rounded-3">
                 </div>
                 <div>
-                    <h1 class="h4 mb-0 fw-bold">B&B Store</h1>
+                    <h1 class="h4 mb-0 fw-bold">Gglob Store</h1>
                     <small class="text-muted">Tienda virtual al alcance de todos</small>
                 </div>
             </div>
             <div class="d-flex gap-2">
-                <a href="{{ route('business.register') }}" class="btn btn-outline-dark rounded-pill px-4">Regístrate</a>
-                <a href="{{ route('credit-applications.create') }}" class="btn btn-brand rounded-pill px-4">Solicitar crédito</a>
+                <a href="{{ route('business.register') }}" class="btn btn-outline-dark rounded-pill px-4">Regístrate</a>                
             </div>
         </div>
     </header>
@@ -159,11 +158,9 @@
                     <div class="col-lg-7">
                         <p class="text-uppercase fw-semibold mb-2" style="letter-spacing: .15rem;">Sobre nosotros</p>
                         <h2 class="display-5 fw-bold mb-3">Impulsamos tus compras con estilo, cercanía y confianza.</h2>
-                        <p class="lead mb-4">En B&B Store reunimos productos de calidad y alternativas de financiación fáciles para que compres desde casa de forma segura, rápida y profesional.</p>
+                        <p class="lead mb-4">En Gglob Store reunimos productos de calidad y alternativas de financiación fáciles para que compres desde casa de forma segura, rápida y profesional.</p>
                         <div class="d-flex flex-wrap gap-3">
                             <a href="{{ route('business.register') }}" class="btn btn-light btn-lg rounded-pill px-4 btn-motion">Regístrate</a>
-                            <a href="{{ route('credit-applications.create') }}" class="btn btn-brand btn-lg rounded-pill px-4 btn-motion">Solicitar crédito</a>
-                            <a href="{{ route('credit-portal.index') }}" class="btn btn-outline-brand btn-lg rounded-pill px-4 btn-motion">Consultar y pagar</a>
                         </div>
                     </div>
                     <div class="col-lg-5">
@@ -186,7 +183,7 @@
         <div class="container">
             <div class="row g-4">
                 <div class="col-md-4">
-                    <h3 class="h5 fw-bold mb-3">B&B Store</h3>
+                    <h3 class="h5 fw-bold mb-3">Gglob Store</h3>
                     <p class="mb-0 text-white-50">Tienda virtual con atención cálida, soluciones de crédito y envíos a todo el país.</p>
                 </div>
                 <div class="col-md-4">
@@ -202,7 +199,7 @@
                         <a href="#" class="social-link" aria-label="TikTok"><i class="bi bi-tiktok"></i></a>
                         <a href="#" class="social-link" aria-label="WhatsApp"><i class="bi bi-whatsapp"></i></a>
                     </div>
-                    <small class="text-white-50 d-block">© {{ now()->year }} B&B Store. Todos los derechos reservados.</small>
+                    <small class="text-white-50 d-block">© {{ now()->year }} Gglob Store. Todos los derechos reservados.</small>
                     <small class="text-white-50">Powered by <a href="https://yefersonsossa.com/" target="_blank" rel="noopener noreferrer" class="text-white">yefersonsossa.com</a></small>
                 </div>
             </div>

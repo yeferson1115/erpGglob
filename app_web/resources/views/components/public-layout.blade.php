@@ -3,7 +3,7 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>{{ $title ?? 'B&B Store | Tienda virtual al alcance de todos' }}</title>
+    <title>{{ $title ?? 'Gglob Store | Tienda virtual al alcance de todos' }}</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
     <style>
@@ -121,14 +121,13 @@
         <div class="container py-3 d-flex align-items-center justify-content-between">
             <div class="d-flex align-items-center gap-3">
                 <a href="{{ route('home') }}" class="logo-wrap" aria-label="Ir a la página principal">
-                    <img src="{{ asset('imagenes/logo.png') }}" alt="Logo B&B Store" class="img-fluid rounded-3">
+                    <img src="{{ asset('imagenes/logo.png') }}" alt="Logo Gglob Store" class="img-fluid rounded-3">
                 </a>
                 <div>
-                    <h1 class="h4 mb-0 fw-bold">B&B Store</h1>
+                    <h1 class="h4 mb-0 fw-bold">Gglob Store</h1>
                     <small class="text-muted">Tienda virtual al alcance de todos</small>
                 </div>
-            </div>
-            <a href="{{ route('credit-applications.create') }}" class="btn btn-brand rounded-pill px-4">Solicitar crédito</a>
+            </div>            
         </div>
     </header>
 
@@ -140,7 +139,7 @@
         <div class="container">
             <div class="row g-4">
                 <div class="col-md-4">
-                    <h3 class="h5 fw-bold mb-3">B&B Store</h3>
+                    <h3 class="h5 fw-bold mb-3">Gglob Store</h3>
                     <p class="mb-0 text-white-50">Tienda virtual con atención cálida, soluciones de crédito y envíos a todo el país.</p>
                 </div>
                 <div class="col-md-4">
@@ -156,7 +155,7 @@
                         <a href="#" class="social-link" aria-label="TikTok"><i class="bi bi-tiktok"></i></a>
                         <a href="#" class="social-link" aria-label="WhatsApp"><i class="bi bi-whatsapp"></i></a>
                     </div>
-                    <small class="text-white-50 d-block">© {{ now()->year }} B&B Store. Todos los derechos reservados.</small>
+                    <small class="text-white-50 d-block">© {{ now()->year }} Gglob Store. Todos los derechos reservados.</small>
                     <small class="text-white-50">Powered by <a href="https://yefersonsossa.com/" target="_blank" rel="noopener noreferrer" class="text-white">yefersonsossa.com</a></small>
                 </div>
             </div>
