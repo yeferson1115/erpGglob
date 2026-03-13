@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Company extends Model
@@ -16,6 +17,7 @@ class Company extends Model
         'address',
         'email',
         'contact_name',
+        'plan_id',
         'plan_name',
         'service_status',
         'started_at',
@@ -37,6 +39,11 @@ class Company extends Model
         'gglob_accounting_enabled' => 'boolean',
     ];
 
+
+    public function plan(): BelongsTo
+    {
+        return $this->belongsTo(Plan::class);
+    }
     public function creditApplications(): HasMany
     {
         return $this->hasMany(CreditApplication::class);

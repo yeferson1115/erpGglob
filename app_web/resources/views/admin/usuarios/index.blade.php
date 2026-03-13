@@ -54,7 +54,11 @@
                     </thead>
                     <tbody>
                     @foreach ($users as $user)
-                        @php $customer = $user->platformCustomer; @endphp
+                        @php
+                            $customer = $user->platformCustomer;
+                            $serviceSource = $user->company ?: $customer;
+                            $sourceLabel = $user->company ? 'Empresa' : 'Usuario';
+                        @endphp
                         <tr class="odd row{{ $user->id }}">
                             <td>{{ $user->id }}</td>
                             <td>
@@ -68,25 +72,26 @@
                                 @endcan
                             </td>
                             <td>{{ $user->name }} {{ $user->last_name }}</td>
-                            <td>{{ $customer->plan_name ?? 'Sin configurar' }}</td>
+                            <td>{{ $serviceSource->plan_name ?? 'Sin configurar' }}<br><small>{{ $sourceLabel }}</small></td>
                             <td>
-                                @if($customer)
-                                    <span class="badge bg-{{ $customer->subscription_status === 'active' ? 'success' : ($customer->subscription_status === 'suspended' ? 'warning' : 'secondary') }}">
-                                        {{ strtoupper($customer->subscription_status) }}
+                                @if($serviceSource)
+                                    @php $status = $user->company ? $user->company->service_status : $customer->subscription_status; @endphp
+                                    <span class="badge bg-{{ $status === 'active' ? 'success' : ($status === 'suspended' ? 'warning' : 'secondary') }}">
+                                        {{ strtoupper($status) }}
                                     </span>
                                 @else
                                     <span class="badge bg-dark">SIN PERFIL</span>
                                 @endif
                             </td>
                             <td class="small">
-                                @if($customer)
-                                    {{ $customer->gglob_cloud_enabled ? 'Nube ' : '' }}
-                                    {{ $customer->gglob_pay_enabled ? 'Pay ' : '' }}
-                                    {{ $customer->gglob_pos_enabled ? 'POS('.($customer->pos_mode === 'multi' ? 'Multi x'.$customer->pos_boxes : 'Mono').') ' : '' }}
-                                    {{ $customer->gglob_accounting_enabled ? 'Contable' : '' }}
+                                @if($serviceSource)
+                                    {{ $serviceSource->gglob_cloud_enabled ? 'Nube ' : '' }}
+                                    {{ $serviceSource->gglob_pay_enabled ? 'Pay ' : '' }}
+                                    {{ $serviceSource->gglob_pos_enabled ? 'POS('.($serviceSource->pos_mode === 'multi' ? 'Multi x'.$serviceSource->pos_boxes : 'Mono').') ' : '' }}
+                                    {{ $serviceSource->gglob_accounting_enabled ? 'Contable' : '' }}
                                 @endif
                             </td>
-                            <td>{{ optional($customer?->active_until)->format('d/m/Y') ?? '-' }}</td>
+                            <td>{{ optional(($user->company?->active_until) ?? ($customer?->active_until))->format('d/m/Y') ?? '-' }}</td>
                             <td>{{ $user->company?->name ?? 'Sin negocio' }}</td>
                             <td>{{ $user->business_role ? strtoupper($user->business_role) : '-' }}</td>
                             <td>{{ $user->email }}</td>
