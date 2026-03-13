@@ -110,7 +110,7 @@
                     <script>
                       document.write(new Date().getFullYear());
                     </script>
-                    , made with ❤️ by <a href="https://zeroxdevs.co/" target="_blank" class="footer-link">zeroxdevs</a>
+                    , made with ❤️ by <a href="https://yefersonsossa.com/" target="_blank" class="footer-link">yefersonsossa.com</a>
                   </div>
                   
                 </div>

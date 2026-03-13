@@ -69,18 +69,8 @@
                           <div data-i18n="Empresas">Empresas</div>
                         </a>
                       </li>
-                      <li class="menu-item">
-                        <a href="{{ route('admin.credit-applications.index') }}" class="menu-link">
-                          <i class="menu-icon fa-solid fa-file-signature"></i>
-                          <div data-i18n="Solicitudes Crédito">Solicitudes Crédito</div>
-                        </a>
-                      </li>
-                      <li class="menu-item">
-                        <a href="{{ route('admin.credit-payments.index') }}" class="menu-link">
-                          <i class="menu-icon fa-solid fa-money-check-dollar"></i>
-                          <div data-i18n="Pagos Crédito">Pagos Crédito</div>
-                        </a>
-                      </li>
+                    
+                      
 
                       <li class="menu-item">
                         <a href="{{ route('admin.platform.index') }}" class="menu-link">

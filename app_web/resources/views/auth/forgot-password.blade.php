@@ -6,7 +6,7 @@
             <div class="d-none d-xl-flex col-xl-8 p-0">
                 <div class="auth-cover-bg d-flex justify-content-center align-items-center">
                     <img
-                        src="{{ asset('imagenes/logo.jpg') }}"
+                        src="{{ asset('imagenes/logo.png') }}"
                         alt="auth-login-cover"
                         style="visibility: visible; !important"
                         class="my-5 auth-illustration"

@@ -121,7 +121,7 @@
         <div class="container py-3 d-flex align-items-center justify-content-between">
             <div class="d-flex align-items-center gap-3">
                 <a href="{{ route('home') }}" class="logo-wrap" aria-label="Ir a la página principal">
-                    <img src="{{ asset('imagenes/logo.jpg') }}" alt="Logo B&B Store" class="img-fluid rounded-3">
+                    <img src="{{ asset('imagenes/logo.png') }}" alt="Logo B&B Store" class="img-fluid rounded-3">
                 </a>
                 <div>
                     <h1 class="h4 mb-0 fw-bold">B&B Store</h1>

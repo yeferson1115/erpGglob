@@ -6,7 +6,7 @@
             <div class="d-none d-xl-flex col-xl-8 p-0">
                 <div class="auth-cover-bg d-flex justify-content-center align-items-center">
                     <img
-                        src="{{ asset('imagenes/logo.jpg') }}"
+                        src="{{ asset('imagenes/logo.png') }}"
                         alt="auth-login-cover"
                         style="visibility: visible; !important"
                         class="my-5 auth-illustration"
@@ -19,7 +19,7 @@
             <div class="d-flex col-12 col-xl-4 align-items-center authentication-bg p-sm-12 p-6">
                 <div class="w-px-400 mx-auto mt-12 pt-5">
                     <div class="mb-4 text-center">
-                        <img src="{{ asset('imagenes/logo.jpg') }}" alt="Logo B&B Store" style="height: 72px;" class="rounded-3">
+                        <img src="{{ asset('imagenes/logo.png') }}" alt="Logo B&B Store" style="height: 72px;" class="rounded-3">
                     </div>
                     <h4 class="mb-1">Bienvenido a B&B Store! 👋</h4>
                     

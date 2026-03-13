@@ -138,7 +138,7 @@
         <div class="container py-3 d-flex align-items-center justify-content-between">
             <div class="d-flex align-items-center gap-3">
                 <div class="logo-wrap">
-                    <img src="{{ asset('imagenes/logo.jpg') }}" alt="Logo B&B Store" class="img-fluid rounded-3">
+                    <img src="{{ asset('imagenes/logo.png') }}" alt="Logo B&B Store" class="img-fluid rounded-3">
                 </div>
                 <div>
                     <h1 class="h4 mb-0 fw-bold">B&B Store</h1>
