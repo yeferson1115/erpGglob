@@ -397,6 +397,16 @@ namespace Gglob
             SetSelectedModule(button.Tag?.ToString());
         }
 
+        private void ServiceMenuButton_Click(object sender, RoutedEventArgs e)
+        {
+            if (sender is not Button button)
+            {
+                return;
+            }
+
+            SetSelectedModule(button.Tag?.ToString());
+        }
+
         private void RenderActiveServicesCards(List<ServiceItem> activeServices)
         {
             ActiveServicesCardsPanel.Children.Clear();
