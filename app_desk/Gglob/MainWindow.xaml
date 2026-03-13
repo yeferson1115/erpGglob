@@ -5,8 +5,8 @@
     xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
     Title="Gglob ERP Desk"
-    Width="1100"
-    Height="700"
+    Width="1180"
+    Height="760"
     Background="#f4f6fb"
     WindowStartupLocation="CenterScreen"
     mc:Ignorable="d">
@@ -159,30 +159,168 @@
                 </Border>
 
                 <Grid Grid.Row="2" Margin="0,12,0,0">
-                    <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="1.5*" />
-                        <ColumnDefinition Width="*" />
-                    </Grid.ColumnDefinitions>
-
-                    <Border Grid.Column="0" Margin="0,0,10,0" Background="White" CornerRadius="12" Padding="14" BorderBrush="#e2e8f3" BorderThickness="1">
+                    <Border x:Name="DefaultPanel" Background="White" CornerRadius="12" Padding="14" BorderBrush="#e2e8f3" BorderThickness="1">
                         <StackPanel>
                             <TextBlock Text="Resumen operativo" FontSize="18" FontWeight="SemiBold" Foreground="#1f2937" Margin="0,0,0,10" />
-                            <UniformGrid Columns="2" Rows="2">
-                                <Border Margin="0,0,8,8" Padding="10" Background="#f8fbff" CornerRadius="8" BorderBrush="#d9e4ff" BorderThickness="1"><StackPanel><TextBlock Text="Pagos del día" Foreground="#6b7280" /><TextBlock Text="$0.00" FontSize="20" FontWeight="Bold" Foreground="#234ea0" /></StackPanel></Border>
-                                <Border Margin="0,0,0,8" Padding="10" Background="#f8fbff" CornerRadius="8" BorderBrush="#d9e4ff" BorderThickness="1"><StackPanel><TextBlock Text="Pagos del mes" Foreground="#6b7280" /><TextBlock Text="$0.00" FontSize="20" FontWeight="Bold" Foreground="#234ea0" /></StackPanel></Border>
-                                <Border Margin="0,0,8,0" Padding="10" Background="#f8fbff" CornerRadius="8" BorderBrush="#d9e4ff" BorderThickness="1"><StackPanel><TextBlock Text="Pedidos hoy" Foreground="#6b7280" /><TextBlock Text="0" FontSize="20" FontWeight="Bold" Foreground="#234ea0" /></StackPanel></Border>
-                                <Border Padding="10" Background="#f8fbff" CornerRadius="8" BorderBrush="#d9e4ff" BorderThickness="1"><StackPanel><TextBlock Text="Pedidos del mes" Foreground="#6b7280" /><TextBlock Text="0" FontSize="20" FontWeight="Bold" Foreground="#234ea0" /></StackPanel></Border>
+                            <TextBlock Text="Selecciona un servicio del menú lateral para abrir su módulo. Gglob Pay se mostrará al hacer clic en su opción." Foreground="#6b7280" TextWrapping="Wrap" Margin="0,0,0,12" />
+                            <UniformGrid Columns="3" Rows="1">
+                                <Border Margin="0,0,8,0" Padding="12" Background="#f8fbff" CornerRadius="8" BorderBrush="#d9e4ff" BorderThickness="1">
+                                    <StackPanel>
+                                        <TextBlock Text="Pagos del día" Foreground="#6b7280" />
+                                        <TextBlock Text="$0" FontSize="20" FontWeight="Bold" Foreground="#234ea0" />
+                                    </StackPanel>
+                                </Border>
+                                <Border Margin="0,0,8,0" Padding="12" Background="#f8fbff" CornerRadius="8" BorderBrush="#d9e4ff" BorderThickness="1">
+                                    <StackPanel>
+                                        <TextBlock Text="Servicios activos" Foreground="#6b7280" />
+                                        <TextBlock x:Name="SummaryServicesText" Text="0" FontSize="20" FontWeight="Bold" Foreground="#234ea0" />
+                                    </StackPanel>
+                                </Border>
+                                <Border Padding="12" Background="#f8fbff" CornerRadius="8" BorderBrush="#d9e4ff" BorderThickness="1">
+                                    <StackPanel>
+                                        <TextBlock Text="Estado actual" Foreground="#6b7280" />
+                                        <TextBlock Text="Listo" FontSize="20" FontWeight="Bold" Foreground="#15803d" />
+                                    </StackPanel>
+                                </Border>
                             </UniformGrid>
                         </StackPanel>
                     </Border>
 
-                    <Border Grid.Column="1" Background="White" CornerRadius="12" Padding="14" BorderBrush="#e2e8f3" BorderThickness="1">
-                        <StackPanel>
-                            <TextBlock Text="Permisos activos" FontSize="18" FontWeight="SemiBold" Foreground="#1f2937" Margin="0,0,0,10" />
-                            <ScrollViewer VerticalScrollBarVisibility="Auto">
-                                <StackPanel x:Name="PermissionsPanel" />
-                            </ScrollViewer>
-                        </StackPanel>
+                    <Border x:Name="GglobPayPanel" Visibility="Collapsed" Background="White" CornerRadius="12" Padding="14" BorderBrush="#e2e8f3" BorderThickness="1">
+                        <TabControl x:Name="GglobPayTabControl">
+                        <TabItem Header="Datos de cuenta destino">
+                            <Grid Margin="10">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="1.4*" />
+                                    <ColumnDefinition Width="*" />
+                                </Grid.ColumnDefinitions>
+                                <StackPanel Margin="0,0,12,0">
+                                    <TextBlock Text="Banco destino" FontWeight="SemiBold" />
+                                    <ComboBox x:Name="DestinationBankComboBox" Margin="0,6,0,12" Height="34" />
+                                    <TextBlock Text="Titular de cuenta" FontWeight="SemiBold" />
+                                    <TextBox x:Name="DestinationHolderTextBox" Style="{StaticResource InputText}" />
+                                    <TextBlock Text="Número de cuenta" FontWeight="SemiBold" />
+                                    <TextBox x:Name="DestinationAccountNumberTextBox" Style="{StaticResource InputText}" />
+                                    <TextBlock Text="Tipo de cuenta" FontWeight="SemiBold" />
+                                    <ComboBox x:Name="DestinationAccountTypeComboBox" Margin="0,6,0,12" Height="34">
+                                        <ComboBoxItem Content="Ahorros" IsSelected="True" />
+                                        <ComboBoxItem Content="Corriente" />
+                                    </ComboBox>
+                                    <Button Content="Guardar cuenta destino" Width="220" Style="{StaticResource PrimaryButton}" Click="SaveDestinationAccountButton_Click" />
+                                </StackPanel>
+                                <Border Grid.Column="1" Background="#f8fbff" CornerRadius="10" BorderThickness="1" BorderBrush="#d9e4ff" Padding="12">
+                                    <StackPanel>
+                                        <TextBlock Text="Cuentas registradas" FontWeight="SemiBold" FontSize="16" Foreground="#1f2937" />
+                                        <ListBox x:Name="DestinationAccountsListBox" Margin="0,12,0,0" Height="250" />
+                                        <TextBlock Text="Incluye soporte para bancos de Colombia (Bancolombia, Davivienda, BBVA, entre otros)." Margin="0,12,0,0" TextWrapping="Wrap" Foreground="#4b5563" />
+                                    </StackPanel>
+                                </Border>
+                            </Grid>
+                        </TabItem>
+
+                        <TabItem Header="Generar QR">
+                            <Grid Margin="10">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="1.3*" />
+                                    <ColumnDefinition Width="*" />
+                                </Grid.ColumnDefinitions>
+                                <StackPanel Margin="0,0,12,0">
+                                    <TextBlock Text="Cuenta para cobrar" FontWeight="SemiBold" />
+                                    <ComboBox x:Name="QrAccountComboBox" Margin="0,6,0,12" Height="34" DisplayMemberPath="DisplayName" />
+                                    <TextBlock Text="Precio" FontWeight="SemiBold" />
+                                    <TextBox x:Name="QrAmountTextBox" Style="{StaticResource InputText}" />
+                                    <TextBlock Text="Cajero / Caja" FontWeight="SemiBold" />
+                                    <ComboBox x:Name="QrCashierComboBox" Margin="0,6,0,12" Height="34" />
+                                    <Button Content="Generar QR Gglob Pay" Width="230" Style="{StaticResource PrimaryButton}" Click="GenerateQrButton_Click" />
+                                    <TextBlock x:Name="QrStatusTextBlock" Margin="0,12,0,0" Foreground="#065f46" TextWrapping="Wrap" />
+                                </StackPanel>
+                                <Border Grid.Column="1" Background="#f8fbff" CornerRadius="10" BorderThickness="1" BorderBrush="#d9e4ff" Padding="12">
+                                    <StackPanel>
+                                        <TextBlock Text="Código QR generado" FontWeight="SemiBold" FontSize="16" Foreground="#1f2937" />
+                                        <TextBox x:Name="QrPayloadTextBox" Margin="0,12,0,0" Height="170" TextWrapping="Wrap" AcceptsReturn="True" IsReadOnly="True" VerticalScrollBarVisibility="Auto" />
+                                        <TextBlock Text="El payload QR contiene referencia, valor y cuenta receptora para verificación inmediata contra el banco receptor." Margin="0,10,0,0" TextWrapping="Wrap" Foreground="#4b5563" />
+                                    </StackPanel>
+                                </Border>
+                            </Grid>
+                        </TabItem>
+
+                        <TabItem Header="Verificados">
+                            <StackPanel Margin="10">
+                                <WrapPanel Margin="0,0,0,10">
+                                    <StackPanel Margin="0,0,10,0">
+                                        <TextBlock Text="Desde" FontWeight="SemiBold" />
+                                        <DatePicker x:Name="VerifiedFromDatePicker" Width="150" />
+                                    </StackPanel>
+                                    <StackPanel Margin="0,0,10,0">
+                                        <TextBlock Text="Hasta" FontWeight="SemiBold" />
+                                        <DatePicker x:Name="VerifiedToDatePicker" Width="150" />
+                                    </StackPanel>
+                                    <StackPanel Margin="0,0,10,0">
+                                        <TextBlock Text="Cajero" FontWeight="SemiBold" />
+                                        <ComboBox x:Name="VerifiedCashierComboBox" Width="170" Height="32" />
+                                    </StackPanel>
+                                    <Button Content="Filtrar" Width="110" Height="32" Margin="0,18,0,0" Click="ApplyVerifiedFilterButton_Click" />
+                                </WrapPanel>
+                                <DataGrid x:Name="VerifiedPaymentsDataGrid" AutoGenerateColumns="False" IsReadOnly="True" Height="290">
+                                    <DataGrid.Columns>
+                                        <DataGridTextColumn Header="Persona" Binding="{Binding SenderName}" Width="*" />
+                                        <DataGridTextColumn Header="Cuenta" Binding="{Binding AccountNumber}" Width="*" />
+                                        <DataGridTextColumn Header="Valor" Binding="{Binding AmountFormatted}" Width="120" />
+                                        <DataGridTextColumn Header="Cajero" Binding="{Binding Cashier}" Width="120" />
+                                        <DataGridTextColumn Header="Banco" Binding="{Binding Bank}" Width="140" />
+                                        <DataGridTextColumn Header="Hora" Binding="{Binding VerifiedAtFormatted}" Width="140" />
+                                    </DataGrid.Columns>
+                                </DataGrid>
+                            </StackPanel>
+                        </TabItem>
+
+                        <TabItem Header="Reportes">
+                            <StackPanel Margin="10">
+                                <WrapPanel Margin="0,0,0,10">
+                                    <StackPanel Margin="0,0,10,0">
+                                        <TextBlock Text="Desde" FontWeight="SemiBold" />
+                                        <DatePicker x:Name="ReportFromDatePicker" Width="150" />
+                                    </StackPanel>
+                                    <StackPanel Margin="0,0,10,0">
+                                        <TextBlock Text="Hasta" FontWeight="SemiBold" />
+                                        <DatePicker x:Name="ReportToDatePicker" Width="150" />
+                                    </StackPanel>
+                                    <StackPanel Margin="0,0,10,0">
+                                        <TextBlock Text="Cajero" FontWeight="SemiBold" />
+                                        <ComboBox x:Name="ReportCashierComboBox" Width="170" Height="32" />
+                                    </StackPanel>
+                                    <Button Content="Generar reporte" Width="140" Height="32" Margin="0,18,0,0" Click="GenerateReportButton_Click" />
+                                </WrapPanel>
+
+                                <Border Background="#f8fbff" CornerRadius="10" BorderThickness="1" BorderBrush="#d9e4ff" Padding="12" Margin="0,0,0,10">
+                                    <WrapPanel>
+                                        <StackPanel Width="210" Margin="0,0,10,0">
+                                            <TextBlock Text="Total verificado" Foreground="#6b7280" />
+                                            <TextBlock x:Name="ReportTotalAmountTextBlock" FontWeight="Bold" FontSize="22" Foreground="#1d4ed8" />
+                                        </StackPanel>
+                                        <StackPanel Width="210" Margin="0,0,10,0">
+                                            <TextBlock Text="Cantidad de pagos" Foreground="#6b7280" />
+                                            <TextBlock x:Name="ReportPaymentsCountTextBlock" FontWeight="Bold" FontSize="22" Foreground="#0f766e" />
+                                        </StackPanel>
+                                        <StackPanel Width="210">
+                                            <TextBlock Text="Ticket promedio" Foreground="#6b7280" />
+                                            <TextBlock x:Name="ReportAverageTextBlock" FontWeight="Bold" FontSize="22" Foreground="#7c3aed" />
+                                        </StackPanel>
+                                    </WrapPanel>
+                                </Border>
+
+                                <DataGrid x:Name="ReportPaymentsDataGrid" AutoGenerateColumns="False" IsReadOnly="True" Height="190">
+                                    <DataGrid.Columns>
+                                        <DataGridTextColumn Header="Referencia" Binding="{Binding ReferenceCode}" Width="*" />
+                                        <DataGridTextColumn Header="Persona" Binding="{Binding SenderName}" Width="*" />
+                                        <DataGridTextColumn Header="Valor" Binding="{Binding AmountFormatted}" Width="140" />
+                                        <DataGridTextColumn Header="Cajero" Binding="{Binding Cashier}" Width="140" />
+                                        <DataGridTextColumn Header="Fecha" Binding="{Binding VerifiedAtFullFormatted}" Width="170" />
+                                    </DataGrid.Columns>
+                                </DataGrid>
+                            </StackPanel>
+                        </TabItem>
+                        </TabControl>
                     </Border>
                 </Grid>
             </Grid>
