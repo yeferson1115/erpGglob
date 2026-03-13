@@ -45,6 +45,7 @@ Route::middleware('auth')->group(function () {
   // Resources
     
     Route::resource('users', UserController::class);
+    Route::put('users/{user}/services', [UserController::class, 'updateServices'])->name('users.services.update');
     Route::resource('permission', PermissionController::class);
     Route::get('/roles/{roleId}/permissions/edit', [PermissionController::class, 'edit'])->name('permissions.edit');
     Route::put('/roles/{roleId}/permissions', [PermissionController::class, 'update'])->name('permissions.update');
@@ -60,8 +61,6 @@ Route::middleware('auth')->group(function () {
 
 
     Route::get('admin/platform', [AdminPlatformController::class, 'index'])->name('admin.platform.index');
-    Route::post('admin/platform/users', [AdminPlatformController::class, 'storeUser'])->name('admin.platform.users.store');
-    Route::put('admin/platform/customers/{customer}', [AdminPlatformController::class, 'updateCustomer'])->name('admin.platform.customers.update');
     Route::post('admin/platform/marketing', [AdminPlatformController::class, 'storeMarketing'])->name('admin.platform.marketing.store');
     Route::post('admin/platform/promotions', [AdminPlatformController::class, 'storePromotion'])->name('admin.platform.promotions.store');
     Route::post('admin/platform/catalog', [AdminPlatformController::class, 'storeCatalog'])->name('admin.platform.catalog.store');

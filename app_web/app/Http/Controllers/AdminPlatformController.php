@@ -9,18 +9,32 @@ use App\Models\PromotionCode;
 use App\Models\User;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Hash;
 use Illuminate\View\View;
 
 class AdminPlatformController extends Controller
 {
-    public function index(): View
+    public function index(Request $request): View
     {
-        $customers = PlatformCustomer::with('user')->orderByDesc('updated_at')->paginate(12);
-        $users = User::orderBy('name')->get(['id', 'name', 'last_name', 'email']);
+        $customersQuery = PlatformCustomer::with('user')->orderByDesc('updated_at');
+
+        if ($request->filled('status')) {
+            $customersQuery->where('subscription_status', $request->string('status'));
+        }
+
+        if ($request->filled('started_from')) {
+            $customersQuery->whereDate('started_at', '>=', $request->date('started_from'));
+        }
+
+        if ($request->filled('started_to')) {
+            $customersQuery->whereDate('started_at', '<=', $request->date('started_to'));
+        }
+
+        $customers = $customersQuery->paginate(15)->withQueryString();
 
         $totals = [
             'users' => PlatformCustomer::count(),
+            'paid_users' => PlatformCustomer::where('is_paid', true)->count(),
+            'unpaid_users' => PlatformCustomer::where('is_paid', false)->count(),
             'active' => PlatformCustomer::where('subscription_status', 'active')->count(),
             'inactive' => PlatformCustomer::where('subscription_status', 'inactive')->count(),
             'total_sales' => PlatformCustomer::sum('sales_total'),
@@ -30,78 +44,18 @@ class AdminPlatformController extends Controller
 
         return view('admin.platform.index', [
             'customers' => $customers,
-            'users' => $users,
             'totals' => $totals,
-            'recentBroadcasts' => MarketingBroadcast::latest()->take(6)->get(),
-            'promotionCodes' => PromotionCode::latest()->take(6)->get(),
-            'catalogPublications' => ProductCatalogPublication::latest()->take(6)->get(),
+            'recentBroadcasts' => MarketingBroadcast::latest()->take(8)->get(),
+            'promotionCodes' => PromotionCode::with('customer.user')->latest()->take(8)->get(),
+            'catalogPublications' => ProductCatalogPublication::latest()->take(8)->get(),
+            'activeCustomers' => PlatformCustomer::with('user')->where('subscription_status', 'active')->get(),
+            'usersList' => User::orderBy('name')->get(['id', 'name', 'last_name']),
+            'filters' => [
+                'status' => $request->get('status'),
+                'started_from' => $request->get('started_from'),
+                'started_to' => $request->get('started_to'),
+            ],
         ]);
-    }
-
-    public function storeUser(Request $request): RedirectResponse
-    {
-        $validated = $request->validate([
-            'name' => 'required|string|max:100',
-            'last_name' => 'nullable|string|max:100',
-            'email' => 'required|email|unique:users,email',
-            'password' => 'required|string|min:8|confirmed',
-            'contact_phone' => 'nullable|string|max:30',
-            'plan_name' => 'nullable|string|max:60',
-            'is_paid' => 'nullable|boolean',
-        ]);
-
-        $user = User::create([
-            'name' => $validated['name'],
-            'last_name' => $validated['last_name'] ?? null,
-            'email' => $validated['email'],
-            'password' => Hash::make($validated['password']),
-            'phone' => $validated['contact_phone'] ?? null,
-        ]);
-
-        PlatformCustomer::create([
-            'user_id' => $user->id,
-            'contact_phone' => $validated['contact_phone'] ?? null,
-            'plan_name' => $validated['plan_name'] ?? 'Sin plan',
-            'is_paid' => (bool)($validated['is_paid'] ?? false),
-            'subscription_status' => 'inactive',
-            'electronic_billing_status' => 'pending',
-        ]);
-
-        return back()->with('status', 'Usuario creado y listo para activación de servicios.');
-    }
-
-    public function updateCustomer(Request $request, PlatformCustomer $customer): RedirectResponse
-    {
-        $validated = $request->validate([
-            'plan_name' => 'required|string|max:60',
-            'subscription_status' => 'required|in:active,inactive,suspended',
-            'is_paid' => 'nullable|boolean',
-            'started_at' => 'nullable|date',
-            'active_until' => 'nullable|date',
-            'gglob_cloud_enabled' => 'nullable|boolean',
-            'gglob_pay_enabled' => 'nullable|boolean',
-            'gglob_pos_enabled' => 'nullable|boolean',
-            'pos_mode' => 'required|in:mono,multi',
-            'pos_boxes' => 'required|integer|min:1|max:30',
-            'gglob_accounting_enabled' => 'nullable|boolean',
-            'electronic_billing_enabled' => 'nullable|boolean',
-            'electronic_billing_scope' => 'required|in:single_branch,multi_branch',
-            'electronic_billing_boxes' => 'required|integer|min:1|max:100',
-            'electronic_billing_monthly_limit' => 'nullable|integer|min:0',
-            'electronic_billing_status' => 'required|in:active,suspended,pending',
-        ]);
-
-        $customer->update([
-            ...$validated,
-            'is_paid' => (bool)($validated['is_paid'] ?? false),
-            'gglob_cloud_enabled' => (bool)($validated['gglob_cloud_enabled'] ?? false),
-            'gglob_pay_enabled' => (bool)($validated['gglob_pay_enabled'] ?? false),
-            'gglob_pos_enabled' => (bool)($validated['gglob_pos_enabled'] ?? false),
-            'gglob_accounting_enabled' => (bool)($validated['gglob_accounting_enabled'] ?? false),
-            'electronic_billing_enabled' => (bool)($validated['electronic_billing_enabled'] ?? false),
-        ]);
-
-        return back()->with('status', 'Cliente actualizado correctamente.');
     }
 
     public function storeMarketing(Request $request): RedirectResponse
@@ -132,6 +86,8 @@ class AdminPlatformController extends Controller
             'discount_type' => 'required|in:percentage,fixed',
             'discount_value' => 'required|numeric|min:0.01',
             'target_service' => 'nullable|string|max:80',
+            'service_action' => 'nullable|in:increase,decrease,remove',
+            'target_customer_id' => 'nullable|exists:platform_customers,id',
             'wompi_rule' => 'nullable|string|max:120',
             'expires_at' => 'nullable|date',
             'is_active' => 'nullable|boolean',
