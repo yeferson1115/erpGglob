@@ -592,6 +592,92 @@ namespace Gglob
             {
                 ApplyVerifiedFilterLocal();
             }
+
+            var cashier = QrCashierComboBox.SelectedItem?.ToString() ?? "Caja Principal";
+            var referenceCode = $"GGPAY-{DateTime.Now:yyyyMMdd-HHmmss}-{Guid.NewGuid().ToString()[..4].ToUpperInvariant()}";
+
+            var payloadObject = new
+            {
+                reference = referenceCode,
+                channel = accountOption.Channel,
+                amount = decimal.Round(amount, 2),
+                currency = "COP",
+                cashier,
+                destination_bank = accountOption.Account.Bank,
+                destination_account = accountOption.Account.AccountNumber,
+                destination_type = accountOption.Account.AccountType,
+                verification = "instant_bank_callback"
+            };
+
+            var payload = JsonSerializer.Serialize(payloadObject, new JsonSerializerOptions
+            {
+                WriteIndented = true
+            });
+
+            QrPayloadTextBox.Text = payload;
+            QrStatusTextBlock.Text = $"QR generado con referencia {referenceCode}. Verificación inmediata configurada para {accountOption.Account.Bank}.";
+            QrStatusTextBlock.Foreground = Brushes.DarkGreen;
+
+            verifiedPayments.Insert(0, new VerifiedPaymentRecord(
+                referenceCode,
+                "Transferencia validada",
+                accountOption.Account.AccountNumber,
+                amount,
+                cashier,
+                accountOption.Account.Bank,
+                DateTime.Now));
+
+            ApplyVerifiedFilter();
+            GenerateReport();
+        }
+
+        private void ApplyVerifiedFilterButton_Click(object sender, RoutedEventArgs e)
+        {
+            ApplyVerifiedFilter();
+        }
+
+        private void ApplyVerifiedFilter()
+        {
+            var from = VerifiedFromDatePicker.SelectedDate?.Date;
+            var to = VerifiedToDatePicker.SelectedDate?.Date;
+            var cashier = VerifiedCashierComboBox.SelectedItem?.ToString();
+
+            var filtered = verifiedPayments.Where(record =>
+                (!from.HasValue || record.VerifiedAt.Date >= from.Value) &&
+                (!to.HasValue || record.VerifiedAt.Date <= to.Value) &&
+                (string.IsNullOrWhiteSpace(cashier) || cashier == "Todos" || record.Cashier == cashier))
+                .OrderByDescending(record => record.VerifiedAt)
+                .ToList();
+
+            VerifiedPaymentsDataGrid.ItemsSource = filtered;
+        }
+
+        private void GenerateReportButton_Click(object sender, RoutedEventArgs e)
+        {
+            GenerateReport();
+        }
+
+        private void GenerateReport()
+        {
+            var from = ReportFromDatePicker.SelectedDate?.Date;
+            var to = ReportToDatePicker.SelectedDate?.Date;
+            var cashier = ReportCashierComboBox.SelectedItem?.ToString();
+
+            var filtered = verifiedPayments.Where(record =>
+                (!from.HasValue || record.VerifiedAt.Date >= from.Value) &&
+                (!to.HasValue || record.VerifiedAt.Date <= to.Value) &&
+                (string.IsNullOrWhiteSpace(cashier) || cashier == "Todos" || record.Cashier == cashier))
+                .OrderByDescending(record => record.VerifiedAt)
+                .ToList();
+
+            var total = filtered.Sum(x => x.Amount);
+            var count = filtered.Count;
+            var average = count == 0 ? 0 : total / count;
+
+            ReportTotalAmountTextBlock.Text = total.ToString("C0", CultureInfo.GetCultureInfo("es-CO"));
+            ReportPaymentsCountTextBlock.Text = count.ToString();
+            ReportAverageTextBlock.Text = average.ToString("C0", CultureInfo.GetCultureInfo("es-CO"));
+            ReportPaymentsDataGrid.ItemsSource = filtered;
         }
 
         private async Task<VerifiedPaymentRecord?> SaveVerifiedPaymentApi(VerifiedPaymentRecord payment)
