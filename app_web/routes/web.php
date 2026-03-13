@@ -11,6 +11,7 @@ use App\Http\Controllers\CreditApplicationController;
 use App\Http\Controllers\CompanyController;
 use App\Http\Controllers\AdminCreditApplicationController;
 use App\Http\Controllers\AdminCreditPaymentController;
+use App\Http\Controllers\AdminPlatformController;
 use App\Http\Controllers\PublicCreditPortalController;
 
 Route::get('/login', [LoginController::class, 'showLoginForm'])->name('login');
@@ -56,6 +57,14 @@ Route::middleware('auth')->group(function () {
     Route::get('admin/credit-payments', [AdminCreditPaymentController::class, 'index'])->name('admin.credit-payments.index');
     Route::get('admin/credit-payments/export', [AdminCreditPaymentController::class, 'export'])->name('admin.credit-payments.export');
     Route::patch('admin/credit-payments/{payment}/status', [AdminCreditPaymentController::class, 'updateStatus'])->name('admin.credit-payments.update-status');
+
+
+    Route::get('admin/platform', [AdminPlatformController::class, 'index'])->name('admin.platform.index');
+    Route::post('admin/platform/users', [AdminPlatformController::class, 'storeUser'])->name('admin.platform.users.store');
+    Route::put('admin/platform/customers/{customer}', [AdminPlatformController::class, 'updateCustomer'])->name('admin.platform.customers.update');
+    Route::post('admin/platform/marketing', [AdminPlatformController::class, 'storeMarketing'])->name('admin.platform.marketing.store');
+    Route::post('admin/platform/promotions', [AdminPlatformController::class, 'storePromotion'])->name('admin.platform.promotions.store');
+    Route::post('admin/platform/catalog', [AdminPlatformController::class, 'storeCatalog'])->name('admin.platform.catalog.store');
 
 });
 
