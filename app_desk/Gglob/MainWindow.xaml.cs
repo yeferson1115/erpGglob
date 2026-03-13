@@ -1,4 +1,4 @@
-﻿using System.Diagnostics;
+using System.Diagnostics;
 using System.IO;
 using System.Net.Http;
 using System.Net.Http.Headers;
@@ -7,6 +7,8 @@ using System.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using System.Windows;
+using System.Windows.Controls;
+using System.Windows.Media;
 
 namespace Gglob
 {
@@ -37,7 +39,6 @@ namespace Gglob
 
             LoginButton.IsEnabled = false;
             ShowStatus("Validando credenciales...", isError: false);
-            SessionPanel.Visibility = Visibility.Collapsed;
 
             var authenticated = await TryOnlineLogin(email, password);
             if (!authenticated)
@@ -75,10 +76,17 @@ namespace Gglob
 
                 var profile = await GetProfile(options);
                 var user = profile ?? authResult.User;
+                var permissions = authResult.Permissions;
 
-                RenderSession(user, authResult.Permissions, "Inicio de sesión exitoso (online).");
-                SaveOfflineSession(email, password, authResult.AccessToken, user, authResult.Permissions);
+                var accessValidation = ValidateDeskAccess(user);
+                if (!accessValidation.IsValid)
+                {
+                    ShowStatus(accessValidation.Message, isError: true);
+                    return true;
+                }
 
+                ShowDashboard(user, permissions, "Ingreso exitoso.");
+                SaveOfflineSession(email, password, authResult.AccessToken, user, permissions);
                 return true;
             }
             catch (Exception ex)
@@ -106,8 +114,15 @@ namespace Gglob
                 return;
             }
 
+            var accessValidation = ValidateDeskAccess(cached.User);
+            if (!accessValidation.IsValid)
+            {
+                ShowStatus($"Acceso denegado (offline): {accessValidation.Message}", isError: true);
+                return;
+            }
+
             HttpClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", cached.AccessToken);
-            RenderSession(cached.User, cached.Permissions, $"Ingreso offline habilitado. Última sincronización: {cached.CachedAt:yyyy-MM-dd HH:mm}");
+            ShowDashboard(cached.User, cached.Permissions, $"Ingreso offline habilitado. Última sincronización: {cached.CachedAt:yyyy-MM-dd HH:mm}");
         }
 
         private static async Task<ApiUser?> GetProfile(JsonSerializerOptions options)
@@ -129,25 +144,189 @@ namespace Gglob
             }
         }
 
-        private void RenderSession(ApiUser user, List<ApiPermission>? permissionsList, string statusMessage)
+        private static AccessValidation ValidateDeskAccess(ApiUser user)
         {
-            var permissions = permissionsList?.Select(p => p.Name).Where(x => !string.IsNullOrWhiteSpace(x)).ToList() ?? [];
-            var roles = user.Roles?.Select(r => r.Name).Where(x => !string.IsNullOrWhiteSpace(x)).ToList() ?? [];
+            if (user.CompanyId is null || user.Company is null)
+            {
+                return new AccessValidation(false, "No tienes negocio asociado. Solicita asignación de empresa para usar Desk.");
+            }
 
-            UserNameTextBlock.Text = $"Usuario: {user.Name} ({user.Email})";
-            BusinessTextBlock.Text = user.Company is null
-                ? $"Negocio: No asociado (company_id: {user.CompanyId?.ToString() ?? "N/A"})"
-                : $"Negocio: {user.Company.Name} (NIT: {user.Company.Nit ?? "N/A"})";
-            BusinessRoleTextBlock.Text = $"Rol en negocio: {NormalizeBusinessRole(user.BusinessRole)}";
-            RolesTextBlock.Text = roles.Count == 0
-                ? "Roles de seguridad: Sin roles asignados"
-                : $"Roles de seguridad: {string.Join(", ", roles)}";
-            PermissionsTextBlock.Text = permissions.Count == 0
-                ? "Permisos: Sin permisos"
-                : $"Permisos: {string.Join(", ", permissions)}";
+            if (string.IsNullOrWhiteSpace(user.BusinessRole))
+            {
+                return new AccessValidation(false, "No tienes rol de negocio asignado. Debes ser Dueño o Cajero.");
+            }
 
-            SessionPanel.Visibility = Visibility.Visible;
+            var normalizedRole = user.BusinessRole.Trim().ToLowerInvariant();
+            if (normalizedRole is not ("owner" or "cashier"))
+            {
+                return new AccessValidation(false, "Rol de negocio no permitido para Desk. Solo Dueño o Cajero.");
+            }
+
+            if (!string.Equals(user.Company.ServiceStatus, "active", StringComparison.OrdinalIgnoreCase))
+            {
+                return new AccessValidation(false, "Tu acceso está inactivo. El estado del negocio no está activo.");
+            }
+
+            return new AccessValidation(true, "OK");
+        }
+
+        private void ShowDashboard(ApiUser user, List<ApiPermission>? permissionsList, string statusMessage)
+        {
+            LoginRoot.Visibility = Visibility.Collapsed;
+            DashboardRoot.Visibility = Visibility.Visible;
+
+            DashboardUserTextBlock.Text = $"{user.Name} ({user.Email})";
+            DashboardBusinessTextBlock.Text = user.Company is null
+                ? "Sin negocio asociado"
+                : $"{user.Company.Name} • NIT {user.Company.Nit ?? "N/A"}";
+            DashboardRoleTextBlock.Text = NormalizeBusinessRole(user.BusinessRole);
+
+            PlanBadgeText.Text = $"Plan: {user.Company?.PlanName ?? "Sin plan"}";
+            StatusBadgeText.Text = $"Estado: {user.Company?.ServiceStatus ?? "N/A"}";
+
+            var services = BuildServiceItems(user.Company);
+            var activeServices = services.Where(s => s.IsActive).ToList();
+            ActiveServicesBadgeText.Text = $"Servicios activos: {activeServices.Count}";
+
+            RenderServicesMenu(services);
+            RenderActiveServicesCards(activeServices);
+            RenderPermissions(permissionsList);
+
             ShowStatus(statusMessage, isError: false);
+        }
+
+        private void RenderServicesMenu(List<ServiceItem> services)
+        {
+            ServicesMenuPanel.Children.Clear();
+
+            foreach (var service in services)
+            {
+                var border = new Border
+                {
+                    CornerRadius = new CornerRadius(8),
+                    Padding = new Thickness(10, 8, 10, 8),
+                    Margin = new Thickness(0, 0, 0, 8),
+                    Background = service.IsActive
+                        ? new SolidColorBrush(Color.FromRgb(76, 116, 196))
+                        : new SolidColorBrush(Color.FromArgb(90, 255, 255, 255))
+                };
+
+                var panel = new StackPanel();
+                panel.Children.Add(new TextBlock
+                {
+                    Text = service.Name,
+                    Foreground = Brushes.White,
+                    FontWeight = FontWeights.SemiBold
+                });
+                panel.Children.Add(new TextBlock
+                {
+                    Text = service.IsActive ? "Activo" : "Inactivo",
+                    Foreground = Brushes.White,
+                    Opacity = 0.9,
+                    FontSize = 12
+                });
+
+                border.Child = panel;
+                ServicesMenuPanel.Children.Add(border);
+            }
+        }
+
+        private void RenderActiveServicesCards(List<ServiceItem> activeServices)
+        {
+            ActiveServicesCardsPanel.Children.Clear();
+
+            if (activeServices.Count == 0)
+            {
+                ActiveServicesCardsPanel.Children.Add(new TextBlock
+                {
+                    Text = "No tienes servicios activos. Actívalos para visualizar módulos en Desk.",
+                    Foreground = new SolidColorBrush(Color.FromRgb(107, 114, 128))
+                });
+
+                return;
+            }
+
+            foreach (var service in activeServices)
+            {
+                var card = new Border
+                {
+                    Width = 220,
+                    Margin = new Thickness(0, 0, 10, 10),
+                    Padding = new Thickness(12),
+                    Background = Brushes.White,
+                    BorderBrush = new SolidColorBrush(Color.FromRgb(217, 228, 255)),
+                    BorderThickness = new Thickness(1),
+                    CornerRadius = new CornerRadius(10)
+                };
+
+                var panel = new StackPanel();
+                panel.Children.Add(new TextBlock
+                {
+                    Text = service.Name,
+                    FontWeight = FontWeights.Bold,
+                    Foreground = new SolidColorBrush(Color.FromRgb(31, 41, 55))
+                });
+                panel.Children.Add(new TextBlock
+                {
+                    Text = service.Description,
+                    Margin = new Thickness(0, 4, 0, 0),
+                    FontSize = 12,
+                    TextWrapping = TextWrapping.Wrap,
+                    Foreground = new SolidColorBrush(Color.FromRgb(107, 114, 128))
+                });
+
+                card.Child = panel;
+                ActiveServicesCardsPanel.Children.Add(card);
+            }
+        }
+
+        private void RenderPermissions(List<ApiPermission>? permissionsList)
+        {
+            PermissionsPanel.Children.Clear();
+
+            var permissions = permissionsList?.Select(p => p.Name)
+                .Where(x => !string.IsNullOrWhiteSpace(x))
+                .Distinct()
+                .ToList() ?? [];
+
+            if (permissions.Count == 0)
+            {
+                PermissionsPanel.Children.Add(new TextBlock
+                {
+                    Text = "Sin permisos asignados.",
+                    Foreground = new SolidColorBrush(Color.FromRgb(107, 114, 128))
+                });
+                return;
+            }
+
+            foreach (var permission in permissions)
+            {
+                PermissionsPanel.Children.Add(new Border
+                {
+                    Background = new SolidColorBrush(Color.FromRgb(245, 248, 255)),
+                    BorderBrush = new SolidColorBrush(Color.FromRgb(217, 228, 255)),
+                    BorderThickness = new Thickness(1),
+                    CornerRadius = new CornerRadius(8),
+                    Padding = new Thickness(8, 6, 8, 6),
+                    Margin = new Thickness(0, 0, 0, 8),
+                    Child = new TextBlock
+                    {
+                        Text = permission,
+                        Foreground = new SolidColorBrush(Color.FromRgb(35, 78, 160))
+                    }
+                });
+            }
+        }
+
+        private static List<ServiceItem> BuildServiceItems(ApiCompany? company)
+        {
+            return
+            [
+                new ServiceItem("Gglob Cloud", "Gestión principal en la nube.", company?.GglobCloudEnabled ?? false),
+                new ServiceItem("Gglob Pay", "Cobros y movimientos de pago.", company?.GglobPayEnabled ?? false),
+                new ServiceItem("Gglob POS", "Punto de venta y cajas.", company?.GglobPosEnabled ?? false),
+                new ServiceItem("Gglob Contable", "Módulo de contabilidad.", company?.GglobAccountingEnabled ?? false),
+            ];
         }
 
         private static string NormalizeBusinessRole(string? businessRole)
@@ -232,15 +411,23 @@ namespace Gglob
         {
             StatusTextBlock.Text = message;
             StatusTextBlock.Foreground = isError
-                ? System.Windows.Media.Brushes.DarkRed
+                ? Brushes.DarkRed
                 : isWarning
-                    ? System.Windows.Media.Brushes.DarkOrange
-                    : System.Windows.Media.Brushes.DarkGreen;
+                    ? Brushes.DarkOrange
+                    : Brushes.DarkGreen;
+        }
+
+        private void LogoutButton_Click(object sender, RoutedEventArgs e)
+        {
+            DashboardRoot.Visibility = Visibility.Collapsed;
+            LoginRoot.Visibility = Visibility.Visible;
+            PasswordBox.Password = string.Empty;
+            ShowStatus("Sesión cerrada.", isError: false);
         }
 
         private void Hyperlink_Click(object sender, RoutedEventArgs e)
         {
-            string url = "http://localhost:81/registro-negocio";
+            const string url = "http://localhost:81/registro-negocio";
 
             Process.Start(new ProcessStartInfo
             {
@@ -302,6 +489,24 @@ namespace Gglob
 
         [JsonPropertyName("nit")]
         public string? Nit { get; set; }
+
+        [JsonPropertyName("plan_name")]
+        public string? PlanName { get; set; }
+
+        [JsonPropertyName("service_status")]
+        public string? ServiceStatus { get; set; }
+
+        [JsonPropertyName("gglob_cloud_enabled")]
+        public bool GglobCloudEnabled { get; set; }
+
+        [JsonPropertyName("gglob_pay_enabled")]
+        public bool GglobPayEnabled { get; set; }
+
+        [JsonPropertyName("gglob_pos_enabled")]
+        public bool GglobPosEnabled { get; set; }
+
+        [JsonPropertyName("gglob_accounting_enabled")]
+        public bool GglobAccountingEnabled { get; set; }
     }
 
     public class OfflineSession
@@ -314,4 +519,13 @@ namespace Gglob
         public List<ApiPermission>? Permissions { get; set; }
         public DateTime CachedAt { get; set; }
     }
+
+    public class ServiceItem(string name, string description, bool isActive)
+    {
+        public string Name { get; } = name;
+        public string Description { get; } = description;
+        public bool IsActive { get; } = isActive;
+    }
+
+    public record AccessValidation(bool IsValid, string Message);
 }
