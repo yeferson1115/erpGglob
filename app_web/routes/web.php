@@ -10,6 +10,7 @@ use App\Http\Controllers\Auth\BusinessRegistrationController;
 use App\Http\Controllers\Auth\NewPasswordController;
 use App\Http\Controllers\CreditApplicationController;
 use App\Http\Controllers\CompanyController;
+use App\Http\Controllers\PlanController;
 use App\Http\Controllers\AdminCreditApplicationController;
 use App\Http\Controllers\AdminCreditPaymentController;
 use App\Http\Controllers\AdminPlatformController;
@@ -43,6 +44,7 @@ Route::middleware('auth')->group(function () {
     Route::put('/roles/{roleId}/permissions', [PermissionController::class, 'update'])->name('permissions.update');
     
     Route::resource('companies', CompanyController::class)->except(['show']);
+    Route::resource('plans', PlanController::class)->except(['show']);
     Route::post('companies/{company}/cashiers', [CompanyController::class, 'storeCashier'])->name('companies.cashiers.store');
     Route::delete('companies/{company}/users/{user}', [CompanyController::class, 'unassignBusinessUser'])->name('companies.users.unassign');
     Route::put('companies/{company}/users/{user}/role', [CompanyController::class, 'updateBusinessUserRole'])->name('companies.users.role.update');

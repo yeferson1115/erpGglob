@@ -163,6 +163,10 @@ class UserController extends Controller
 
     public function updateServices(Request $request, User $user): RedirectResponse
     {
+        if ($user->company_id) {
+            return back()->with('error', 'Este usuario hereda plan y servicios desde su empresa.');
+        }
+
         if (!Schema::hasTable('platform_customers')) {
             return back()->with('error', 'La tabla platform_customers no existe. Ejecuta migraciones.');
         }

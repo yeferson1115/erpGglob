@@ -17,17 +17,12 @@
 
         <h6 class="mb-2">Activación de servicios del negocio</h6>
         <div class="row g-3 mb-4">
-            <div class="col-md-3"><label class="form-label">Plan</label><input name="plan_name" class="form-control" value="{{ old('plan_name', 'Sin plan') }}" required></div>
+            <div class="col-md-4"><label class="form-label">Plan</label><select name="plan_id" class="form-select" required><option value="">Selecciona un plan</option>@foreach($plans as $plan)<option value="{{ $plan->id }}" @selected((int) old('plan_id') === $plan->id)>{{ $plan->name }}</option>@endforeach</select></div>
             <div class="col-md-3"><label class="form-label">Estado</label><select name="service_status" class="form-select"><option value="active">Activo</option><option value="inactive" selected>Inactivo</option><option value="suspended">Suspendido</option></select></div>
             <div class="col-md-3"><label class="form-label">Activo desde</label><input type="date" name="started_at" class="form-control" value="{{ old('started_at') }}"></div>
             <div class="col-md-3"><label class="form-label">Activo hasta</label><input type="date" name="active_until" class="form-control" value="{{ old('active_until') }}"></div>
 
-            <div class="col-md-2"><input type="hidden" name="gglob_cloud_enabled" value="0"><label><input type="checkbox" name="gglob_cloud_enabled" value="1" @checked(old('gglob_cloud_enabled'))> Gglob Nube</label></div>
-            <div class="col-md-2"><input type="hidden" name="gglob_pay_enabled" value="0"><label><input type="checkbox" name="gglob_pay_enabled" value="1" @checked(old('gglob_pay_enabled'))> Gglob Pay</label></div>
-            <div class="col-md-2"><input type="hidden" name="gglob_pos_enabled" value="0"><label><input type="checkbox" name="gglob_pos_enabled" value="1" @checked(old('gglob_pos_enabled'))> Gglob POS</label></div>
-            <div class="col-md-2"><input type="hidden" name="gglob_accounting_enabled" value="0"><label><input type="checkbox" name="gglob_accounting_enabled" value="1" @checked(old('gglob_accounting_enabled'))> Gglob Contable</label></div>
-            <div class="col-md-2"><label class="form-label">POS modo</label><select name="pos_mode" class="form-select"><option value="mono">MonoCaja</option><option value="multi">MultiCaja</option></select></div>
-            <div class="col-md-2"><label class="form-label"># Cajas</label><input type="number" min="1" max="50" name="pos_boxes" class="form-control" value="{{ old('pos_boxes', 1) }}"></div>
+            
         </div>
 
         <h6 class="mb-2">Usuario dueño (más opciones)</h6>
