@@ -365,7 +365,7 @@ namespace Gglob
                     Cursor = System.Windows.Input.Cursors.Hand
                 };
 
-                button.Click += (_, _) => SetSelectedModule(service.Key);
+                button.Click += OnServiceMenuClick;
 
                 var panel = new StackPanel();
                 panel.Children.Add(new TextBlock
@@ -384,6 +384,15 @@ namespace Gglob
 
                 button.Content = panel;
                 ServicesMenuPanel.Children.Add(button);
+            }
+        }
+
+
+        private void OnServiceMenuClick(object sender, RoutedEventArgs e)
+        {
+            if (sender is Button clickedButton && clickedButton.Tag is string moduleKey)
+            {
+                SetSelectedModule(moduleKey);
             }
 
             SetSelectedModule(button.Tag?.ToString());
@@ -584,6 +593,265 @@ namespace Gglob
             {
                 ApplyVerifiedFilterLocal();
             }
+        }
+
+        private async Task<VerifiedPaymentRecord?> SaveVerifiedPaymentApi(VerifiedPaymentRecord payment)
+        {
+            try
+            {
+                var payload = JsonSerializer.Serialize(new
+                {
+                    reference_code = payment.ReferenceCode,
+                    sender_name = payment.SenderName,
+                    account_number = payment.AccountNumber,
+                    amount = payment.Amount,
+                    cashier = payment.Cashier,
+                    bank = payment.Bank,
+                    verified_at = payment.VerifiedAt.ToString("yyyy-MM-dd HH:mm:ss")
+                });
+
+                using var content = new StringContent(payload, Encoding.UTF8, "application/json");
+                using var response = await HttpClient.PostAsync($"{ApiBaseUrl}/gglob-pay/payments", content);
+                if (!response.IsSuccessStatusCode)
+                {
+                    return null;
+                }
+
+                var body = await response.Content.ReadAsStringAsync();
+                var result = JsonSerializer.Deserialize<ApiSingleResponse<ApiVerifiedPayment>>(body, JsonOptions());
+                return result?.Data?.ToDesktopRecord() ?? payment;
+            }
+            catch
+            {
+                return null;
+            }
+        }
+
+        private async Task GenerateReportFromApi()
+        {
+            try
+            {
+                var from = ReportFromDatePicker.SelectedDate?.ToString("yyyy-MM-dd");
+                var to = ReportToDatePicker.SelectedDate?.ToString("yyyy-MM-dd");
+                var cashier = ReportCashierComboBox.SelectedItem?.ToString();
+                var query = BuildPaymentsQuery(from, to, cashier);
+
+                using var response = await HttpClient.GetAsync($"{ApiBaseUrl}/gglob-pay/report{query}");
+                if (!response.IsSuccessStatusCode)
+                {
+                    GenerateReportLocal();
+                    return;
+                }
+
+                var content = await response.Content.ReadAsStringAsync();
+                var result = JsonSerializer.Deserialize<ApiReportResponse>(content, JsonOptions());
+                if (result?.Summary is null)
+                {
+                    GenerateReportLocal();
+                    return;
+                }
+
+                ReportTotalAmountTextBlock.Text = result.Summary.Total.ToString("C0", CultureInfo.GetCultureInfo("es-CO"));
+                ReportPaymentsCountTextBlock.Text = result.Summary.Count.ToString();
+                ReportAverageTextBlock.Text = result.Summary.Average.ToString("C0", CultureInfo.GetCultureInfo("es-CO"));
+                ReportPaymentsDataGrid.ItemsSource = (result.Data ?? [])
+                    .Select(x => x.ToDesktopRecord())
+                    .OrderByDescending(x => x.VerifiedAt)
+                    .ToList();
+            }
+            catch
+            {
+                GenerateReportLocal();
+            }
+        }
+
+        private void RefreshQrOptions()
+        {
+            qrAccountOptions.Clear();
+            foreach (var account in destinationAccounts)
+            {
+                qrAccountOptions.Add(new QrAccountOption("Cuenta de ahorro", account));
+                qrAccountOptions.Add(new QrAccountOption("WOMPI tarjetas crédito", account));
+            }
+
+            if (qrAccountOptions.Count > 0)
+            {
+                QrAccountComboBox.SelectedIndex = 0;
+            }
+        }
+
+        private static string BuildPaymentsQuery(string? from, string? to, string? cashier)
+        {
+            var parts = new List<string>();
+            if (!string.IsNullOrWhiteSpace(from)) parts.Add($"from={Uri.EscapeDataString(from)}");
+            if (!string.IsNullOrWhiteSpace(to)) parts.Add($"to={Uri.EscapeDataString(to)}");
+            if (!string.IsNullOrWhiteSpace(cashier) && cashier != "Todos") parts.Add($"cashier={Uri.EscapeDataString(cashier)}");
+
+            return parts.Count == 0 ? string.Empty : $"?{string.Join("&", parts)}";
+        }
+
+        private static JsonSerializerOptions JsonOptions() => new()
+        {
+            PropertyNameCaseInsensitive = true
+        };
+
+        private async void SaveDestinationAccountButton_Click(object sender, RoutedEventArgs e)
+        {
+            if (DestinationBankComboBox.SelectedItem is not string bank)
+            {
+                QrStatusTextBlock.Text = "Selecciona un banco destino válido.";
+                QrStatusTextBlock.Foreground = Brushes.DarkRed;
+                return;
+            }
+
+            var holder = DestinationHolderTextBox.Text.Trim();
+            var accountNumber = DestinationAccountNumberTextBox.Text.Trim();
+            var accountType = (DestinationAccountTypeComboBox.SelectedItem as ComboBoxItem)?.Content?.ToString() ?? "Ahorros";
+
+            if (string.IsNullOrWhiteSpace(holder) || string.IsNullOrWhiteSpace(accountNumber))
+            {
+                QrStatusTextBlock.Text = "Completa titular y número de cuenta.";
+                QrStatusTextBlock.Foreground = Brushes.DarkRed;
+                return;
+            }
+
+            var account = await SaveDestinationAccountApi(bank, holder, accountNumber, accountType);
+            if (account is null)
+            {
+                QrStatusTextBlock.Text = "No se pudo guardar la cuenta en app_web.";
+                QrStatusTextBlock.Foreground = Brushes.DarkRed;
+                return;
+            }
+
+            destinationAccounts.Insert(0, account);
+            RefreshQrOptions();
+
+            DestinationHolderTextBox.Text = string.Empty;
+            DestinationAccountNumberTextBox.Text = string.Empty;
+
+            QrStatusTextBlock.Text = $"Cuenta {accountType} de {bank} agregada y disponible para QR/WOMPI.";
+            QrStatusTextBlock.Foreground = Brushes.DarkGreen;
+        }
+
+        private async void GenerateQrButton_Click(object sender, RoutedEventArgs e)
+        {
+            var accountOption = QrAccountComboBox.SelectedItem as QrAccountOption;
+            if (accountOption is null)
+            {
+                QrStatusTextBlock.Text = "Selecciona una cuenta para generar el QR.";
+                QrStatusTextBlock.Foreground = Brushes.DarkRed;
+                return;
+            }
+
+            if (!decimal.TryParse(QrAmountTextBox.Text.Trim(), NumberStyles.Number, CultureInfo.InvariantCulture, out var amount) &&
+                !decimal.TryParse(QrAmountTextBox.Text.Trim(), NumberStyles.Number, CultureInfo.GetCultureInfo("es-CO"), out amount))
+            {
+                QrStatusTextBlock.Text = "Precio inválido. Usa solo números.";
+                QrStatusTextBlock.Foreground = Brushes.DarkRed;
+                return;
+            }
+
+            if (amount <= 0)
+            {
+                QrStatusTextBlock.Text = "El precio debe ser mayor a cero.";
+                QrStatusTextBlock.Foreground = Brushes.DarkRed;
+                return;
+            }
+
+            var cashier = QrCashierComboBox.SelectedItem?.ToString() ?? "Caja Principal";
+            var referenceCode = $"GGPAY-{DateTime.Now:yyyyMMdd-HHmmss}-{Guid.NewGuid().ToString()[..4].ToUpperInvariant()}";
+
+            var payloadObject = new
+            {
+                reference = referenceCode,
+                channel = accountOption.Channel,
+                amount = decimal.Round(amount, 2),
+                currency = "COP",
+                cashier,
+                destination_bank = accountOption.Account.Bank,
+                destination_account = accountOption.Account.AccountNumber,
+                destination_type = accountOption.Account.AccountType,
+                verification = "instant_bank_callback"
+            };
+
+            var payload = JsonSerializer.Serialize(payloadObject, new JsonSerializerOptions
+            {
+                WriteIndented = true
+            });
+
+            QrPayloadTextBox.Text = payload;
+            QrStatusTextBlock.Text = $"QR generado con referencia {referenceCode}. Verificación inmediata configurada para {accountOption.Account.Bank}.";
+            QrStatusTextBlock.Foreground = Brushes.DarkGreen;
+
+            var payment = new VerifiedPaymentRecord(
+                referenceCode,
+                "Transferencia validada",
+                accountOption.Account.AccountNumber,
+                amount,
+                cashier,
+                accountOption.Account.Bank,
+                DateTime.Now);
+
+            var stored = await SaveVerifiedPaymentApi(payment);
+            if (stored is null)
+            {
+                QrStatusTextBlock.Foreground = Brushes.DarkOrange;
+                QrStatusTextBlock.Text += " No se pudo guardar en app_web, revisa la conexión.";
+                return;
+            }
+
+            verifiedPayments.Insert(0, stored);
+            ApplyVerifiedFilterLocal();
+            GenerateReportLocal();
+        }
+
+        private async void ApplyVerifiedFilterButton_Click(object sender, RoutedEventArgs e)
+        {
+            await LoadVerifiedPaymentsFromApi();
+        }
+
+        private void ApplyVerifiedFilterLocal()
+        {
+            var from = VerifiedFromDatePicker.SelectedDate?.Date;
+            var to = VerifiedToDatePicker.SelectedDate?.Date;
+            var cashier = VerifiedCashierComboBox.SelectedItem?.ToString();
+
+            var filtered = verifiedPayments.Where(record =>
+                (!from.HasValue || record.VerifiedAt.Date >= from.Value) &&
+                (!to.HasValue || record.VerifiedAt.Date <= to.Value) &&
+                (string.IsNullOrWhiteSpace(cashier) || cashier == "Todos" || record.Cashier == cashier))
+                .OrderByDescending(record => record.VerifiedAt)
+                .ToList();
+
+            VerifiedPaymentsDataGrid.ItemsSource = filtered;
+        }
+
+        private async void GenerateReportButton_Click(object sender, RoutedEventArgs e)
+        {
+            await GenerateReportFromApi();
+        }
+
+        private void GenerateReportLocal()
+        {
+            var from = ReportFromDatePicker.SelectedDate?.Date;
+            var to = ReportToDatePicker.SelectedDate?.Date;
+            var cashier = ReportCashierComboBox.SelectedItem?.ToString();
+
+            var filtered = verifiedPayments.Where(record =>
+                (!from.HasValue || record.VerifiedAt.Date >= from.Value) &&
+                (!to.HasValue || record.VerifiedAt.Date <= to.Value) &&
+                (string.IsNullOrWhiteSpace(cashier) || cashier == "Todos" || record.Cashier == cashier))
+                .OrderByDescending(record => record.VerifiedAt)
+                .ToList();
+
+            var total = filtered.Sum(x => x.Amount);
+            var count = filtered.Count;
+            var average = count == 0 ? 0 : total / count;
+
+            ReportTotalAmountTextBlock.Text = total.ToString("C0", CultureInfo.GetCultureInfo("es-CO"));
+            ReportPaymentsCountTextBlock.Text = count.ToString();
+            ReportAverageTextBlock.Text = average.ToString("C0", CultureInfo.GetCultureInfo("es-CO"));
+            ReportPaymentsDataGrid.ItemsSource = filtered;
         }
 
         private async Task<VerifiedPaymentRecord?> SaveVerifiedPaymentApi(VerifiedPaymentRecord payment)
