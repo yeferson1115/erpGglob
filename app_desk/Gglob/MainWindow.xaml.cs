@@ -1,4 +1,6 @@
+using System.Collections.ObjectModel;
 using System.Diagnostics;
+using System.Globalization;
 using System.IO;
 using System.Net.Http;
 using System.Net.Http.Headers;
@@ -21,9 +23,72 @@ namespace Gglob
             "Gglob",
             "offline-session.json");
 
+        private readonly ObservableCollection<DestinationAccount> destinationAccounts = [];
+        private readonly ObservableCollection<QrAccountOption> qrAccountOptions = [];
+        private readonly ObservableCollection<VerifiedPaymentRecord> verifiedPayments = [];
+
         public MainWindow()
         {
             InitializeComponent();
+            InitializeGglobPayModule();
+        }
+
+        private void InitializeGglobPayModule()
+        {
+            DestinationBankComboBox.ItemsSource = new[]
+            {
+                "Bancolombia",
+                "Davivienda",
+                "Banco de Bogotá",
+                "BBVA Colombia",
+                "Banco Popular",
+                "Nequi",
+                "Daviplata"
+            };
+            DestinationBankComboBox.SelectedIndex = 0;
+
+            QrCashierComboBox.ItemsSource = new[] { "Caja Principal", "Caja Norte", "Cajero Ana", "Cajero Luis" };
+            QrCashierComboBox.SelectedIndex = 0;
+
+            var cashierFilter = new[] { "Todos", "Caja Principal", "Caja Norte", "Cajero Ana", "Cajero Luis" };
+            VerifiedCashierComboBox.ItemsSource = cashierFilter;
+            ReportCashierComboBox.ItemsSource = cashierFilter;
+            VerifiedCashierComboBox.SelectedIndex = 0;
+            ReportCashierComboBox.SelectedIndex = 0;
+
+            var defaultAccount = new DestinationAccount("Bancolombia", "Gglob SAS", "01872365019", "Ahorros");
+            destinationAccounts.Add(defaultAccount);
+            qrAccountOptions.Add(new QrAccountOption("Cuenta de ahorro", defaultAccount));
+            qrAccountOptions.Add(new QrAccountOption("WOMPI tarjetas crédito", defaultAccount));
+
+            DestinationAccountsListBox.ItemsSource = destinationAccounts;
+            QrAccountComboBox.ItemsSource = qrAccountOptions;
+            QrAccountComboBox.SelectedIndex = 0;
+
+            SeedVerifiedPayments();
+            ApplyVerifiedFilter();
+            GenerateReport();
+        }
+
+        private void SeedVerifiedPayments()
+        {
+            verifiedPayments.Clear();
+            verifiedPayments.Add(new VerifiedPaymentRecord(
+                "GGPAY-20260614-080102-A1B2",
+                "María Herrera",
+                "30201984756",
+                235000m,
+                "Caja Principal",
+                "Bancolombia",
+                DateTime.Now.AddHours(-2)));
+            verifiedPayments.Add(new VerifiedPaymentRecord(
+                "GGPAY-20260614-084519-F4K8",
+                "Julián Torres",
+                "45782019431",
+                115000m,
+                "Cajero Ana",
+                "Davivienda",
+                DateTime.Now.AddHours(-1)));
         }
 
         private async void LoginButton_Click(object sender, RoutedEventArgs e)
@@ -239,9 +304,25 @@ namespace Gglob
 
             RenderServicesMenu(services);
             RenderActiveServicesCards(activeServices);
+            ToggleGglobPayModuleVisibility(user.Company?.GglobPayEnabled ?? false);
             RenderPermissions(permissionsList);
 
             ShowStatus(statusMessage, isError: false);
+        }
+
+        private void ToggleGglobPayModuleVisibility(bool enabled)
+        {
+            GglobPayTabControl.IsEnabled = enabled;
+            if (!enabled)
+            {
+                QrStatusTextBlock.Foreground = Brushes.DarkOrange;
+                QrStatusTextBlock.Text = "Gglob Pay está inactivo en este negocio. Activa el servicio para operar pagos y verificación bancaria.";
+            }
+            else
+            {
+                QrStatusTextBlock.Foreground = Brushes.DarkGreen;
+                QrStatusTextBlock.Text = "Gglob Pay activo: puedes generar QR y verificar transferencias inmediatas.";
+            }
         }
 
         private void RenderServicesMenu(List<ServiceItem> services)
@@ -331,8 +412,6 @@ namespace Gglob
 
         private void RenderPermissions(List<ApiPermission>? permissionsList)
         {
-            PermissionsPanel.Children.Clear();
-
             var permissions = permissionsList?.Select(p => p.Name)
                 .Where(x => !string.IsNullOrWhiteSpace(x))
                 .Distinct()
@@ -340,31 +419,149 @@ namespace Gglob
 
             if (permissions.Count == 0)
             {
-                PermissionsPanel.Children.Add(new TextBlock
-                {
-                    Text = "Sin permisos asignados.",
-                    Foreground = new SolidColorBrush(Color.FromRgb(107, 114, 128))
-                });
                 return;
             }
 
-            foreach (var permission in permissions)
+            QrStatusTextBlock.Text += $" Permisos detectados: {string.Join(", ", permissions)}.";
+        }
+
+        private void SaveDestinationAccountButton_Click(object sender, RoutedEventArgs e)
+        {
+            if (DestinationBankComboBox.SelectedItem is not string bank)
             {
-                PermissionsPanel.Children.Add(new Border
-                {
-                    Background = new SolidColorBrush(Color.FromRgb(245, 248, 255)),
-                    BorderBrush = new SolidColorBrush(Color.FromRgb(217, 228, 255)),
-                    BorderThickness = new Thickness(1),
-                    CornerRadius = new CornerRadius(8),
-                    Padding = new Thickness(8, 6, 8, 6),
-                    Margin = new Thickness(0, 0, 0, 8),
-                    Child = new TextBlock
-                    {
-                        Text = permission,
-                        Foreground = new SolidColorBrush(Color.FromRgb(35, 78, 160))
-                    }
-                });
+                QrStatusTextBlock.Text = "Selecciona un banco destino válido.";
+                QrStatusTextBlock.Foreground = Brushes.DarkRed;
+                return;
             }
+
+            var holder = DestinationHolderTextBox.Text.Trim();
+            var accountNumber = DestinationAccountNumberTextBox.Text.Trim();
+            var accountType = (DestinationAccountTypeComboBox.SelectedItem as ComboBoxItem)?.Content?.ToString() ?? "Ahorros";
+
+            if (string.IsNullOrWhiteSpace(holder) || string.IsNullOrWhiteSpace(accountNumber))
+            {
+                QrStatusTextBlock.Text = "Completa titular y número de cuenta.";
+                QrStatusTextBlock.Foreground = Brushes.DarkRed;
+                return;
+            }
+
+            var account = new DestinationAccount(bank, holder, accountNumber, accountType);
+            destinationAccounts.Add(account);
+            qrAccountOptions.Add(new QrAccountOption("Cuenta de ahorro", account));
+            qrAccountOptions.Add(new QrAccountOption("WOMPI tarjetas crédito", account));
+
+            DestinationHolderTextBox.Text = string.Empty;
+            DestinationAccountNumberTextBox.Text = string.Empty;
+
+            QrStatusTextBlock.Text = $"Cuenta {accountType} de {bank} agregada y disponible para QR/WOMPI.";
+            QrStatusTextBlock.Foreground = Brushes.DarkGreen;
+        }
+
+        private void GenerateQrButton_Click(object sender, RoutedEventArgs e)
+        {
+            if (QrAccountComboBox.SelectedItem is not QrAccountOption accountOption)
+            {
+                QrStatusTextBlock.Text = "Selecciona una cuenta para generar el QR.";
+                QrStatusTextBlock.Foreground = Brushes.DarkRed;
+                return;
+            }
+
+            if (!decimal.TryParse(QrAmountTextBox.Text.Trim(), NumberStyles.Number, CultureInfo.InvariantCulture, out var amount) &&
+                !decimal.TryParse(QrAmountTextBox.Text.Trim(), NumberStyles.Number, CultureInfo.GetCultureInfo("es-CO"), out amount))
+            {
+                QrStatusTextBlock.Text = "Precio inválido. Usa solo números.";
+                QrStatusTextBlock.Foreground = Brushes.DarkRed;
+                return;
+            }
+
+            if (amount <= 0)
+            {
+                QrStatusTextBlock.Text = "El precio debe ser mayor a cero.";
+                QrStatusTextBlock.Foreground = Brushes.DarkRed;
+                return;
+            }
+
+            var cashier = QrCashierComboBox.SelectedItem?.ToString() ?? "Caja Principal";
+            var referenceCode = $"GGPAY-{DateTime.Now:yyyyMMdd-HHmmss}-{Guid.NewGuid().ToString()[..4].ToUpperInvariant()}";
+
+            var payload = $"""
+                {
+                  "reference": "{referenceCode}",
+                  "channel": "{accountOption.Channel}",
+                  "amount": {amount.ToString("0.##", CultureInfo.InvariantCulture)},
+                  "currency": "COP",
+                  "cashier": "{cashier}",
+                  "destination_bank": "{accountOption.Account.Bank}",
+                  "destination_account": "{accountOption.Account.AccountNumber}",
+                  "destination_type": "{accountOption.Account.AccountType}",
+                  "verification": "instant_bank_callback"
+                }
+                """;
+
+            QrPayloadTextBox.Text = payload;
+            QrStatusTextBlock.Text = $"QR generado con referencia {referenceCode}. Verificación inmediata configurada para {accountOption.Account.Bank}.";
+            QrStatusTextBlock.Foreground = Brushes.DarkGreen;
+
+            verifiedPayments.Insert(0, new VerifiedPaymentRecord(
+                referenceCode,
+                "Transferencia validada",
+                accountOption.Account.AccountNumber,
+                amount,
+                cashier,
+                accountOption.Account.Bank,
+                DateTime.Now));
+
+            ApplyVerifiedFilter();
+            GenerateReport();
+        }
+
+        private void ApplyVerifiedFilterButton_Click(object sender, RoutedEventArgs e)
+        {
+            ApplyVerifiedFilter();
+        }
+
+        private void ApplyVerifiedFilter()
+        {
+            var from = VerifiedFromDatePicker.SelectedDate?.Date;
+            var to = VerifiedToDatePicker.SelectedDate?.Date;
+            var cashier = VerifiedCashierComboBox.SelectedItem?.ToString();
+
+            var filtered = verifiedPayments.Where(record =>
+                (!from.HasValue || record.VerifiedAt.Date >= from.Value) &&
+                (!to.HasValue || record.VerifiedAt.Date <= to.Value) &&
+                (string.IsNullOrWhiteSpace(cashier) || cashier == "Todos" || record.Cashier == cashier))
+                .OrderByDescending(record => record.VerifiedAt)
+                .ToList();
+
+            VerifiedPaymentsDataGrid.ItemsSource = filtered;
+        }
+
+        private void GenerateReportButton_Click(object sender, RoutedEventArgs e)
+        {
+            GenerateReport();
+        }
+
+        private void GenerateReport()
+        {
+            var from = ReportFromDatePicker.SelectedDate?.Date;
+            var to = ReportToDatePicker.SelectedDate?.Date;
+            var cashier = ReportCashierComboBox.SelectedItem?.ToString();
+
+            var filtered = verifiedPayments.Where(record =>
+                (!from.HasValue || record.VerifiedAt.Date >= from.Value) &&
+                (!to.HasValue || record.VerifiedAt.Date <= to.Value) &&
+                (string.IsNullOrWhiteSpace(cashier) || cashier == "Todos" || record.Cashier == cashier))
+                .OrderByDescending(record => record.VerifiedAt)
+                .ToList();
+
+            var total = filtered.Sum(x => x.Amount);
+            var count = filtered.Count;
+            var average = count == 0 ? 0 : total / count;
+
+            ReportTotalAmountTextBlock.Text = total.ToString("C0", CultureInfo.GetCultureInfo("es-CO"));
+            ReportPaymentsCountTextBlock.Text = count.ToString();
+            ReportAverageTextBlock.Text = average.ToString("C0", CultureInfo.GetCultureInfo("es-CO"));
+            ReportPaymentsDataGrid.ItemsSource = filtered;
         }
 
         private static List<ServiceItem> BuildServiceItems(ApiCompany? company)
@@ -583,6 +780,38 @@ namespace Gglob
         public string Name { get; } = name;
         public string Description { get; } = description;
         public bool IsActive { get; } = isActive;
+    }
+
+    public class DestinationAccount(string bank, string holderName, string accountNumber, string accountType)
+    {
+        public string Bank { get; } = bank;
+        public string HolderName { get; } = holderName;
+        public string AccountNumber { get; } = accountNumber;
+        public string AccountType { get; } = accountType;
+
+        public override string ToString() => $"{Bank} - {AccountType} - {AccountNumber} ({HolderName})";
+    }
+
+    public class QrAccountOption(string channel, DestinationAccount account)
+    {
+        public string Channel { get; } = channel;
+        public DestinationAccount Account { get; } = account;
+        public string DisplayName => $"{channel} | {account.Bank} {account.AccountType} {account.AccountNumber}";
+    }
+
+    public class VerifiedPaymentRecord(string referenceCode, string senderName, string accountNumber, decimal amount, string cashier, string bank, DateTime verifiedAt)
+    {
+        public string ReferenceCode { get; } = referenceCode;
+        public string SenderName { get; } = senderName;
+        public string AccountNumber { get; } = accountNumber;
+        public decimal Amount { get; } = amount;
+        public string Cashier { get; } = cashier;
+        public string Bank { get; } = bank;
+        public DateTime VerifiedAt { get; } = verifiedAt;
+
+        public string AmountFormatted => Amount.ToString("C0", CultureInfo.GetCultureInfo("es-CO"));
+        public string VerifiedAtFormatted => VerifiedAt.ToString("HH:mm:ss");
+        public string VerifiedAtFullFormatted => VerifiedAt.ToString("yyyy-MM-dd HH:mm");
     }
 
     public record AccessValidation(bool IsValid, string Message);
