@@ -395,7 +395,6 @@ namespace Gglob
                 SetSelectedModule(moduleKey);
             }
 
-            SetSelectedModule(button.Tag?.ToString());
         }
 
         private void RenderActiveServicesCards(List<ServiceItem> activeServices)
