@@ -9,6 +9,7 @@ use Illuminate\Notifications\Notifiable;
 use Illuminate\Auth\Notifications\ResetPassword;
 use App\Notifications\CustomResetPasswordNotification;
 use Illuminate\Database\Eloquent\Relations\HasOne;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class User extends Authenticatable implements JWTSubject  // <- implementa la interfaz
 {
@@ -20,7 +21,9 @@ class User extends Authenticatable implements JWTSubject  // <- implementa la in
         'email',
         'phone',
         'password',
-        'gender'
+        'gender',
+        'company_id',
+        'business_role'
     ];
 
     protected $hidden = [
@@ -59,5 +62,11 @@ class User extends Authenticatable implements JWTSubject  // <- implementa la in
     {
         return $this->hasOne(PlatformCustomer::class);
     }
+
+    public function company(): BelongsTo
+    {
+        return $this->belongsTo(Company::class);
+    }
 }
+
 

@@ -51,6 +51,7 @@ Route::middleware('auth')->group(function () {
     Route::put('/roles/{roleId}/permissions', [PermissionController::class, 'update'])->name('permissions.update');
     
     Route::resource('companies', CompanyController::class)->except(['show']);
+    Route::post('companies/{company}/cashiers', [CompanyController::class, 'storeCashier'])->name('companies.cashiers.store');
 
     Route::get('admin/credit-applications', [AdminCreditApplicationController::class, 'index'])->name('admin.credit-applications.index');
     Route::get('admin/credit-applications/{creditApplication}', [AdminCreditApplicationController::class, 'show'])->name('admin.credit-applications.show');
