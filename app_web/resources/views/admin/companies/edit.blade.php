@@ -14,17 +14,12 @@
             <div class="col-md-6"><label class="form-label">Email negocio</label><input type="email" name="email" class="form-control" value="{{ old('email', $company->email) }}" required></div>
             <div class="col-md-6"><label class="form-label">Contacto negocio</label><input name="contact_name" class="form-control" value="{{ old('contact_name', $company->contact_name) }}" required></div>
 
-            <div class="col-md-3"><label class="form-label">Plan</label><input name="plan_name" class="form-control" value="{{ old('plan_name', $company->plan_name) }}" required></div>
+            <div class="col-md-4"><label class="form-label">Plan</label><select name="plan_id" class="form-select" required><option value="">Selecciona un plan</option>@foreach($plans as $plan)<option value="{{ $plan->id }}" @selected((int) old('plan_id', $company->plan_id) === $plan->id)>{{ $plan->name }}</option>@endforeach</select></div>
             <div class="col-md-3"><label class="form-label">Estado servicio</label><select name="service_status" class="form-select"><option value="active" @selected(old('service_status', $company->service_status)==='active')>Activo</option><option value="inactive" @selected(old('service_status', $company->service_status)==='inactive')>Inactivo</option><option value="suspended" @selected(old('service_status', $company->service_status)==='suspended')>Suspendido</option></select></div>
             <div class="col-md-3"><label class="form-label">Activo desde</label><input type="date" name="started_at" class="form-control" value="{{ old('started_at', optional($company->started_at)->format('Y-m-d')) }}"></div>
             <div class="col-md-3"><label class="form-label">Activo hasta</label><input type="date" name="active_until" class="form-control" value="{{ old('active_until', optional($company->active_until)->format('Y-m-d')) }}"></div>
 
-            <div class="col-md-2"><input type="hidden" name="gglob_cloud_enabled" value="0"><label><input type="checkbox" name="gglob_cloud_enabled" value="1" @checked(old('gglob_cloud_enabled', $company->gglob_cloud_enabled))> Gglob Nube</label></div>
-            <div class="col-md-2"><input type="hidden" name="gglob_pay_enabled" value="0"><label><input type="checkbox" name="gglob_pay_enabled" value="1" @checked(old('gglob_pay_enabled', $company->gglob_pay_enabled))> Gglob Pay</label></div>
-            <div class="col-md-2"><input type="hidden" name="gglob_pos_enabled" value="0"><label><input type="checkbox" name="gglob_pos_enabled" value="1" @checked(old('gglob_pos_enabled', $company->gglob_pos_enabled))> Gglob POS</label></div>
-            <div class="col-md-2"><input type="hidden" name="gglob_accounting_enabled" value="0"><label><input type="checkbox" name="gglob_accounting_enabled" value="1" @checked(old('gglob_accounting_enabled', $company->gglob_accounting_enabled))> Gglob Contable</label></div>
-            <div class="col-md-2"><label class="form-label">POS modo</label><select name="pos_mode" class="form-select"><option value="mono" @selected(old('pos_mode', $company->pos_mode)==='mono')>MonoCaja</option><option value="multi" @selected(old('pos_mode', $company->pos_mode)==='multi')>MultiCaja</option></select></div>
-            <div class="col-md-2"><label class="form-label"># Cajas</label><input type="number" min="1" max="50" name="pos_boxes" class="form-control" value="{{ old('pos_boxes', $company->pos_boxes) }}"></div>
+            
         </div>
 
         <div class="pt-4 d-flex gap-2">

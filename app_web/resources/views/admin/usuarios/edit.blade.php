@@ -47,41 +47,44 @@
                 <div class="card">
                     <div class="card-header">
                         <h4 class="card-title">Activación de servicios y estado del cliente</h4>
-                        <small class="text-muted">Usa este bloque para activar Nube, Pay, POS, Contable y controlar activo/inactivo/suspendido.</small>
+                        <small class="text-muted">Si el usuario pertenece a una empresa, hereda automáticamente el plan y servicios de esa empresa.</small>
                     </div>
                     <div class="card-body">
+                        @if($user->company)
+                        <div class="alert alert-info">Este usuario pertenece a <strong>{{ $user->company->name }}</strong> y hereda el plan <strong>{{ $user->company->plan_name }}</strong>. Gestiona el plan desde Empresas.</div>
+                        @endif
                         <form method="POST" action="{{ route('users.services.update', $user) }}" class="row g-2">
                             @csrf
                             @method('PUT')
-                            <div class="col-md-3"><label class="form-label">Plan</label><input class="form-control" name="plan_name" value="{{ old('plan_name', $platformCustomer->plan_name ?? 'Sin plan') }}" required></div>
+                            <div class="col-md-3"><label class="form-label">Plan</label><input class="form-control" name="plan_name" @disabled($user->company) value="{{ old('plan_name', $platformCustomer->plan_name ?? 'Sin plan') }}" required></div>
                             <div class="col-md-3">
                                 <label class="form-label">Estado del servicio</label>
-                                <select class="form-select" name="subscription_status">
+                                <select class="form-select" name="subscription_status" @disabled($user->company)>
                                     @foreach(['active'=>'Activo','inactive'=>'Inactivo','suspended'=>'Suspendido'] as $value=>$label)
                                         <option value="{{ $value }}" @selected(old('subscription_status', $platformCustomer->subscription_status ?? 'inactive')===$value)>{{ $label }}</option>
                                     @endforeach
                                 </select>
                             </div>
-                            <div class="col-md-3"><label class="form-label">Activo desde</label><input type="date" class="form-control" name="started_at" value="{{ old('started_at', optional($platformCustomer?->started_at)->format('Y-m-d')) }}"></div>
-                            <div class="col-md-3"><label class="form-label">Activo hasta</label><input type="date" class="form-control" name="active_until" value="{{ old('active_until', optional($platformCustomer?->active_until)->format('Y-m-d')) }}"></div>
+                            <div class="col-md-3"><label class="form-label">Activo desde</label><input type="date" class="form-control" name="started_at" @disabled($user->company) value="{{ old('started_at', optional($platformCustomer?->started_at)->format('Y-m-d')) }}"></div>
+                            <div class="col-md-3"><label class="form-label">Activo hasta</label><input type="date" class="form-control" name="active_until" @disabled($user->company) value="{{ old('active_until', optional($platformCustomer?->active_until)->format('Y-m-d')) }}"></div>
 
-                            <div class="col-md-2"><input type="hidden" name="gglob_cloud_enabled" value="0"><label><input type="checkbox" name="gglob_cloud_enabled" value="1" @checked(old('gglob_cloud_enabled', $platformCustomer->gglob_cloud_enabled ?? false))> Activar Gglob Nube</label></div>
-                            <div class="col-md-2"><input type="hidden" name="gglob_pay_enabled" value="0"><label><input type="checkbox" name="gglob_pay_enabled" value="1" @checked(old('gglob_pay_enabled', $platformCustomer->gglob_pay_enabled ?? false))> Activar Gglob Pay</label></div>
-                            <div class="col-md-2"><input type="hidden" name="gglob_pos_enabled" value="0"><label><input type="checkbox" name="gglob_pos_enabled" value="1" @checked(old('gglob_pos_enabled', $platformCustomer->gglob_pos_enabled ?? false))> Activar Gglob POS</label></div>
-                            <div class="col-md-2"><input type="hidden" name="gglob_accounting_enabled" value="0"><label><input type="checkbox" name="gglob_accounting_enabled" value="1" @checked(old('gglob_accounting_enabled', $platformCustomer->gglob_accounting_enabled ?? false))> Activar Gglob Contable</label></div>
-                            <div class="col-md-2"><input type="hidden" name="is_paid" value="0"><label><input type="checkbox" name="is_paid" value="1" @checked(old('is_paid', $platformCustomer->is_paid ?? false))> Cliente pago</label></div>
+                            <div class="col-md-2"><input type="hidden" name="gglob_cloud_enabled" @disabled($user->company) value="0"><label><input type="checkbox" name="gglob_cloud_enabled" @disabled($user->company) value="1" @checked(old('gglob_cloud_enabled', $platformCustomer->gglob_cloud_enabled ?? false))> Activar Gglob Nube</label></div>
+                            <div class="col-md-2"><input type="hidden" name="gglob_pay_enabled" @disabled($user->company) value="0"><label><input type="checkbox" name="gglob_pay_enabled" @disabled($user->company) value="1" @checked(old('gglob_pay_enabled', $platformCustomer->gglob_pay_enabled ?? false))> Activar Gglob Pay</label></div>
+                            <div class="col-md-2"><input type="hidden" name="gglob_pos_enabled" @disabled($user->company) value="0"><label><input type="checkbox" name="gglob_pos_enabled" @disabled($user->company) value="1" @checked(old('gglob_pos_enabled', $platformCustomer->gglob_pos_enabled ?? false))> Activar Gglob POS</label></div>
+                            <div class="col-md-2"><input type="hidden" name="gglob_accounting_enabled" @disabled($user->company) value="0"><label><input type="checkbox" name="gglob_accounting_enabled" @disabled($user->company) value="1" @checked(old('gglob_accounting_enabled', $platformCustomer->gglob_accounting_enabled ?? false))> Activar Gglob Contable</label></div>
+                            <div class="col-md-2"><input type="hidden" name="is_paid" @disabled($user->company) value="0"><label><input type="checkbox" name="is_paid" @disabled($user->company) value="1" @checked(old('is_paid', $platformCustomer->is_paid ?? false))> Cliente pago</label></div>
 
                             <div class="col-md-2">
                                 <label class="form-label">POS</label>
-                                <select class="form-select" name="pos_mode">
+                                <select class="form-select" name="pos_mode" @disabled($user->company)>
                                     <option value="mono" @selected(old('pos_mode', $platformCustomer->pos_mode ?? 'mono')==='mono')>MonoCaja</option>
                                     <option value="multi" @selected(old('pos_mode', $platformCustomer->pos_mode ?? 'mono')==='multi')>MultiCaja</option>
                                 </select>
                             </div>
-                            <div class="col-md-2"><label class="form-label">Cantidad de cajas</label><input type="number" class="form-control" min="1" max="30" name="pos_boxes" value="{{ old('pos_boxes', $platformCustomer->pos_boxes ?? 1) }}"></div>
+                            <div class="col-md-2"><label class="form-label">Cantidad de cajas</label><input type="number" class="form-control" min="1" max="30" name="pos_boxes" @disabled($user->company) value="{{ old('pos_boxes', $platformCustomer->pos_boxes ?? 1) }}"></div>
 
                             <div class="col-12 mt-2">
-                                <button class="btn btn-outline-primary">Guardar activación de servicios</button>
+                                <button class="btn btn-outline-primary" @disabled($user->company)>Guardar activación de servicios</button>
                             </div>
                         </form>
                     </div>

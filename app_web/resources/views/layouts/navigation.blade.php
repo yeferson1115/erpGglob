@@ -69,9 +69,13 @@
                           <div data-i18n="Empresas">Empresas</div>
                         </a>
                       </li>
-                    
-                      
 
+                      <li class="menu-item">
+                        <a href="{{ route('plans.index') }}" class="menu-link">
+                          <i class="menu-icon fa-solid fa-list-check"></i>
+                          <div data-i18n="Planes">Planes</div>
+                        </a>
+                      </li>
                       <li class="menu-item">
                         <a href="{{ route('admin.platform.index') }}" class="menu-link">
                           <i class="menu-icon fa-solid fa-chart-pie"></i>

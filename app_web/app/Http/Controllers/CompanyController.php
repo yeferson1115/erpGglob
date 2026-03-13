@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Company;
+use App\Models\Plan;
 use App\Models\User;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -16,7 +17,7 @@ class CompanyController extends Controller
     {
         $status = $request->get('service_status');
 
-        $companies = Company::with(['owners', 'cashiers'])
+        $companies = Company::with(['owners', 'cashiers', 'plan'])
             ->when(in_array($status, ['active', 'inactive', 'suspended'], true), function ($query) use ($status) {
                 $query->where('service_status', $status);
             })
@@ -29,7 +30,9 @@ class CompanyController extends Controller
 
     public function create(): View
     {
-        return view('admin.companies.create');
+        $plans = Plan::orderBy('name')->get();
+
+        return view('admin.companies.create', compact('plans'));
     }
 
     public function store(Request $request): RedirectResponse
@@ -41,16 +44,10 @@ class CompanyController extends Controller
             'email' => ['required', 'email', 'max:255'],
             'contact_name' => ['required', 'string', 'max:255'],
 
-            'plan_name' => ['required', 'string', 'max:80'],
+            'plan_id' => ['required', 'exists:plans,id'],
             'service_status' => ['required', 'in:active,inactive,suspended'],
             'started_at' => ['nullable', 'date'],
             'active_until' => ['nullable', 'date'],
-            'gglob_cloud_enabled' => ['nullable', 'boolean'],
-            'gglob_pay_enabled' => ['nullable', 'boolean'],
-            'gglob_pos_enabled' => ['nullable', 'boolean'],
-            'pos_mode' => ['required', 'in:mono,multi'],
-            'pos_boxes' => ['required', 'integer', 'min:1', 'max:50'],
-            'gglob_accounting_enabled' => ['nullable', 'boolean'],
 
             'owner_name' => ['required', 'string', 'max:255'],
             'owner_last_name' => ['nullable', 'string', 'max:255'],
@@ -59,22 +56,18 @@ class CompanyController extends Controller
             'owner_password' => ['required', 'string', 'min:8', 'confirmed'],
         ]);
 
+        $plan = Plan::findOrFail($data['plan_id']);
+
         $company = Company::create([
             'name' => $data['name'],
             'nit' => $data['nit'],
             'address' => $data['address'],
             'email' => $data['email'],
             'contact_name' => $data['contact_name'],
-            'plan_name' => $data['plan_name'],
+            ...$this->planDataForCompany($plan),
             'service_status' => $data['service_status'],
             'started_at' => $data['started_at'] ?? null,
             'active_until' => $data['active_until'] ?? null,
-            'gglob_cloud_enabled' => (bool)($data['gglob_cloud_enabled'] ?? false),
-            'gglob_pay_enabled' => (bool)($data['gglob_pay_enabled'] ?? false),
-            'gglob_pos_enabled' => (bool)($data['gglob_pos_enabled'] ?? false),
-            'pos_mode' => $data['pos_mode'],
-            'pos_boxes' => $data['pos_boxes'],
-            'gglob_accounting_enabled' => (bool)($data['gglob_accounting_enabled'] ?? false),
         ]);
 
         $owner = User::create([
@@ -98,8 +91,9 @@ class CompanyController extends Controller
     {
         $company->load(['owners', 'cashiers', 'users']);
         $availableUsers = User::whereNull('company_id')->orderBy('name')->get();
+        $plans = Plan::orderBy('name')->get();
 
-        return view('admin.companies.edit', compact('company', 'availableUsers'));
+        return view('admin.companies.edit', compact('company', 'availableUsers', 'plans'));
     }
 
     public function update(Request $request, Company $company): RedirectResponse
@@ -110,24 +104,24 @@ class CompanyController extends Controller
             'address' => ['required', 'string', 'max:255'],
             'email' => ['required', 'email', 'max:255'],
             'contact_name' => ['required', 'string', 'max:255'],
-            'plan_name' => ['required', 'string', 'max:80'],
+            'plan_id' => ['required', 'exists:plans,id'],
             'service_status' => ['required', 'in:active,inactive,suspended'],
             'started_at' => ['nullable', 'date'],
             'active_until' => ['nullable', 'date'],
-            'gglob_cloud_enabled' => ['nullable', 'boolean'],
-            'gglob_pay_enabled' => ['nullable', 'boolean'],
-            'gglob_pos_enabled' => ['nullable', 'boolean'],
-            'pos_mode' => ['required', 'in:mono,multi'],
-            'pos_boxes' => ['required', 'integer', 'min:1', 'max:50'],
-            'gglob_accounting_enabled' => ['nullable', 'boolean'],
         ]);
 
+        $plan = Plan::findOrFail($data['plan_id']);
+
         $company->update([
-            ...$data,
-            'gglob_cloud_enabled' => (bool)($data['gglob_cloud_enabled'] ?? false),
-            'gglob_pay_enabled' => (bool)($data['gglob_pay_enabled'] ?? false),
-            'gglob_pos_enabled' => (bool)($data['gglob_pos_enabled'] ?? false),
-            'gglob_accounting_enabled' => (bool)($data['gglob_accounting_enabled'] ?? false),
+            'name' => $data['name'],
+            'nit' => $data['nit'],
+            'address' => $data['address'],
+            'email' => $data['email'],
+            'contact_name' => $data['contact_name'],
+            ...$this->planDataForCompany($plan),
+            'service_status' => $data['service_status'],
+            'started_at' => $data['started_at'] ?? null,
+            'active_until' => $data['active_until'] ?? null,
         ]);
 
         return redirect()->route('companies.index')->with('success', 'Negocio actualizado correctamente.');
@@ -215,5 +209,19 @@ class CompanyController extends Controller
         $company->delete();
 
         return redirect()->route('companies.index')->with('success', 'Empresa eliminada correctamente.');
+    }
+
+    private function planDataForCompany(Plan $plan): array
+    {
+        return [
+            'plan_id' => $plan->id,
+            'plan_name' => $plan->name,
+            'gglob_cloud_enabled' => $plan->gglob_cloud_enabled,
+            'gglob_pay_enabled' => $plan->gglob_pay_enabled,
+            'gglob_pos_enabled' => $plan->gglob_pos_enabled,
+            'pos_mode' => $plan->pos_mode,
+            'pos_boxes' => $plan->pos_boxes,
+            'gglob_accounting_enabled' => $plan->gglob_accounting_enabled,
+        ];
     }
 }
