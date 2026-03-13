@@ -385,6 +385,8 @@ namespace Gglob
                 button.Content = panel;
                 ServicesMenuPanel.Children.Add(button);
             }
+
+            SetSelectedModule(button.Tag?.ToString());
         }
 
         private void RenderActiveServicesCards(List<ServiceItem> activeServices)
