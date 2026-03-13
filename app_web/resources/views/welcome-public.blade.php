@@ -3,7 +3,7 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>Gglob</title>
+    <title>Gglob CRM</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
     <style>
@@ -66,27 +66,8 @@
             background: linear-gradient(120deg, var(--brand-orange), var(--brand-purple));
         }
 
-        .btn-brand {
-            color: #fff;
-            border: 0;
-            background: linear-gradient(120deg, var(--brand-orange), var(--brand-pink), var(--brand-purple));
-            box-shadow: 0 10px 24px rgba(140, 61, 255, 0.24);
-            transition: transform .25s ease, box-shadow .25s ease, filter .25s ease;
-        }
-
-        .btn-brand:hover {
-            color: #fff;
-            transform: translateY(-2px) scale(1.01);
-            box-shadow: 0 16px 34px rgba(140, 61, 255, 0.3);
-            filter: brightness(1.06);
-        }
-
         .btn-motion {
             animation: floatingPulse 3.2s ease-in-out infinite;
-        }
-
-        .btn-motion:nth-child(2) {
-            animation-delay: .35s;
         }
 
         @keyframes floatingPulse {
@@ -96,23 +77,6 @@
             50% {
                 transform: translateY(-3px);
             }
-        }
-
-        .btn-outline-brand {
-            border: 1px solid rgba(255, 255, 255, 0.6);
-            color: #fff;
-        }
-
-        .btn-outline-brand:hover {
-            color: var(--brand-dark);
-            background: #fff;
-        }
-
-        .contact-card {
-            border-radius: 18px;
-            border: 1px solid rgba(17, 24, 39, 0.08);
-            background: #fff;
-            height: 100%;
         }
 
         .social-link {
@@ -138,15 +102,15 @@
         <div class="container py-3 d-flex align-items-center justify-content-between">
             <div class="d-flex align-items-center gap-3">
                 <div class="logo-wrap">
-                    <img src="{{ asset('imagenes/logo.png') }}" alt="Logo Gglob Store" class="img-fluid rounded-3">
+                    <img src="{{ asset('imagenes/logo.png') }}" alt="Logo Gglob CRM" class="img-fluid rounded-3">
                 </div>
                 <div>
-                    <h1 class="h4 mb-0 fw-bold">Gglob Store</h1>
-                    <small class="text-muted">Tienda virtual al alcance de todos</small>
+                    <h1 class="h4 mb-0 fw-bold">Gglob CRM</h1>
+                    <small class="text-muted">Gestión comercial, clientes y cartera en un solo lugar</small>
                 </div>
             </div>
             <div class="d-flex gap-2">
-                <a href="{{ route('business.register') }}" class="btn btn-outline-dark rounded-pill px-4">Regístrate</a>                
+                <a href="{{ route('business.register') }}" class="btn btn-outline-dark rounded-pill px-4">Regístrate</a>
             </div>
         </div>
     </header>
@@ -156,21 +120,21 @@
             <div class="hero-content p-4 p-lg-5 text-white">
                 <div class="row g-4 align-items-center">
                     <div class="col-lg-7">
-                        <p class="text-uppercase fw-semibold mb-2" style="letter-spacing: .15rem;">Sobre nosotros</p>
-                        <h2 class="display-5 fw-bold mb-3">Impulsamos tus compras con estilo, cercanía y confianza.</h2>
-                        <p class="lead mb-4">En Gglob Store reunimos productos de calidad y alternativas de financiación fáciles para que compres desde casa de forma segura, rápida y profesional.</p>
+                        <p class="text-uppercase fw-semibold mb-2" style="letter-spacing: .15rem;">Solución CRM</p>
+                        <h2 class="display-5 fw-bold mb-3">Haz crecer tu negocio con procesos de venta organizados y medibles.</h2>
+                        <p class="lead mb-4">En Gglob CRM centralizas prospectos, clientes, oportunidades, pagos y seguimiento postventa para mejorar la productividad de tu equipo y cerrar más negocios.</p>
                         <div class="d-flex flex-wrap gap-3">
-                            <a href="{{ route('business.register') }}" class="btn btn-light btn-lg rounded-pill px-4 btn-motion">Regístrate</a>
+                            <a href="{{ route('business.register') }}" class="btn btn-light btn-lg rounded-pill px-4 btn-motion">Crear cuenta</a>
                         </div>
                     </div>
                     <div class="col-lg-5">
                         <div class="glass-card p-4 text-dark">
-                            <h3 class="h5 fw-bold mb-3">¿Por qué elegirnos?</h3>
+                            <h3 class="h5 fw-bold mb-3">¿Qué puedes gestionar en Gglob CRM?</h3>
                             <ul class="list-unstyled mb-0">
-                                <li class="mb-2"><span class="feature-dot"></span>Atención personalizada en todo el proceso.</li>
-                                <li class="mb-2"><span class="feature-dot"></span>Créditos ágiles con seguimiento en línea.</li>
-                                <li class="mb-2"><span class="feature-dot"></span>Pagos seguros y transparentes.</li>
-                                <li><span class="feature-dot"></span>Compromiso con la satisfacción de cada cliente.</li>
+                                <li class="mb-2"><span class="feature-dot"></span>Pipeline comercial y seguimiento de oportunidades.</li>
+                                <li class="mb-2"><span class="feature-dot"></span>Control de cartera, créditos y pagos en línea.</li>
+                                <li class="mb-2"><span class="feature-dot"></span>Reportes de ventas y desempeño de asesores.</li>
+                                <li><span class="feature-dot"></span>Automatización de tareas y comunicación con clientes.</li>
                             </ul>
                         </div>
                     </div>
@@ -183,24 +147,25 @@
         <div class="container">
             <div class="row g-4">
                 <div class="col-md-4">
-                    <h3 class="h5 fw-bold mb-3">Gglob Store</h3>
-                    <p class="mb-0 text-white-50">Tienda virtual con atención cálida, soluciones de crédito y envíos a todo el país.</p>
+                    <h3 class="h5 fw-bold mb-3">Gglob CRM</h3>
+                    <p class="mb-0 text-white-50">Plataforma para gestionar clientes, ventas y recaudo con trazabilidad en tiempo real.</p>
                 </div>
                 <div class="col-md-4">
                     <h4 class="h6 fw-bold text-uppercase mb-3">Contacto</h4>
-                    <p class="mb-1"><i class="bi bi-geo-alt-fill me-2"></i>Carrera 59 bb # 40c - 50 Bello - Antioquia</p>
-                    <p class="mb-0"><i class="bi bi-phone-fill me-2"></i>Celular / WhatsApp: +57 3042933031</p>
+                    <p class="mb-1"><i class="bi bi-geo-alt-fill me-2"></i>Medellín, Antioquia · Colombia</p>
+                    <p class="mb-1"><i class="bi bi-envelope-fill me-2"></i>contacto@gglobcrm.com</p>
+                    <p class="mb-0"><i class="bi bi-phone-fill me-2"></i>WhatsApp comercial: +57 304 293 3031</p>
                 </div>
                 <div class="col-md-4">
                     <h4 class="h6 fw-bold text-uppercase mb-3">Síguenos</h4>
                     <div class="d-flex gap-2 mb-2">
-                        <a href="#" class="social-link" aria-label="Facebook"><i class="bi bi-facebook"></i></a>
-                        <a href="#" class="social-link" aria-label="Instagram"><i class="bi bi-instagram"></i></a>
-                        <a href="#" class="social-link" aria-label="TikTok"><i class="bi bi-tiktok"></i></a>
-                        <a href="#" class="social-link" aria-label="WhatsApp"><i class="bi bi-whatsapp"></i></a>
+                        <a href="https://www.linkedin.com" target="_blank" rel="noopener noreferrer" class="social-link" aria-label="LinkedIn"><i class="bi bi-linkedin"></i></a>
+                        <a href="https://www.instagram.com" target="_blank" rel="noopener noreferrer" class="social-link" aria-label="Instagram"><i class="bi bi-instagram"></i></a>
+                        <a href="https://www.facebook.com" target="_blank" rel="noopener noreferrer" class="social-link" aria-label="Facebook"><i class="bi bi-facebook"></i></a>
+                        <a href="https://wa.me/573042933031" target="_blank" rel="noopener noreferrer" class="social-link" aria-label="WhatsApp"><i class="bi bi-whatsapp"></i></a>
                     </div>
-                    <small class="text-white-50 d-block">© {{ now()->year }} Gglob Store. Todos los derechos reservados.</small>
-                    <small class="text-white-50">Powered by <a href="https://yefersonsossa.com/" target="_blank" rel="noopener noreferrer" class="text-white">yefersonsossa.com</a></small>
+                    <small class="text-white-50 d-block">© {{ now()->year }} Gglob CRM. Todos los derechos reservados.</small>
+                    <small class="text-white-50">Desarrollado para la transformación digital de tu negocio.</small>
                 </div>
             </div>
         </div>
