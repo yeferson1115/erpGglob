@@ -8,6 +8,7 @@ use Tymon\JWTAuth\Contracts\JWTSubject;  // <- importa esta interfaz
 use Illuminate\Notifications\Notifiable;
 use Illuminate\Auth\Notifications\ResetPassword;
 use App\Notifications\CustomResetPasswordNotification;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 
 class User extends Authenticatable implements JWTSubject  // <- implementa la interfaz
 {
@@ -53,4 +54,10 @@ class User extends Authenticatable implements JWTSubject  // <- implementa la in
     {
         $this->notify(new CustomResetPasswordNotification($token));
     }
+
+    public function platformCustomer(): HasOne
+    {
+        return $this->hasOne(PlatformCustomer::class);
+    }
 }
+
