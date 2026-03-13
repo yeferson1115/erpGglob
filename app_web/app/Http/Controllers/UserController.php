@@ -21,7 +21,7 @@ class UserController extends Controller
     {
         $statusFilter = $request->get('service_status');
 
-        $usersQuery = User::with('roles')->with('permissions')->orderBy('created_at', 'desc');
+        $usersQuery = User::with('roles')->with('permissions')->with('company')->orderBy('created_at', 'desc');
 
         if (Schema::hasTable('platform_customers')) {
             $usersQuery->with('platformCustomer');

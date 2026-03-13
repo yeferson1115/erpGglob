@@ -52,6 +52,9 @@ Route::middleware('auth')->group(function () {
     
     Route::resource('companies', CompanyController::class)->except(['show']);
     Route::post('companies/{company}/cashiers', [CompanyController::class, 'storeCashier'])->name('companies.cashiers.store');
+    Route::delete('companies/{company}/users/{user}', [CompanyController::class, 'unassignBusinessUser'])->name('companies.users.unassign');
+    Route::put('companies/{company}/users/{user}/role', [CompanyController::class, 'updateBusinessUserRole'])->name('companies.users.role.update');
+    Route::post('companies/{company}/assign-user', [CompanyController::class, 'assignExistingUser'])->name('companies.users.assign');
 
     Route::get('admin/credit-applications', [AdminCreditApplicationController::class, 'index'])->name('admin.credit-applications.index');
     Route::get('admin/credit-applications/{creditApplication}', [AdminCreditApplicationController::class, 'show'])->name('admin.credit-applications.show');

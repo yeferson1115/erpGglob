@@ -46,6 +46,8 @@
                             <th>Estado servicio</th>
                             <th>Servicios activos</th>
                             <th>Vigencia</th>
+                            <th>Negocio</th>
+                            <th>Rol negocio</th>
                             <th>Email</th>
                             <th>Teléfono</th>
                         </tr>
@@ -85,6 +87,8 @@
                                 @endif
                             </td>
                             <td>{{ optional($customer?->active_until)->format('d/m/Y') ?? '-' }}</td>
+                            <td>{{ $user->company?->name ?? 'Sin negocio' }}</td>
+                            <td>{{ $user->business_role ? strtoupper($user->business_role) : '-' }}</td>
                             <td>{{ $user->email }}</td>
                             <td>{{ $user->phone }}</td>
                         </tr>

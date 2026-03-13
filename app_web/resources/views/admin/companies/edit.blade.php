@@ -37,17 +37,30 @@
 <div class="row g-3">
     <div class="col-md-6">
         <div class="card">
-            <div class="card-header">Dueño del negocio</div>
-            <div class="card-body small">
-                @forelse($company->owners as $owner)
-                    <div><strong>{{ $owner->name }} {{ $owner->last_name }}</strong></div>
-                    <div>{{ $owner->email }} | {{ $owner->phone }}</div>
-                @empty
-                    <div>No hay dueño asociado.</div>
-                @endforelse
+            <div class="card-header">Asignar usuario existente al negocio</div>
+            <div class="card-body">
+                <form method="POST" action="{{ route('companies.users.assign', $company) }}" class="row g-2">
+                    @csrf
+                    <div class="col-md-6">
+                        <select name="user_id" class="form-select" required>
+                            <option value="">Usuario sin negocio</option>
+                            @foreach($availableUsers as $availableUser)
+                                <option value="{{ $availableUser->id }}">{{ $availableUser->name }} {{ $availableUser->last_name }} ({{ $availableUser->email }})</option>
+                            @endforeach
+                        </select>
+                    </div>
+                    <div class="col-md-3">
+                        <select name="business_role" class="form-select" required>
+                            <option value="owner">Dueño</option>
+                            <option value="cashier">Cajero</option>
+                        </select>
+                    </div>
+                    <div class="col-md-3"><button class="btn btn-outline-primary w-100">Asignar</button></div>
+                </form>
             </div>
         </div>
     </div>
+
     <div class="col-md-6">
         <div class="card">
             <div class="card-header">Crear usuario cajero (permisos limitados)</div>
@@ -68,15 +81,40 @@
 
     <div class="col-12">
         <div class="card">
-            <div class="card-header">Cajeros del negocio</div>
+            <div class="card-header">Usuarios del negocio (cómo identificar dueño/cajero)</div>
             <div class="card-body table-responsive">
                 <table class="table table-sm mb-0">
-                    <thead><tr><th>Nombre</th><th>Email</th><th>Teléfono</th></tr></thead>
+                    <thead><tr><th>Nombre</th><th>Email</th><th>Teléfono</th><th>Rol negocio</th><th>Acciones</th></tr></thead>
                     <tbody>
-                    @forelse($company->cashiers as $cashier)
-                        <tr><td>{{ $cashier->name }} {{ $cashier->last_name }}</td><td>{{ $cashier->email }}</td><td>{{ $cashier->phone }}</td></tr>
+                    @forelse($company->users as $businessUser)
+                        <tr>
+                            <td>{{ $businessUser->name }} {{ $businessUser->last_name }}</td>
+                            <td>{{ $businessUser->email }}</td>
+                            <td>{{ $businessUser->phone }}</td>
+                            <td>
+                                <span class="badge bg-{{ $businessUser->business_role === 'owner' ? 'primary' : 'secondary' }}">
+                                    {{ strtoupper($businessUser->business_role ?? 'N/A') }}
+                                </span>
+                            </td>
+                            <td class="d-flex gap-2">
+                                <form method="POST" action="{{ route('companies.users.role.update', [$company, $businessUser]) }}" class="d-flex gap-1">
+                                    @csrf
+                                    @method('PUT')
+                                    <select name="business_role" class="form-select form-select-sm">
+                                        <option value="owner" @selected($businessUser->business_role === 'owner')>Dueño</option>
+                                        <option value="cashier" @selected($businessUser->business_role === 'cashier')>Cajero</option>
+                                    </select>
+                                    <button class="btn btn-sm btn-outline-primary">Guardar</button>
+                                </form>
+                                <form method="POST" action="{{ route('companies.users.unassign', [$company, $businessUser]) }}" onsubmit="return confirm('¿Desasignar usuario del negocio?')">
+                                    @csrf
+                                    @method('DELETE')
+                                    <button class="btn btn-sm btn-outline-danger">Desasignar</button>
+                                </form>
+                            </td>
+                        </tr>
                     @empty
-                        <tr><td colspan="3">No hay cajeros creados.</td></tr>
+                        <tr><td colspan="5">No hay usuarios asociados.</td></tr>
                     @endforelse
                     </tbody>
                 </table>

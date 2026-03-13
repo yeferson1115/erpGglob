@@ -91,14 +91,15 @@ class CompanyController extends Controller
             $owner->assignRole('admin');
         }
 
-        return redirect()->route('companies.edit', $company)->with('success', 'Negocio creado con dueño. Ahora puedes crear cajeros.');
+        return redirect()->route('companies.edit', $company)->with('success', 'Negocio creado con dueño. Ahora puedes crear/asignar cajeros.');
     }
 
     public function edit(Company $company): View
     {
-        $company->load(['owners', 'cashiers']);
+        $company->load(['owners', 'cashiers', 'users']);
+        $availableUsers = User::whereNull('company_id')->orderBy('name')->get();
 
-        return view('admin.companies.edit', compact('company'));
+        return view('admin.companies.edit', compact('company', 'availableUsers'));
     }
 
     public function update(Request $request, Company $company): RedirectResponse
@@ -157,6 +158,56 @@ class CompanyController extends Controller
         }
 
         return back()->with('success', 'Cajero creado con permisos limitados.');
+    }
+
+    public function assignExistingUser(Request $request, Company $company): RedirectResponse
+    {
+        $data = $request->validate([
+            'user_id' => ['required', 'exists:users,id'],
+            'business_role' => ['required', 'in:owner,cashier'],
+        ]);
+
+        $user = User::findOrFail($data['user_id']);
+
+        if ($data['business_role'] === 'owner') {
+            User::where('company_id', $company->id)->where('business_role', 'owner')->update(['business_role' => 'cashier']);
+        }
+
+        $user->update([
+            'company_id' => $company->id,
+            'business_role' => $data['business_role'],
+        ]);
+
+        return back()->with('success', 'Usuario asignado al negocio correctamente.');
+    }
+
+    public function updateBusinessUserRole(Request $request, Company $company, User $user): RedirectResponse
+    {
+        abort_unless($user->company_id === $company->id, 404);
+
+        $data = $request->validate([
+            'business_role' => ['required', 'in:owner,cashier'],
+        ]);
+
+        if ($data['business_role'] === 'owner') {
+            User::where('company_id', $company->id)->where('business_role', 'owner')->where('id', '!=', $user->id)->update(['business_role' => 'cashier']);
+        }
+
+        $user->update(['business_role' => $data['business_role']]);
+
+        return back()->with('success', 'Rol del usuario actualizado dentro del negocio.');
+    }
+
+    public function unassignBusinessUser(Company $company, User $user): RedirectResponse
+    {
+        abort_unless($user->company_id === $company->id, 404);
+
+        $user->update([
+            'company_id' => null,
+            'business_role' => null,
+        ]);
+
+        return back()->with('success', 'Usuario desasignado del negocio.');
     }
 
     public function destroy(Company $company): RedirectResponse
