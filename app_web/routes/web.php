@@ -6,6 +6,7 @@ use App\Http\Controllers\Auth\LoginController;
 use App\Http\Controllers\UserController;
 use App\Http\Controllers\PermissionController;
 use App\Http\Controllers\Auth\PasswordResetLinkController;
+use App\Http\Controllers\Auth\BusinessRegistrationController;
 use App\Http\Controllers\Auth\NewPasswordController;
 use App\Http\Controllers\CreditApplicationController;
 use App\Http\Controllers\CompanyController;
@@ -19,6 +20,11 @@ Route::post('/login', [LoginController::class, 'login']);
 Route::post('/logout', [LoginController::class, 'logout'])->name('logout');
 
 Route::get('/', [PublicCreditPortalController::class, 'home'])->name('home');
+
+Route::middleware('guest')->group(function () {
+    Route::get('/registro-negocio', [BusinessRegistrationController::class, 'create'])->name('business.register');
+    Route::post('/registro-negocio', [BusinessRegistrationController::class, 'store'])->name('business.register.store');
+});
 
 Route::middleware('auth')->group(function () {  
   Route::get('/dashboard', [DashboardController::class, 'index'])->name('index');
