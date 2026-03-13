@@ -42,7 +42,7 @@ class AuthController extends Controller
 
         // Obtener usuario manualmente:
         $user = auth('api')->user();
-        $user->load('roles', 'permissions');
+        $user->load('roles', 'permissions', 'company');
         // Alternativamente, si $user es null, búscalo así:
         if (!$user) {
             $user = User::where('email', $credentials['email'])->first();
@@ -67,7 +67,15 @@ class AuthController extends Controller
 
     public function me()
     {
-        return response()->json(auth()->user());
+        $user = auth('api')->user();
+
+        if (!$user) {
+            return response()->json(['error' => 'Unauthorized'], 401);
+        }
+
+        $user->load('roles', 'permissions', 'company');
+
+        return response()->json($user);
     }
 
     public function refresh()
@@ -75,6 +83,10 @@ class AuthController extends Controller
         try {
             $newToken = auth()->refresh(); // Genera un nuevo token
             $user = auth()->user();
+            if (!$user) {
+                return response()->json(['error' => 'Unauthorized'], 401);
+            }
+            $user->load('roles', 'permissions', 'company');
             $permissions = $user->getAllPermissions();
 
             return response()->json([
