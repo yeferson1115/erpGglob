@@ -10,6 +10,7 @@ use Illuminate\Auth\Notifications\ResetPassword;
 use App\Notifications\CustomResetPasswordNotification;
 use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 
 class User extends Authenticatable implements JWTSubject  // <- implementa la interfaz
 {
@@ -66,6 +67,13 @@ class User extends Authenticatable implements JWTSubject  // <- implementa la in
     public function company(): BelongsTo
     {
         return $this->belongsTo(Company::class);
+    }
+
+    public function cashRegisters(): BelongsToMany
+    {
+        return $this->belongsToMany(CashRegister::class, 'cash_register_user')
+            ->withPivot(['assigned_by', 'assigned_at', 'is_primary'])
+            ->withTimestamps();
     }
 }
 

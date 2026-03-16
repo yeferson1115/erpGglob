@@ -26,6 +26,8 @@ namespace Gglob
         private readonly ObservableCollection<DestinationAccount> destinationAccounts = [];
         private readonly ObservableCollection<QrAccountOption> qrAccountOptions = [];
         private readonly ObservableCollection<VerifiedPaymentRecord> verifiedPayments = [];
+        private readonly ObservableCollection<CashRegisterOption> cashRegisterOptions = [];
+        private ApiUser? currentUser;
         private bool isGglobPayEnabled;
 
         public MainWindow()
@@ -48,10 +50,10 @@ namespace Gglob
             };
             DestinationBankComboBox.SelectedIndex = 0;
 
-            QrCashierComboBox.ItemsSource = new[] { "Caja Principal", "Caja Norte", "Cajero Ana", "Cajero Luis" };
+            QrCashierComboBox.ItemsSource = new[] { "Sin caja asignada" };
             QrCashierComboBox.SelectedIndex = 0;
 
-            var cashierFilter = new[] { "Todos", "Caja Principal", "Caja Norte", "Cajero Ana", "Cajero Luis" };
+            var cashierFilter = new[] { "Todos" };
             VerifiedCashierComboBox.ItemsSource = cashierFilter;
             ReportCashierComboBox.ItemsSource = cashierFilter;
             VerifiedCashierComboBox.SelectedIndex = 0;
@@ -73,7 +75,11 @@ namespace Gglob
                 235000m,
                 "Caja Principal",
                 "Bancolombia",
-                DateTime.Now.AddHours(-2)));
+                DateTime.Now.AddHours(-2),
+                1,
+                1,
+                "Caja Principal",
+                "ahorros"));
             verifiedPayments.Add(new VerifiedPaymentRecord(
                 "GGPAY-20260614-084519-F4K8",
                 "Julián Torres",
@@ -81,7 +87,11 @@ namespace Gglob
                 115000m,
                 "Cajero Ana",
                 "Davivienda",
-                DateTime.Now.AddHours(-1)));
+                DateTime.Now.AddHours(-1),
+                1,
+                1,
+                "Caja Principal",
+                "wompi_credit_card"));
 
             RefreshQrOptions();
         }
@@ -113,7 +123,7 @@ namespace Gglob
         {
             try
             {
-                var payload = JsonSerializer.Serialize(new { email, password });
+                var payload = JsonSerializer.Serialize(new { email, password, app_context = "desk" });
                 using var content = new StringContent(payload, Encoding.UTF8, "application/json");
                 using var response = await HttpClient.PostAsync($"{ApiBaseUrl}/login", content);
                 var body = await response.Content.ReadAsStringAsync();
@@ -284,6 +294,8 @@ namespace Gglob
             LoginRoot.Visibility = Visibility.Collapsed;
             DashboardRoot.Visibility = Visibility.Visible;
 
+            currentUser = user;
+
             DashboardUserTextBlock.Text = $"{user.Name} ({user.Email})";
             DashboardBusinessTextBlock.Text = user.Company is null
                 ? "Sin negocio asociado"
@@ -303,6 +315,7 @@ namespace Gglob
             isGglobPayEnabled = user.Company?.GglobPayEnabled ?? false;
             ToggleGglobPayModuleAvailability();
             RenderPermissions(permissionsList);
+            BindCashiersAndCashRegisters(user);
 
             _ = LoadGglobPayDataFromApi();
             SetSelectedModule(null);
@@ -606,6 +619,9 @@ namespace Gglob
                     amount = payment.Amount,
                     cashier = payment.Cashier,
                     bank = payment.Bank,
+                    cash_register_id = payment.CashRegisterId,
+                    cashier_user_id = payment.CashierUserId,
+                    source_channel = payment.SourceChannel,
                     verified_at = payment.VerifiedAt.ToString("yyyy-MM-dd HH:mm:ss")
                 });
 
@@ -757,7 +773,22 @@ namespace Gglob
                 return;
             }
 
-            var cashier = QrCashierComboBox.SelectedItem?.ToString() ?? "Caja Principal";
+            if (currentUser is null)
+            {
+                QrStatusTextBlock.Text = "No hay usuario en sesión.";
+                QrStatusTextBlock.Foreground = Brushes.DarkRed;
+                return;
+            }
+
+            var selectedCashRegister = QrCashierComboBox.SelectedItem as CashRegisterOption;
+            if (selectedCashRegister is null)
+            {
+                QrStatusTextBlock.Text = "Debes tener una caja activa asignada para generar QR.";
+                QrStatusTextBlock.Foreground = Brushes.DarkRed;
+                return;
+            }
+
+            var cashier = currentUser.Name ?? "Cajero";
             var referenceCode = $"GGPAY-{DateTime.Now:yyyyMMdd-HHmmss}-{Guid.NewGuid().ToString()[..4].ToUpperInvariant()}";
 
             var payloadObject = new
@@ -767,6 +798,7 @@ namespace Gglob
                 amount = decimal.Round(amount, 2),
                 currency = "COP",
                 cashier,
+                cash_register = selectedCashRegister.Name,
                 destination_bank = accountOption.Account.Bank,
                 destination_account = accountOption.Account.AccountNumber,
                 destination_type = accountOption.Account.AccountType,
@@ -789,7 +821,11 @@ namespace Gglob
                 amount,
                 cashier,
                 accountOption.Account.Bank,
-                DateTime.Now);
+                DateTime.Now,
+                selectedCashRegister.Id,
+                currentUser.Id ?? 0,
+                selectedCashRegister.Name,
+                accountOption.Channel);
 
             var stored = await SaveVerifiedPaymentApi(payment);
             if (stored is null)
@@ -861,6 +897,7 @@ namespace Gglob
                 new ServiceItem("gglob_cloud", "Gglob Cloud", "Gestión principal en la nube.", company?.GglobCloudEnabled ?? false),
                 new ServiceItem("gglob_pay", "Gglob Pay", "Cobros y movimientos de pago.", company?.GglobPayEnabled ?? false),
                 new ServiceItem("gglob_pos", "Gglob POS", "Punto de venta y cajas.", company?.GglobPosEnabled ?? false),
+                new ServiceItem("cash_register_management", "Gestión de Cajas", "Asignación de cajas y cajeros.", (company?.GglobPosEnabled ?? false) && company is not null && company.IsMultiCaja),
                 new ServiceItem("gglob_accounting", "Gglob Contable", "Módulo de contabilidad.", company?.GglobAccountingEnabled ?? false),
             ];
         }
@@ -943,6 +980,45 @@ namespace Gglob
             return string.Equals(hash, expectedHash, StringComparison.Ordinal);
         }
 
+
+        private void BindCashiersAndCashRegisters(ApiUser user)
+        {
+            var cashierName = string.IsNullOrWhiteSpace(user.Name) ? "Cajero" : user.Name;
+
+            cashRegisterOptions.Clear();
+            foreach (var register in user.CashRegisters ?? [])
+            {
+                if (register.Id is null)
+                {
+                    continue;
+                }
+
+                cashRegisterOptions.Add(new CashRegisterOption(
+                    register.Id.Value,
+                    register.Name ?? "Caja",
+                    register.Code ?? string.Empty,
+                    register.IsPrimary));
+            }
+
+            if (cashRegisterOptions.Count == 0)
+            {
+                QrCashierComboBox.ItemsSource = new[] { "Sin caja asignada" };
+                QrCashierComboBox.SelectedIndex = 0;
+            }
+            else
+            {
+                QrCashierComboBox.ItemsSource = cashRegisterOptions;
+                var primaryIndex = cashRegisterOptions.ToList().FindIndex(x => x.IsPrimary);
+                QrCashierComboBox.SelectedIndex = primaryIndex >= 0 ? primaryIndex : 0;
+            }
+
+            var filters = new[] { "Todos", cashierName };
+            VerifiedCashierComboBox.ItemsSource = filters;
+            ReportCashierComboBox.ItemsSource = filters;
+            VerifiedCashierComboBox.SelectedIndex = 0;
+            ReportCashierComboBox.SelectedIndex = 0;
+        }
+
         private void ShowStatus(string message, bool isError, bool isWarning = false)
         {
             StatusTextBlock.Text = message;
@@ -987,6 +1063,9 @@ namespace Gglob
 
     public class ApiUser
     {
+        [JsonPropertyName("id")]
+        public int? Id { get; set; }
+
         [JsonPropertyName("name")]
         public string? Name { get; set; }
 
@@ -1004,6 +1083,9 @@ namespace Gglob
 
         [JsonPropertyName("company")]
         public ApiCompany? Company { get; set; }
+
+        [JsonPropertyName("cash_registers")]
+        public List<ApiCashRegister>? CashRegisters { get; set; }
     }
 
     public class ApiRole
@@ -1052,6 +1134,40 @@ namespace Gglob
 
         [JsonPropertyName("gglob_accounting_enabled")]
         public bool GglobAccountingEnabled { get; set; }
+
+        [JsonPropertyName("pos_mode")]
+        public string? PosMode { get; set; }
+
+        [JsonPropertyName("pos_boxes")]
+        public int PosBoxes { get; set; }
+
+        public bool IsMultiCaja => string.Equals(PosMode, "multi", StringComparison.OrdinalIgnoreCase)
+            || PosBoxes > 1;
+    }
+
+    public class ApiCashRegister
+    {
+        [JsonPropertyName("id")]
+        public int? Id { get; set; }
+
+        [JsonPropertyName("name")]
+        public string? Name { get; set; }
+
+        [JsonPropertyName("code")]
+        public string? Code { get; set; }
+
+        [JsonPropertyName("is_primary")]
+        public bool IsPrimary { get; set; }
+    }
+
+    public class CashRegisterOption(int id, string name, string code, bool isPrimary)
+    {
+        public int Id { get; } = id;
+        public string Name { get; } = name;
+        public string Code { get; } = code;
+        public bool IsPrimary { get; } = isPrimary;
+
+        public override string ToString() => $"{Name} ({Code})";
     }
 
     public class OfflineSession
@@ -1144,6 +1260,18 @@ namespace Gglob
         [JsonPropertyName("verified_at")]
         public string? VerifiedAt { get; set; }
 
+        [JsonPropertyName("cash_register_id")]
+        public int? CashRegisterId { get; set; }
+
+        [JsonPropertyName("cashier_user_id")]
+        public int? CashierUserId { get; set; }
+
+        [JsonPropertyName("source_channel")]
+        public string? SourceChannel { get; set; }
+
+        [JsonPropertyName("cash_register_name")]
+        public string? CashRegisterName { get; set; }
+
         public VerifiedPaymentRecord ToDesktopRecord()
         {
             _ = DateTime.TryParse(VerifiedAt, out var verifiedAt);
@@ -1154,7 +1282,11 @@ namespace Gglob
                 Amount,
                 Cashier ?? string.Empty,
                 Bank ?? string.Empty,
-                verifiedAt == default ? DateTime.Now : verifiedAt);
+                verifiedAt == default ? DateTime.Now : verifiedAt,
+                CashRegisterId ?? 0,
+                CashierUserId ?? 0,
+                CashRegisterName ?? string.Empty,
+                SourceChannel ?? "ahorros");
         }
     }
 
@@ -1175,7 +1307,7 @@ namespace Gglob
         public string DisplayName => $"{channel} | {account.Bank} {account.AccountType} {account.AccountNumber}";
     }
 
-    public class VerifiedPaymentRecord(string referenceCode, string senderName, string accountNumber, decimal amount, string cashier, string bank, DateTime verifiedAt)
+    public class VerifiedPaymentRecord(string referenceCode, string senderName, string accountNumber, decimal amount, string cashier, string bank, DateTime verifiedAt, int cashRegisterId, int cashierUserId, string cashRegisterName, string sourceChannel)
     {
         public string ReferenceCode { get; } = referenceCode;
         public string SenderName { get; } = senderName;
@@ -1184,6 +1316,10 @@ namespace Gglob
         public string Cashier { get; } = cashier;
         public string Bank { get; } = bank;
         public DateTime VerifiedAt { get; } = verifiedAt;
+        public int CashRegisterId { get; } = cashRegisterId;
+        public int CashierUserId { get; } = cashierUserId;
+        public string CashRegisterName { get; } = cashRegisterName;
+        public string SourceChannel { get; } = sourceChannel;
 
         public string AmountFormatted => Amount.ToString("C0", CultureInfo.GetCultureInfo("es-CO"));
         public string VerifiedAtFormatted => VerifiedAt.ToString("HH:mm:ss");
