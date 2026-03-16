@@ -7,7 +7,6 @@ use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Validator;
-use Tymon\JWTAuth\Facades\JWTAuth;
 
 class AuthController extends Controller
 {
@@ -27,25 +26,35 @@ class AuthController extends Controller
             'password' => Hash::make($request->password)
         ]);
 
-        $user->assignRole('user'); // asignar rol por defecto
+        $user->assignRole('user');
 
         return response()->json(['message' => 'User created successfully']);
     }
 
     public function login(Request $request)
     {
-       $credentials = $request->only(['email', 'password']);
+        $credentials = $request->only(['email', 'password']);
 
         if (!$token = auth('api')->attempt($credentials)) {
             return response()->json(['error' => 'Unauthorized'], 401);
         }
 
-        // Obtener usuario manualmente:
         $user = auth('api')->user();
-        $user->load('roles', 'permissions', 'company');
-        // Alternativamente, si $user es null, búscalo así:
         if (!$user) {
             $user = User::where('email', $credentials['email'])->first();
+        }
+
+        if (!$user) {
+            return response()->json(['error' => 'Unauthorized'], 401);
+        }
+
+        $user->load(['roles', 'permissions', 'company', 'cashRegisters']);
+
+        $context = strtolower((string) $request->input('app_context', 'web'));
+        $access = $this->validateAccessByContext($user, $context);
+        if ($access !== null) {
+            auth('api')->logout();
+            return $access;
         }
 
         $permissions = $user->getAllPermissions();
@@ -57,6 +66,40 @@ class AuthController extends Controller
             'user'         => $user,
             'permissions' => $permissions,
         ]);
+    }
+
+    private function validateAccessByContext(User $user, string $context)
+    {
+        $company = $user->company;
+        $companyIsActive = $company
+            && strtolower((string) $company->service_status) === 'active'
+            && $company->plan_id
+            && !empty($company->active_until)
+            && now()->toDateString() <= $company->active_until->toDateString();
+
+        if ($context === 'desk') {
+            if (!in_array(strtolower((string) $user->business_role), ['owner', 'cashier'], true)) {
+                return response()->json(['error' => 'Rol de negocio no permitido para app_desk.'], 403);
+            }
+
+            if (!$companyIsActive) {
+                return response()->json(['error' => 'Plan o estado de la empresa inválido para app_desk.'], 403);
+            }
+
+            return null;
+        }
+
+        $hasAdminRole = $user->hasRole('admin') || $user->hasRole('Administrador');
+        $isBusinessOwner = strtolower((string) $user->business_role) === 'owner';
+        if (!$hasAdminRole && !$isBusinessOwner) {
+            return response()->json(['error' => 'Acceso app_web permitido solo para Administradores o Dueños de Negocio.'], 403);
+        }
+
+        if (!$companyIsActive || !($company?->gglob_cloud_enabled)) {
+            return response()->json(['error' => 'Para ingresar a app_web se requiere plan activo con Gglob Nube habilitado.'], 403);
+        }
+
+        return null;
     }
 
     public function logout()
@@ -73,7 +116,7 @@ class AuthController extends Controller
             return response()->json(['error' => 'Unauthorized'], 401);
         }
 
-        $user->load('roles', 'permissions', 'company');
+        $user->load(['roles', 'permissions', 'company', 'cashRegisters']);
 
         return response()->json($user);
     }
@@ -81,12 +124,12 @@ class AuthController extends Controller
     public function refresh()
     {
         try {
-            $newToken = auth()->refresh(); // Genera un nuevo token
+            $newToken = auth()->refresh();
             $user = auth()->user();
             if (!$user) {
                 return response()->json(['error' => 'Unauthorized'], 401);
             }
-            $user->load('roles', 'permissions', 'company');
+            $user->load(['roles', 'permissions', 'company', 'cashRegisters']);
             $permissions = $user->getAllPermissions();
 
             return response()->json([

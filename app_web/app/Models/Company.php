@@ -63,4 +63,9 @@ class Company extends Model
     {
         return $this->users()->where('business_role', 'cashier');
     }
+
+    public function cashRegisters(): HasMany
+    {
+        return $this->hasMany(CashRegister::class);
+    }
 }
