@@ -12,23 +12,68 @@
     mc:Ignorable="d">
 
     <Window.Resources>
+        <SolidColorBrush x:Key="BrandBrush" Color="#2563eb" />
+        <SolidColorBrush x:Key="BrandBrushHover" Color="#1d4ed8" />
+        <SolidColorBrush x:Key="SurfaceBrush" Color="#ffffff" />
+        <SolidColorBrush x:Key="SurfaceMutedBrush" Color="#f8fafc" />
+        <SolidColorBrush x:Key="BorderBrushSoft" Color="#dbe3f0" />
+
+        <Style TargetType="TextBlock">
+            <Setter Property="Foreground" Value="#1f2937" />
+            <Setter Property="FontFamily" Value="Segoe UI" />
+        </Style>
+
         <Style x:Key="PrimaryButton" TargetType="Button">
-            <Setter Property="Background" Value="#2f66d0" />
+            <Setter Property="Background" Value="{StaticResource BrandBrush}" />
             <Setter Property="Foreground" Value="White" />
-            <Setter Property="FontSize" Value="15" />
-            <Setter Property="Padding" Value="10,8" />
+            <Setter Property="FontSize" Value="14" />
+            <Setter Property="FontWeight" Value="SemiBold" />
+            <Setter Property="Padding" Value="14,10" />
             <Setter Property="Margin" Value="0,10,0,0" />
             <Setter Property="BorderThickness" Value="0" />
             <Setter Property="Cursor" Value="Hand" />
             <Setter Property="Template">
                 <Setter.Value>
                     <ControlTemplate TargetType="Button">
-                        <Border Background="{TemplateBinding Background}" CornerRadius="8">
+                        <Border x:Name="ButtonChrome" Background="{TemplateBinding Background}" CornerRadius="10">
+                            <Border.Effect>
+                                <DropShadowEffect BlurRadius="8" ShadowDepth="1" Opacity="0.2" Color="#1e3a8a" />
+                            </Border.Effect>
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center" Margin="2,0" />
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="ButtonChrome" Property="Background" Value="{StaticResource BrandBrushHover}" />
+                            </Trigger>
+                            <Trigger Property="IsPressed" Value="True">
+                                <Setter TargetName="ButtonChrome" Property="Opacity" Value="0.9" />
+                            </Trigger>
+                            <Trigger Property="IsEnabled" Value="False">
+                                <Setter TargetName="ButtonChrome" Property="Opacity" Value="0.55" />
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <Style TargetType="Button">
+            <Setter Property="Background" Value="#f3f6fc" />
+            <Setter Property="Foreground" Value="#1f2937" />
+            <Setter Property="FontSize" Value="13" />
+            <Setter Property="Padding" Value="12,8" />
+            <Setter Property="BorderBrush" Value="{StaticResource BorderBrushSoft}" />
+            <Setter Property="BorderThickness" Value="1" />
+            <Setter Property="Cursor" Value="Hand" />
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="SecondaryButtonChrome" Background="{TemplateBinding Background}" BorderBrush="{TemplateBinding BorderBrush}" BorderThickness="{TemplateBinding BorderThickness}" CornerRadius="10">
                             <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center" />
                         </Border>
                         <ControlTemplate.Triggers>
                             <Trigger Property="IsMouseOver" Value="True">
-                                <Setter Property="Background" Value="#1f55bd" />
+                                <Setter TargetName="SecondaryButtonChrome" Property="Background" Value="#e8eefb" />
                             </Trigger>
                         </ControlTemplate.Triggers>
                     </ControlTemplate>
@@ -38,14 +83,70 @@
 
         <Style x:Key="InputText" TargetType="TextBox">
             <Setter Property="Margin" Value="0,6,0,12" />
-            <Setter Property="Padding" Value="10,8" />
+            <Setter Property="Padding" Value="12,9" />
             <Setter Property="FontSize" Value="14" />
+            <Setter Property="Background" Value="{StaticResource SurfaceMutedBrush}" />
+            <Setter Property="BorderBrush" Value="{StaticResource BorderBrushSoft}" />
+            <Setter Property="BorderThickness" Value="1" />
         </Style>
 
         <Style x:Key="InputPassword" TargetType="PasswordBox">
             <Setter Property="Margin" Value="0,6,0,12" />
-            <Setter Property="Padding" Value="10,8" />
+            <Setter Property="Padding" Value="12,9" />
             <Setter Property="FontSize" Value="14" />
+            <Setter Property="Background" Value="{StaticResource SurfaceMutedBrush}" />
+            <Setter Property="BorderBrush" Value="{StaticResource BorderBrushSoft}" />
+            <Setter Property="BorderThickness" Value="1" />
+        </Style>
+
+        <Style TargetType="ComboBox">
+            <Setter Property="Margin" Value="0,6,0,12" />
+            <Setter Property="Height" Value="36" />
+            <Setter Property="Padding" Value="8,4" />
+            <Setter Property="Background" Value="{StaticResource SurfaceMutedBrush}" />
+            <Setter Property="BorderBrush" Value="{StaticResource BorderBrushSoft}" />
+        </Style>
+
+        <Style TargetType="DatePicker">
+            <Setter Property="Margin" Value="0,6,0,12" />
+            <Setter Property="Height" Value="34" />
+            <Setter Property="Background" Value="{StaticResource SurfaceMutedBrush}" />
+            <Setter Property="BorderBrush" Value="{StaticResource BorderBrushSoft}" />
+        </Style>
+
+        <Style TargetType="DataGrid">
+            <Setter Property="RowBackground" Value="White" />
+            <Setter Property="AlternatingRowBackground" Value="#f8fafc" />
+            <Setter Property="GridLinesVisibility" Value="Horizontal" />
+            <Setter Property="HeadersVisibility" Value="Column" />
+            <Setter Property="BorderBrush" Value="{StaticResource BorderBrushSoft}" />
+            <Setter Property="BorderThickness" Value="1" />
+            <Setter Property="ColumnHeaderStyle">
+                <Setter.Value>
+                    <Style TargetType="DataGridColumnHeader">
+                        <Setter Property="Background" Value="#eef2ff" />
+                        <Setter Property="Foreground" Value="#334155" />
+                        <Setter Property="FontWeight" Value="SemiBold" />
+                        <Setter Property="Padding" Value="8,6" />
+                        <Setter Property="BorderBrush" Value="{StaticResource BorderBrushSoft}" />
+                    </Style>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <Style TargetType="TabControl">
+            <Setter Property="Background" Value="Transparent" />
+            <Setter Property="BorderBrush" Value="Transparent" />
+        </Style>
+
+        <Style TargetType="TabItem">
+            <Setter Property="FontWeight" Value="SemiBold" />
+            <Setter Property="Padding" Value="12,6" />
+        </Style>
+
+        <Style TargetType="ListBox">
+            <Setter Property="BorderBrush" Value="{StaticResource BorderBrushSoft}" />
+            <Setter Property="Background" Value="{StaticResource SurfaceMutedBrush}" />
         </Style>
     </Window.Resources>
 
@@ -73,7 +174,7 @@
                         <RowDefinition Height="*" />
                     </Grid.RowDefinitions>
 
-                    <TextBlock Text="Ingreso al sistema" FontSize="26" FontWeight="SemiBold" Foreground="#212529" />
+                    <TextBlock Text="🔐 Ingreso al sistema" FontSize="26" FontWeight="SemiBold" Foreground="#212529" />
 
                     <StackPanel Grid.Row="1" Margin="0,18,0,0">
                         <TextBlock Text="Correo" FontWeight="SemiBold" />
@@ -82,7 +183,7 @@
                         <TextBlock Text="Contraseña" FontWeight="SemiBold" />
                         <PasswordBox x:Name="PasswordBox" Style="{StaticResource InputPassword}" />
 
-                        <Button x:Name="LoginButton" Style="{StaticResource PrimaryButton}" Click="LoginButton_Click" Content="Iniciar sesión" Width="180" />
+                        <Button x:Name="LoginButton" Style="{StaticResource PrimaryButton}" Click="LoginButton_Click" Content="Entrar al Desk" Width="190" />
 
                         <TextBlock x:Name="StatusTextBlock" Margin="0,12,0,4" Foreground="#495057" TextWrapping="Wrap" />
 
@@ -105,7 +206,7 @@
 
             <Border Grid.Column="0" Margin="0,0,14,0" CornerRadius="14" Background="#264f9c" Padding="14">
                 <DockPanel>
-                    <Button DockPanel.Dock="Bottom" Style="{StaticResource PrimaryButton}" Content="Cerrar sesión" Click="LogoutButton_Click" />
+                    <Button DockPanel.Dock="Bottom" Style="{StaticResource PrimaryButton}" Content="⏻ Cerrar sesión" Click="LogoutButton_Click" />
                     <StackPanel>
                         <TextBlock Text="GglobERP Desk" Foreground="White" FontSize="22" FontWeight="Bold" />
                         <TextBlock x:Name="DashboardUserTextBlock" Margin="0,4,0,2" Foreground="#dce8ff" />
@@ -135,7 +236,7 @@
 
                 <Border Background="White" CornerRadius="12" Padding="14" BorderBrush="#e2e8f3" BorderThickness="1">
                     <StackPanel>
-                        <TextBlock Text="Dashboard" FontSize="25" FontWeight="SemiBold" Foreground="#1f2937" />
+                        <TextBlock Text="📊 Dashboard" FontSize="25" FontWeight="SemiBold" Foreground="#1f2937" />
                         <TextBlock Text="Vista principal por permisos y servicios activos." Foreground="#6b7280" Margin="0,3,0,10" />
                         <WrapPanel>
                             <Border Background="#e8f0ff" CornerRadius="8" Padding="8,5" Margin="0,0,8,8">
@@ -153,7 +254,7 @@
 
                 <Border Grid.Row="1" Margin="0,12,0,0" Background="White" CornerRadius="12" Padding="14" BorderBrush="#e2e8f3" BorderThickness="1">
                     <StackPanel>
-                        <TextBlock Text="Módulos disponibles" FontSize="18" FontWeight="SemiBold" Foreground="#1f2937" Margin="0,0,0,10" />
+                        <TextBlock Text="🧩 Módulos disponibles" FontSize="18" FontWeight="SemiBold" Foreground="#1f2937" Margin="0,0,0,10" />
                         <WrapPanel x:Name="ActiveServicesCardsPanel" />
                     </StackPanel>
                 </Border>
@@ -189,7 +290,7 @@
                     <Border x:Name="GglobPayPanel" Visibility="Collapsed" Background="White" CornerRadius="12" Padding="14" BorderBrush="#e2e8f3" BorderThickness="1">
                         <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
                             <TabControl x:Name="GglobPayTabControl">
-                        <TabItem x:Name="WompiConfigTab" Header="Wompi">
+                        <TabItem x:Name="WompiConfigTab" Header="💳 Wompi">
                             <Grid Margin="10">
                                 <Grid.ColumnDefinitions>
                                     <ColumnDefinition Width="1.2*" />
@@ -214,7 +315,7 @@
                             </Grid>
                         </TabItem>
 
-                        <TabItem x:Name="BancolombiaConfigTab" Header="Bancolombia">
+                        <TabItem x:Name="BancolombiaConfigTab" Header="🏦 Bancolombia">
                             <Grid Margin="10">
                                 <Grid.ColumnDefinitions>
                                     <ColumnDefinition Width="1.4*" />
@@ -255,7 +356,7 @@
 
                         
 
-                        <TabItem Header="Generar QR">
+                        <TabItem Header="🔳 Generar QR">
                             <Grid Margin="10">
                                 <Grid.ColumnDefinitions>
                                     <ColumnDefinition Width="1.3*" />
@@ -286,7 +387,7 @@
                             </Grid>
                         </TabItem>
 
-                        <TabItem Header="Verificados">
+                        <TabItem Header="✅ Verificados">
                             <StackPanel Margin="10">
                                 <WrapPanel Margin="0,0,0,10">
                                     <StackPanel Margin="0,0,10,0">
@@ -324,7 +425,7 @@
                             </StackPanel>
                         </TabItem>
 
-                        <TabItem Header="Reportes">
+                        <TabItem Header="📈 Reportes">
                             <StackPanel Margin="10">
                                 <WrapPanel Margin="0,0,0,10">
                                     <StackPanel Margin="0,0,10,0">
