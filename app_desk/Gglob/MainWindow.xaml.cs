@@ -2315,6 +2315,15 @@ namespace Gglob
         public string Status { get; } = status;
     }
 
+    public class CreateCashierFormResult(string name, string lastName, string email, string phone, string password)
+    {
+        public string Name { get; } = name;
+        public string LastName { get; } = lastName;
+        public string Email { get; } = email;
+        public string Phone { get; } = phone;
+        public string Password { get; } = password;
+    }
+
     public class OfflineSession
     {
         public string? Email { get; set; }
