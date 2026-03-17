@@ -20,6 +20,7 @@ use App\Http\Controllers\API\GglobPayController;
 
 Route::post('/register', [AuthController::class, 'register']);
 Route::post('/login', [AuthController::class, 'login']);
+Route::post('gglob-pay/webhooks/wompi', [GglobPayController::class, 'wompiWebhook']);
 Route::get('/propiedades/search', [PropiedadController::class, 'search']);
 // Rutas protegidas
 Route::middleware(['auth:api'])->group(function () {
@@ -80,6 +81,9 @@ Route::middleware(['auth:api'])->group(function () {
     Route::post('ingreso/import', [IngresoController::class, 'import']);
 
     Route::get('gglob-pay/cash-registers', [GglobPayController::class, 'cashRegisters']);
+    Route::post('gglob-pay/cash-registers', [GglobPayController::class, 'storeCashRegister']);
+    Route::put('gglob-pay/cash-registers/{cashRegister}', [GglobPayController::class, 'updateCashRegister']);
+    Route::post('gglob-pay/cash-registers/{cashRegister}/assign-me', [GglobPayController::class, 'assignCashRegisterToCurrentUser']);
     Route::get('gglob-pay/provider-settings/{provider}', [GglobPayController::class, 'providerSettings']);
     Route::post('gglob-pay/provider-settings/{provider}', [GglobPayController::class, 'saveProviderSettings']);
     Route::post('gglob-pay/qr/intents', [GglobPayController::class, 'createQrIntent']);
@@ -92,4 +96,3 @@ Route::middleware(['auth:api'])->group(function () {
 });
 
 Route::middleware('auth:api')->post('/refresh', [AuthController::class, 'refresh']);
-

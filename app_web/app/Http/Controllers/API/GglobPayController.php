@@ -10,6 +10,31 @@ use Illuminate\Support\Str;
 
 class GglobPayController extends Controller
 {
+
+    public function wompiWebhook(Request $request)
+    {
+        $reference = (string) data_get($request->all(), 'data.transaction.reference', '');
+        $transactionId = (string) data_get($request->all(), 'data.transaction.id', '');
+        $status = strtoupper((string) data_get($request->all(), 'data.transaction.status', ''));
+
+        if ($reference === '' || $transactionId === '') {
+            return response()->json(['message' => 'Webhook recibido sin referencia/transacción.'], 202);
+        }
+
+        $updated = DB::table('gglob_pay_payments')
+            ->where('reference_code', $reference)
+            ->update([
+                'status' => $status !== '' ? $status : 'APPROVED',
+                'verification_provider' => 'wompi',
+                'verification_trace' => 'webhook:' . $transactionId,
+                'updated_at' => now(),
+            ]);
+
+        return response()->json([
+            'message' => $updated > 0 ? 'Webhook procesado.' : 'Webhook recibido, sin pago asociado.',
+        ]);
+    }
+
     public function destinationAccounts(Request $request)
     {
         $companyId = $request->user()->company_id;
@@ -56,19 +81,172 @@ class GglobPayController extends Controller
     public function cashRegisters(Request $request)
     {
         $user = $request->user();
+        $isAdmin = $user->hasRole('admin') || $user->hasRole('Administrador');
+        $scope = strtolower((string) $request->input('scope', 'assigned'));
+
         $rows = DB::table('cash_registers as cr')
-            ->join('cash_register_user as cru', 'cru.cash_register_id', '=', 'cr.id')
+            ->leftJoin('cash_register_user as cru', function ($join) use ($user) {
+                $join->on('cru.cash_register_id', '=', 'cr.id')
+                    ->where('cru.user_id', '=', $user->id);
+            })
             ->where('cr.company_id', $user->company_id)
-            ->where('cru.user_id', $user->id)
-            ->where('cr.status', 'active')
-            ->select('cr.id', 'cr.name', 'cr.code', 'cr.status', 'cru.is_primary')
-            ->orderByDesc('cru.is_primary')
+            ->when($scope !== 'all' || ! $isAdmin, function ($query) {
+                $query->whereNotNull('cru.id')->where('cr.status', 'active');
+            })
+            ->select('cr.id', 'cr.name', 'cr.code', 'cr.status', DB::raw('COALESCE(cru.is_primary, 0) as is_primary'))
+            ->orderByDesc('is_primary')
             ->orderBy('cr.name')
             ->get();
 
         return response()->json(['data' => $rows]);
     }
 
+
+
+    public function storeCashRegister(Request $request)
+    {
+        $user = $request->user();
+        $isAdmin = $user->hasRole('admin') || $user->hasRole('Administrador');
+        if (!$isAdmin) {
+            return response()->json(['message' => 'Solo el administrador puede crear cajas.'], 403);
+        }
+
+        $validated = $request->validate([
+            'name' => ['required', 'string', 'max:120'],
+            'code' => ['required', 'string', 'max:40'],
+            'status' => ['nullable', 'string', 'in:active,inactive'],
+        ]);
+
+        $code = strtoupper(trim($validated['code']));
+        $exists = DB::table('cash_registers')
+            ->where('company_id', $user->company_id)
+            ->whereRaw('LOWER(code) = ?', [strtolower($code)])
+            ->exists();
+
+        if ($exists) {
+            return response()->json(['message' => 'Ya existe una caja con ese código en la empresa.'], 409);
+        }
+
+        $id = DB::table('cash_registers')->insertGetId([
+            'company_id' => $user->company_id,
+            'name' => trim($validated['name']),
+            'code' => $code,
+            'status' => $validated['status'] ?? 'active',
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+
+        $cashRegister = DB::table('cash_registers')->where('id', $id)->first();
+
+        return response()->json(['message' => 'Caja creada correctamente.', 'data' => $cashRegister], 201);
+    }
+
+    public function updateCashRegister(Request $request, int $cashRegister)
+    {
+        $user = $request->user();
+        $isAdmin = $user->hasRole('admin') || $user->hasRole('Administrador');
+        if (!$isAdmin) {
+            return response()->json(['message' => 'Solo el administrador puede editar cajas.'], 403);
+        }
+
+        $validated = $request->validate([
+            'name' => ['required', 'string', 'max:120'],
+            'code' => ['required', 'string', 'max:40'],
+            'status' => ['required', 'string', 'in:active,inactive'],
+            'is_primary_for_current_user' => ['nullable', 'boolean'],
+        ]);
+
+        $register = DB::table('cash_registers')
+            ->where('id', $cashRegister)
+            ->where('company_id', $user->company_id)
+            ->first();
+
+        if (!$register) {
+            return response()->json(['message' => 'Caja no encontrada para la empresa.'], 404);
+        }
+
+        $code = strtoupper(trim($validated['code']));
+        $exists = DB::table('cash_registers')
+            ->where('company_id', $user->company_id)
+            ->where('id', '!=', $cashRegister)
+            ->whereRaw('LOWER(code) = ?', [strtolower($code)])
+            ->exists();
+
+        if ($exists) {
+            return response()->json(['message' => 'Ya existe otra caja con ese código en la empresa.'], 409);
+        }
+
+        DB::table('cash_registers')
+            ->where('id', $cashRegister)
+            ->update([
+                'name' => trim($validated['name']),
+                'code' => $code,
+                'status' => $validated['status'],
+                'updated_at' => now(),
+            ]);
+
+        if (!empty($validated['is_primary_for_current_user'])) {
+            DB::table('cash_register_user')
+                ->where('user_id', $user->id)
+                ->update(['is_primary' => false, 'updated_at' => now()]);
+
+            DB::table('cash_register_user')->updateOrInsert(
+                ['cash_register_id' => $cashRegister, 'user_id' => $user->id],
+                [
+                    'assigned_by' => $user->id,
+                    'assigned_at' => now(),
+                    'is_primary' => true,
+                    'updated_at' => now(),
+                    'created_at' => now(),
+                ]
+            );
+        }
+
+        $updated = DB::table('cash_registers')->where('id', $cashRegister)->first();
+
+        return response()->json(['message' => 'Caja actualizada correctamente.', 'data' => $updated]);
+    }
+
+    public function assignCashRegisterToCurrentUser(Request $request, int $cashRegister)
+    {
+        $user = $request->user();
+
+        $validated = $request->validate([
+            'is_primary' => ['nullable', 'boolean'],
+        ]);
+
+        $register = DB::table('cash_registers')
+            ->where('id', $cashRegister)
+            ->where('company_id', $user->company_id)
+            ->first();
+
+        if (!$register) {
+            return response()->json(['message' => 'Caja no encontrada para la empresa.'], 404);
+        }
+
+        if (($register->status ?? 'inactive') !== 'active') {
+            return response()->json(['message' => 'Solo se pueden asignar cajas activas.'], 422);
+        }
+
+        if (!empty($validated['is_primary'])) {
+            DB::table('cash_register_user')
+                ->where('user_id', $user->id)
+                ->update(['is_primary' => false, 'updated_at' => now()]);
+        }
+
+        DB::table('cash_register_user')->updateOrInsert(
+            ['cash_register_id' => $cashRegister, 'user_id' => $user->id],
+            [
+                'assigned_by' => $user->id,
+                'assigned_at' => now(),
+                'is_primary' => !empty($validated['is_primary']),
+                'updated_at' => now(),
+                'created_at' => now(),
+            ]
+        );
+
+        return response()->json(['message' => 'Caja asignada correctamente al usuario.']);
+    }
 
     public function providerSettings(Request $request, string $provider)
     {
