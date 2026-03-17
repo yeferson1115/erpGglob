@@ -16,6 +16,7 @@ use App\Http\Controllers\API\IngresoImageController;
 use App\Http\Controllers\API\AvaluoController;
 use App\Http\Controllers\API\InspeccionController;
 use App\Http\Controllers\API\GglobPayController;
+use App\Http\Controllers\API\ProductCategoryController;
 
 
 Route::post('/register', [AuthController::class, 'register']);
@@ -79,6 +80,12 @@ Route::middleware(['auth:api'])->group(function () {
         Route::post('/imagenes/delete', [IngresoImageController::class, 'delete']);
     });
     Route::post('ingreso/import', [IngresoController::class, 'import']);
+
+
+    Route::get('product-categories', [ProductCategoryController::class, 'index']);
+    Route::post('product-categories', [ProductCategoryController::class, 'store']);
+    Route::put('product-categories/{productCategory}', [ProductCategoryController::class, 'update']);
+    Route::delete('product-categories/{productCategory}', [ProductCategoryController::class, 'destroy']);
 
     Route::get('gglob-pay/cash-registers', [GglobPayController::class, 'cashRegisters']);
     Route::delete('gglob-pay/cash-registers/{cashRegister}', [GglobPayController::class, 'destroyCashRegister']);

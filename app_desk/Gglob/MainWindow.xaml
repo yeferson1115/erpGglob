@@ -315,6 +315,83 @@
                         </StackPanel>
                     </Border>
 
+
+
+                    <Border x:Name="GglobPosPanel" Visibility="Collapsed" Background="White" CornerRadius="12" Padding="14" BorderBrush="#e2e8f3" BorderThickness="1">
+                        <StackPanel>
+                            <TextBlock Text="🧾 Gglob POS" FontSize="20" FontWeight="SemiBold" Foreground="#1f2937" />
+                            <TextBlock Text="Accesos rápidos del punto de venta. Aquí podrán convivir más botones de operación." Foreground="#6b7280" Margin="0,4,0,14" TextWrapping="Wrap" />
+                            <WrapPanel>
+                                <Button x:Name="OpenCategoriesButton" Content="🗂️ Categorías" Width="220" Height="56" Margin="0,0,12,12" Background="#f97316" Foreground="White" FontSize="16" FontWeight="Bold" BorderThickness="0" Click="OpenCategoriesButton_Click" />
+                                <Button Content="🧺 Productos (próximamente)" Width="220" Height="56" Margin="0,0,12,12" IsEnabled="False" />
+                                <Button Content="🧾 Pedidos (próximamente)" Width="220" Height="56" Margin="0,0,12,12" IsEnabled="False" />
+                            </WrapPanel>
+                        </StackPanel>
+                    </Border>
+
+                    <Border x:Name="ProductCategoriesPanel" Visibility="Collapsed" Background="White" CornerRadius="12" Padding="14" BorderBrush="#e2e8f3" BorderThickness="1">
+                        <Grid>
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto" />
+                                <RowDefinition Height="*" />
+                            </Grid.RowDefinitions>
+
+                            <DockPanel Margin="0,0,0,12">
+                                <StackPanel DockPanel.Dock="Left">
+                                    <TextBlock Text="Categorías de producto" FontSize="20" FontWeight="SemiBold" Foreground="#1f2937" />
+                                    <TextBlock Text="Crea, edita y elimina categorías del negocio actual." Foreground="#6b7280" Margin="0,2,0,0" />
+                                </StackPanel>
+                                <WrapPanel DockPanel.Dock="Right" HorizontalAlignment="Right" VerticalAlignment="Center">
+                                    <Button Content="↩ Volver a POS" Margin="0,0,8,0" Click="BackToPosButton_Click" />
+                                    <Button Content="🔄 Recargar" Click="ReloadCategoriesButton_Click" />
+                                </WrapPanel>
+                            </DockPanel>
+
+                            <Grid Grid.Row="1">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="1.2*" />
+                                    <ColumnDefinition Width="2*" />
+                                </Grid.ColumnDefinitions>
+
+                                <Border Background="#f8fbff" CornerRadius="10" BorderBrush="#d9e4ff" BorderThickness="1" Padding="12" Margin="0,0,12,0">
+                                    <StackPanel>
+                                        <TextBlock x:Name="CategoryFormTitleTextBlock" Text="Nueva categoría" FontWeight="SemiBold" FontSize="16" />
+                                        <TextBlock Text="Nombre" FontWeight="SemiBold" Margin="0,10,0,0" />
+                                        <TextBox x:Name="CategoryNameTextBox" Style="{StaticResource InputText}" MaxLength="120" />
+
+                                        <TextBlock Text="Descripción" FontWeight="SemiBold" />
+                                        <TextBox x:Name="CategoryDescriptionTextBox" Style="{StaticResource InputText}" MaxLength="500" Height="80" TextWrapping="Wrap" AcceptsReturn="True" VerticalScrollBarVisibility="Auto" />
+
+                                        <CheckBox x:Name="CategoryActiveCheckBox" Content="Categoría activa" IsChecked="True" Margin="0,4,0,12" />
+
+                                        <WrapPanel>
+                                            <Button x:Name="SaveCategoryButton" Content="💾 Guardar categoría" Width="170" Style="{StaticResource PrimaryButton}" Click="SaveCategoryButton_Click" />
+                                            <Button x:Name="CancelCategoryEditButton" Content="Cancelar" Width="110" Margin="8,10,0,0" Click="CancelCategoryEditButton_Click" Visibility="Collapsed" />
+                                        </WrapPanel>
+                                    </StackPanel>
+                                </Border>
+
+                                <DataGrid Grid.Column="1" x:Name="ProductCategoriesDataGrid" AutoGenerateColumns="False" IsReadOnly="True" CanUserAddRows="False" HeadersVisibility="Column" RowHeaderWidth="0">
+                                    <DataGrid.Columns>
+                                        <DataGridTextColumn Header="Nombre" Binding="{Binding Name}" Width="2*" />
+                                        <DataGridTextColumn Header="Descripción" Binding="{Binding Description}" Width="3*" />
+                                        <DataGridTextColumn Header="Estado" Binding="{Binding StatusLabel}" Width="*" />
+                                        <DataGridTemplateColumn Header="Acciones" Width="2*">
+                                            <DataGridTemplateColumn.CellTemplate>
+                                                <DataTemplate>
+                                                    <StackPanel Orientation="Horizontal">
+                                                        <Button Content="✏️ Editar" Tag="{Binding}" Margin="0,0,8,0" MinWidth="90" Height="34" Padding="12,6" Background="#e0ecff" BorderBrush="#bdd3ff" Click="EditCategoryRowButton_Click" />
+                                                        <Button Content="🗑 Eliminar" Tag="{Binding}" MinWidth="90" Height="34" Padding="12,6" Background="#ffe2e2" BorderBrush="#ffc6c6" Click="DeleteCategoryRowButton_Click" />
+                                                    </StackPanel>
+                                                </DataTemplate>
+                                            </DataGridTemplateColumn.CellTemplate>
+                                        </DataGridTemplateColumn>
+                                    </DataGrid.Columns>
+                                </DataGrid>
+                            </Grid>
+                        </Grid>
+                    </Border>
+
                     <Border x:Name="GglobPayPanel" Visibility="Collapsed" Background="White" CornerRadius="12" Padding="14" BorderBrush="#e2e8f3" BorderThickness="1">
                         <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
                             <TabControl x:Name="GglobPayTabControl">
