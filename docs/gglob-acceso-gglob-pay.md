@@ -1,4 +1,4 @@
-# Gglob — Lógica de negocio: Acceso, permisos y módulo Gglob Pay
+# Gglob — Lógica de negocio: Acceso, permisos y módulo Gglob Pay.
 
 ## 1) Validación de acceso y permisos
 
