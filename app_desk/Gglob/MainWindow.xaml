@@ -187,7 +187,8 @@
                     </Border>
 
                     <Border x:Name="GglobPayPanel" Visibility="Collapsed" Background="White" CornerRadius="12" Padding="14" BorderBrush="#e2e8f3" BorderThickness="1">
-                        <TabControl x:Name="GglobPayTabControl">
+                        <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+                            <TabControl x:Name="GglobPayTabControl">
                         <TabItem x:Name="WompiConfigTab" Header="Wompi">
                             <Grid Margin="10">
                                 <Grid.ColumnDefinitions>
@@ -369,11 +370,13 @@
                                 </DataGrid>
                             </StackPanel>
                         </TabItem>
-                        </TabControl>
+                            </TabControl>
+                        </ScrollViewer>
                     </Border>
 
                     <Border x:Name="CashRegistersPanel" Visibility="Collapsed" Background="White" CornerRadius="12" Padding="14" BorderBrush="#e2e8f3" BorderThickness="1">
-                        <Grid Margin="10">
+                        <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+                            <Grid Margin="10">
                             <Grid.RowDefinitions>
                                 <RowDefinition Height="Auto" />
                                 <RowDefinition Height="*" />
@@ -433,7 +436,80 @@
                                     </DataGridTemplateColumn>
                                 </DataGrid.Columns>
                             </DataGrid>
-                        </Grid>
+                            </Grid>
+                        </ScrollViewer>
+                    </Border>
+
+
+
+                    <Border x:Name="CashiersManagementPanel" Visibility="Collapsed" Background="White" CornerRadius="12" Padding="14" BorderBrush="#e2e8f3" BorderThickness="1">
+                        <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+                            <StackPanel Margin="10">
+                                <TextBlock Text="Usuarios cajeros" FontWeight="SemiBold" FontSize="18" Foreground="#1f2937" />
+                                <TextBlock Text="Crea, edita o elimina los usuarios cajeros del negocio." Foreground="#6b7280" FontSize="12" Margin="0,0,0,12" />
+
+                                <Border Background="#f8fbff" CornerRadius="10" BorderThickness="1" BorderBrush="#d9e4ff" Padding="12" Margin="0,0,0,12">
+                                    <Grid>
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*" />
+                                            <ColumnDefinition Width="*" />
+                                        </Grid.ColumnDefinitions>
+                                        <Grid.RowDefinitions>
+                                            <RowDefinition Height="Auto" />
+                                            <RowDefinition Height="Auto" />
+                                            <RowDefinition Height="Auto" />
+                                        </Grid.RowDefinitions>
+
+                                        <StackPanel Grid.Row="0" Grid.Column="0" Margin="0,0,8,0">
+                                            <TextBlock Text="Nombre" FontWeight="SemiBold" />
+                                            <TextBox x:Name="CashierNameTextBox" Style="{StaticResource InputText}" />
+                                        </StackPanel>
+                                        <StackPanel Grid.Row="0" Grid.Column="1" Margin="8,0,0,0">
+                                            <TextBlock Text="Apellido" FontWeight="SemiBold" />
+                                            <TextBox x:Name="CashierLastNameTextBox" Style="{StaticResource InputText}" />
+                                        </StackPanel>
+
+                                        <StackPanel Grid.Row="1" Grid.Column="0" Margin="0,0,8,0">
+                                            <TextBlock Text="Correo" FontWeight="SemiBold" />
+                                            <TextBox x:Name="CashierEmailTextBox" Style="{StaticResource InputText}" />
+                                        </StackPanel>
+                                        <StackPanel Grid.Row="1" Grid.Column="1" Margin="8,0,0,0">
+                                            <TextBlock Text="Teléfono" FontWeight="SemiBold" />
+                                            <TextBox x:Name="CashierPhoneTextBox" Style="{StaticResource InputText}" />
+                                        </StackPanel>
+
+                                        <StackPanel Grid.Row="2" Grid.Column="0" Margin="0,0,8,0">
+                                            <TextBlock x:Name="CashierPasswordLabel" Text="Contraseña" FontWeight="SemiBold" />
+                                            <PasswordBox x:Name="CashierPasswordBox" Style="{StaticResource InputPassword}" />
+                                        </StackPanel>
+                                        <StackPanel Grid.Row="2" Grid.Column="1" Margin="8,0,0,0" VerticalAlignment="Bottom">
+                                            <WrapPanel HorizontalAlignment="Right" Margin="0,12,0,0">
+                                                <Button x:Name="ClearCashierFormButton" Content="Limpiar" Width="110" Margin="0,0,8,0" Click="ClearCashierFormButton_Click" />
+                                                <Button x:Name="SaveCashierButton" Content="Crear cajero" Width="130" Style="{StaticResource PrimaryButton}" Click="SaveCashierButton_Click" />
+                                            </WrapPanel>
+                                        </StackPanel>
+                                    </Grid>
+                                </Border>
+
+                                <DataGrid x:Name="CashiersManagementDataGrid" AutoGenerateColumns="False" IsReadOnly="True" CanUserAddRows="False" HeadersVisibility="Column" RowHeaderWidth="0" MinHeight="240">
+                                    <DataGrid.Columns>
+                                        <DataGridTextColumn Header="Nombre" Binding="{Binding FullName}" Width="2*" />
+                                        <DataGridTextColumn Header="Correo" Binding="{Binding Email}" Width="2*" />
+                                        <DataGridTextColumn Header="Teléfono" Binding="{Binding Phone}" Width="*" />
+                                        <DataGridTemplateColumn Header="Acciones" Width="1.6*">
+                                            <DataGridTemplateColumn.CellTemplate>
+                                                <DataTemplate>
+                                                    <WrapPanel>
+                                                        <Button Content="Editar" Tag="{Binding}" Margin="0,0,6,0" Click="EditCashierRowButton_Click" />
+                                                        <Button Content="Eliminar" Tag="{Binding}" Click="DeleteCashierRowButton_Click" />
+                                                    </WrapPanel>
+                                                </DataTemplate>
+                                            </DataGridTemplateColumn.CellTemplate>
+                                        </DataGridTemplateColumn>
+                                    </DataGrid.Columns>
+                                </DataGrid>
+                            </StackPanel>
+                        </ScrollViewer>
                     </Border>
 
                     <Border x:Name="LoadingOverlay" Visibility="Collapsed" Background="#7F111827" CornerRadius="12">
