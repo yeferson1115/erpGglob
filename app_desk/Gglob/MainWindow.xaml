@@ -148,6 +148,29 @@
             <Setter Property="BorderBrush" Value="{StaticResource BorderBrushSoft}" />
             <Setter Property="Background" Value="{StaticResource SurfaceMutedBrush}" />
         </Style>
+
+        <Style TargetType="ScrollBar">
+            <Setter Property="Width" Value="10" />
+            <Setter Property="Background" Value="#e2e8f0" />
+        </Style>
+
+        <Style TargetType="Thumb">
+            <Setter Property="Background" Value="#94a3b8" />
+            <Setter Property="BorderBrush" Value="#94a3b8" />
+            <Setter Property="BorderThickness" Value="0" />
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Thumb">
+                        <Border Background="{TemplateBinding Background}" CornerRadius="8" />
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+            <Style.Triggers>
+                <Trigger Property="IsMouseOver" Value="True">
+                    <Setter Property="Background" Value="#64748b" />
+                </Trigger>
+            </Style.Triggers>
+        </Style>
     </Window.Resources>
 
     <Grid Margin="16">
@@ -183,7 +206,7 @@
                         <TextBlock Text="Contraseña" FontWeight="SemiBold" />
                         <PasswordBox x:Name="PasswordBox" Style="{StaticResource InputPassword}" />
 
-                        <Button x:Name="LoginButton" Style="{StaticResource PrimaryButton}" Click="LoginButton_Click" Content="Entrar al Desk" Width="190" />
+                        <Button x:Name="LoginButton" Style="{StaticResource PrimaryButton}" Click="LoginButton_Click" Content="Entrar al Desk" HorizontalAlignment="Stretch" MinHeight="44" />
 
                         <TextBlock x:Name="StatusTextBlock" Margin="0,12,0,4" Foreground="#495057" TextWrapping="Wrap" />
 
@@ -206,7 +229,7 @@
 
             <Border Grid.Column="0" Margin="0,0,14,0" CornerRadius="14" Background="#264f9c" Padding="14">
                 <DockPanel>
-                    <Button DockPanel.Dock="Bottom" Style="{StaticResource PrimaryButton}" Content="⏻ Cerrar sesión" Click="LogoutButton_Click" />
+                    <Button DockPanel.Dock="Bottom" Style="{StaticResource PrimaryButton}" Content="🚪 Cerrar sesión" Click="LogoutButton_Click" />
                     <StackPanel>
                         <TextBlock Text="GglobERP Desk" Foreground="White" FontSize="22" FontWeight="Bold" />
                         <TextBlock x:Name="DashboardUserTextBlock" Margin="0,4,0,2" Foreground="#dce8ff" />
@@ -252,7 +275,7 @@
                     </StackPanel>
                 </Border>
 
-                <Border Grid.Row="1" Margin="0,12,0,0" Background="White" CornerRadius="12" Padding="14" BorderBrush="#e2e8f3" BorderThickness="1">
+                <Border x:Name="AvailableModulesPanel" Grid.Row="1" Margin="0,12,0,0" Background="White" CornerRadius="12" Padding="14" BorderBrush="#e2e8f3" BorderThickness="1">
                     <StackPanel>
                         <TextBlock Text="🧩 Módulos disponibles" FontSize="18" FontWeight="SemiBold" Foreground="#1f2937" Margin="0,0,0,10" />
                         <WrapPanel x:Name="ActiveServicesCardsPanel" />
@@ -498,26 +521,74 @@
                                         <Setter Property="Background" Value="#1d4ed8" />
                                         <Setter Property="BorderBrush" Value="#1d4ed8" />
                                         <Setter Property="BorderThickness" Value="0" />
-                                        <Setter Property="Padding" Value="10,5" />
+                                        <Setter Property="Height" Value="34" />
+                                        <Setter Property="MinWidth" Value="95" />
+                                        <Setter Property="Padding" Value="12,6" />
                                         <Setter Property="Margin" Value="0,0,6,0" />
                                         <Setter Property="Cursor" Value="Hand" />
+                                        <Setter Property="Template">
+                                            <Setter.Value>
+                                                <ControlTemplate TargetType="Button">
+                                                    <Border x:Name="ActionButtonChrome" Background="{TemplateBinding Background}" CornerRadius="10">
+                                                        <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center" />
+                                                    </Border>
+                                                    <ControlTemplate.Triggers>
+                                                        <Trigger Property="IsMouseOver" Value="True">
+                                                            <Setter TargetName="ActionButtonChrome" Property="Background" Value="#1e40af" />
+                                                        </Trigger>
+                                                    </ControlTemplate.Triggers>
+                                                </ControlTemplate>
+                                            </Setter.Value>
+                                        </Setter>
                                     </Style>
                                     <Style x:Key="CashRegisterAssignButtonStyle" TargetType="Button">
                                         <Setter Property="Foreground" Value="White" />
                                         <Setter Property="Background" Value="#0f766e" />
                                         <Setter Property="BorderBrush" Value="#0f766e" />
                                         <Setter Property="BorderThickness" Value="0" />
-                                        <Setter Property="Padding" Value="10,5" />
+                                        <Setter Property="Height" Value="34" />
+                                        <Setter Property="MinWidth" Value="95" />
+                                        <Setter Property="Padding" Value="12,6" />
                                         <Setter Property="Margin" Value="0,0,6,0" />
                                         <Setter Property="Cursor" Value="Hand" />
+                                        <Setter Property="Template">
+                                            <Setter.Value>
+                                                <ControlTemplate TargetType="Button">
+                                                    <Border x:Name="ActionButtonChrome" Background="{TemplateBinding Background}" CornerRadius="10">
+                                                        <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center" />
+                                                    </Border>
+                                                    <ControlTemplate.Triggers>
+                                                        <Trigger Property="IsMouseOver" Value="True">
+                                                            <Setter TargetName="ActionButtonChrome" Property="Background" Value="#0f5f59" />
+                                                        </Trigger>
+                                                    </ControlTemplate.Triggers>
+                                                </ControlTemplate>
+                                            </Setter.Value>
+                                        </Setter>
                                     </Style>
                                     <Style x:Key="CashRegisterDeleteButtonStyle" TargetType="Button">
                                         <Setter Property="Foreground" Value="White" />
                                         <Setter Property="Background" Value="#b91c1c" />
                                         <Setter Property="BorderBrush" Value="#b91c1c" />
                                         <Setter Property="BorderThickness" Value="0" />
-                                        <Setter Property="Padding" Value="10,5" />
+                                        <Setter Property="Height" Value="34" />
+                                        <Setter Property="MinWidth" Value="95" />
+                                        <Setter Property="Padding" Value="12,6" />
                                         <Setter Property="Cursor" Value="Hand" />
+                                        <Setter Property="Template">
+                                            <Setter.Value>
+                                                <ControlTemplate TargetType="Button">
+                                                    <Border x:Name="ActionButtonChrome" Background="{TemplateBinding Background}" CornerRadius="10">
+                                                        <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center" />
+                                                    </Border>
+                                                    <ControlTemplate.Triggers>
+                                                        <Trigger Property="IsMouseOver" Value="True">
+                                                            <Setter TargetName="ActionButtonChrome" Property="Background" Value="#991b1b" />
+                                                        </Trigger>
+                                                    </ControlTemplate.Triggers>
+                                                </ControlTemplate>
+                                            </Setter.Value>
+                                        </Setter>
                                     </Style>
                                 </DataGrid.Resources>
                                 <DataGrid.Columns>
@@ -528,9 +599,9 @@
                                         <DataGridTemplateColumn.CellTemplate>
                                             <DataTemplate>
                                                 <WrapPanel>
-                                                    <Button Content="Editar" Tag="{Binding}" Style="{StaticResource CashRegisterEditButtonStyle}" Click="EditCashRegisterRowButton_Click" />
-                                                    <Button Content="Asignar" Tag="{Binding}" Style="{StaticResource CashRegisterAssignButtonStyle}" Click="AssignCashRegisterRowButton_Click" />
-                                                    <Button Content="Eliminar" Tag="{Binding}" Style="{StaticResource CashRegisterDeleteButtonStyle}" Click="DeleteCashRegisterRowButton_Click" />
+                                                    <Button Content="✏️ Editar" Tag="{Binding}" Style="{StaticResource CashRegisterEditButtonStyle}" Click="EditCashRegisterRowButton_Click" />
+                                                    <Button Content="👤 Asignar" Tag="{Binding}" Style="{StaticResource CashRegisterAssignButtonStyle}" Click="AssignCashRegisterRowButton_Click" />
+                                                    <Button Content="🗑 Eliminar" Tag="{Binding}" Style="{StaticResource CashRegisterDeleteButtonStyle}" Click="DeleteCashRegisterRowButton_Click" />
                                                 </WrapPanel>
                                             </DataTemplate>
                                         </DataGridTemplateColumn.CellTemplate>
@@ -585,8 +656,8 @@
                                         </StackPanel>
                                         <StackPanel Grid.Row="2" Grid.Column="1" Margin="8,0,0,0" VerticalAlignment="Bottom">
                                             <WrapPanel HorizontalAlignment="Right" Margin="0,12,0,0">
-                                                <Button x:Name="ClearCashierFormButton" Content="Limpiar" Width="110" Margin="0,0,8,0" Click="ClearCashierFormButton_Click" />
-                                                <Button x:Name="SaveCashierButton" Content="Crear cajero" Width="130" Style="{StaticResource PrimaryButton}" Click="SaveCashierButton_Click" />
+                                                <Button x:Name="ClearCashierFormButton" Content="🧹 Limpiar" Width="120" Height="36" Margin="0,0,8,0" Click="ClearCashierFormButton_Click" />
+                                                <Button x:Name="SaveCashierButton" Content="👤 Crear cajero" Width="150" Height="36" Style="{StaticResource PrimaryButton}" Click="SaveCashierButton_Click" />
                                             </WrapPanel>
                                         </StackPanel>
                                     </Grid>
@@ -601,8 +672,8 @@
                                             <DataGridTemplateColumn.CellTemplate>
                                                 <DataTemplate>
                                                     <WrapPanel>
-                                                        <Button Content="Editar" Tag="{Binding}" Margin="0,0,6,0" Click="EditCashierRowButton_Click" />
-                                                        <Button Content="Eliminar" Tag="{Binding}" Click="DeleteCashierRowButton_Click" />
+                                                        <Button Content="✏️ Editar" Tag="{Binding}" Margin="0,0,6,0" MinWidth="90" Height="34" Padding="12,6" Background="#e0ecff" BorderBrush="#bdd3ff" Click="EditCashierRowButton_Click" />
+                                                        <Button Content="🗑 Eliminar" Tag="{Binding}" MinWidth="90" Height="34" Padding="12,6" Background="#ffe2e2" BorderBrush="#ffc6c6" Click="DeleteCashierRowButton_Click" />
                                                     </WrapPanel>
                                                 </DataTemplate>
                                             </DataGridTemplateColumn.CellTemplate>

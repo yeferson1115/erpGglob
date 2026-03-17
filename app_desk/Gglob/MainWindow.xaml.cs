@@ -332,6 +332,7 @@ namespace Gglob
 
             RenderServicesMenu(services);
             RenderActiveServicesCards(activeServices);
+            ApplyModulesVisibilityByRole();
             isGglobPayEnabled = user.Company?.GglobPayEnabled ?? false;
             ToggleGglobPayModuleAvailability();
             RenderPermissions(permissionsList);
@@ -362,6 +363,7 @@ namespace Gglob
 
         private void SetSelectedModule(string? moduleKey)
         {
+            ApplyModulesVisibilityByRole(moduleKey);
             DefaultPanel.Visibility = Visibility.Visible;
             GglobPayPanel.Visibility = Visibility.Collapsed;
             CashRegistersPanel.Visibility = Visibility.Collapsed;
@@ -409,6 +411,21 @@ namespace Gglob
                 _ = LoadBusinessCashiersFromApi();
                 return;
             }
+        }
+
+
+        private void ApplyModulesVisibilityByRole(string? moduleKey = null)
+        {
+            if (currentUser is null)
+            {
+                AvailableModulesPanel.Visibility = Visibility.Visible;
+                return;
+            }
+
+            var role = currentUser.BusinessRole?.Trim().ToLowerInvariant();
+            var hideByRole = role is "cashier";
+            var hideByModule = moduleKey is "gglob_pay" or "cash_register_management" or "cashier_management";
+            AvailableModulesPanel.Visibility = (hideByRole || hideByModule) ? Visibility.Collapsed : Visibility.Visible;
         }
 
         private void RenderServicesMenu(List<ServiceItem> services)
@@ -1645,8 +1662,8 @@ namespace Gglob
             CashierPhoneTextBox.Text = cashier.Phone;
             CashierPasswordBox.Password = string.Empty;
             CashierPasswordLabel.Text = "Contraseña (opcional para actualizar)";
-            SaveCashierButton.Content = "Actualizar cajero";
-            ClearCashierFormButton.Content = "Cancelar edición";
+            SaveCashierButton.Content = "💾 Actualizar cajero";
+            ClearCashierFormButton.Content = "↩ Cancelar edición";
         }
 
         private async void DeleteCashierRowButton_Click(object sender, RoutedEventArgs e)
@@ -1704,8 +1721,8 @@ namespace Gglob
             CashierPhoneTextBox.Text = string.Empty;
             CashierPasswordBox.Password = string.Empty;
             CashierPasswordLabel.Text = "Contraseña";
-            SaveCashierButton.Content = "Crear cajero";
-            ClearCashierFormButton.Content = "Limpiar";
+            SaveCashierButton.Content = "👤 Crear cajero";
+            ClearCashierFormButton.Content = "🧹 Limpiar";
         }
 
         private async Task<ApiQrIntentResponse?> CreateQrIntentApi(string sourceChannel, decimal amount, int cashRegisterId, int? destinationAccountId)
