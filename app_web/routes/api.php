@@ -81,8 +81,11 @@ Route::middleware(['auth:api'])->group(function () {
     Route::post('ingreso/import', [IngresoController::class, 'import']);
 
     Route::get('gglob-pay/cash-registers', [GglobPayController::class, 'cashRegisters']);
+    Route::delete('gglob-pay/cash-registers/{cashRegister}', [GglobPayController::class, 'destroyCashRegister']);
     Route::post('gglob-pay/cash-registers', [GglobPayController::class, 'storeCashRegister']);
     Route::put('gglob-pay/cash-registers/{cashRegister}', [GglobPayController::class, 'updateCashRegister']);
+    Route::get('gglob-pay/cashiers', [GglobPayController::class, 'cashiers']);
+    Route::post('gglob-pay/cash-registers/{cashRegister}/assign-user', [GglobPayController::class, 'assignCashRegisterToCashier']);
     Route::post('gglob-pay/cash-registers/{cashRegister}/assign-me', [GglobPayController::class, 'assignCashRegisterToCurrentUser']);
     Route::get('gglob-pay/provider-settings/{provider}', [GglobPayController::class, 'providerSettings']);
     Route::post('gglob-pay/provider-settings/{provider}', [GglobPayController::class, 'saveProviderSettings']);
