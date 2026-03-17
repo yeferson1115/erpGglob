@@ -187,7 +187,8 @@
                     </Border>
 
                     <Border x:Name="GglobPayPanel" Visibility="Collapsed" Background="White" CornerRadius="12" Padding="14" BorderBrush="#e2e8f3" BorderThickness="1">
-                        <TabControl x:Name="GglobPayTabControl">
+                        <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+                            <TabControl x:Name="GglobPayTabControl">
                         <TabItem x:Name="WompiConfigTab" Header="Wompi">
                             <Grid Margin="10">
                                 <Grid.ColumnDefinitions>
@@ -369,11 +370,13 @@
                                 </DataGrid>
                             </StackPanel>
                         </TabItem>
-                        </TabControl>
+                            </TabControl>
+                        </ScrollViewer>
                     </Border>
 
                     <Border x:Name="CashRegistersPanel" Visibility="Collapsed" Background="White" CornerRadius="12" Padding="14" BorderBrush="#e2e8f3" BorderThickness="1">
-                        <Grid Margin="10">
+                        <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+                            <Grid Margin="10">
                             <Grid.RowDefinitions>
                                 <RowDefinition Height="Auto" />
                                 <RowDefinition Height="*" />
@@ -433,7 +436,8 @@
                                     </DataGridTemplateColumn>
                                 </DataGrid.Columns>
                             </DataGrid>
-                        </Grid>
+                            </Grid>
+                        </ScrollViewer>
                     </Border>
 
                     <Border x:Name="LoadingOverlay" Visibility="Collapsed" Background="#7F111827" CornerRadius="12">

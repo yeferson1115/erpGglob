@@ -3,11 +3,14 @@
 namespace App\Http\Controllers\API;
 
 use App\Http\Controllers\Controller;
+use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Crypt;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Str;
+use Spatie\Permission\Models\Role;
 
 class GglobPayController extends Controller
 {
@@ -301,6 +304,45 @@ class GglobPayController extends Controller
             ->get();
 
         return response()->json(['data' => $rows]);
+    }
+
+    public function storeCashier(Request $request)
+    {
+        $user = $request->user();
+        if (!$this->isOwner($request)) {
+            return response()->json(['message' => 'Solo el dueño puede crear usuarios cajeros.'], 403);
+        }
+
+        $validated = $request->validate([
+            'name' => ['required', 'string', 'max:255'],
+            'last_name' => ['nullable', 'string', 'max:255'],
+            'email' => ['required', 'email', 'max:255', 'unique:users,email'],
+            'phone' => ['nullable', 'string', 'max:30'],
+            'password' => ['required', 'string', 'min:8'],
+        ]);
+
+        $cashier = User::create([
+            'name' => trim($validated['name']),
+            'last_name' => $validated['last_name'] ?? null,
+            'email' => strtolower(trim($validated['email'])),
+            'phone' => $validated['phone'] ?? null,
+            'password' => Hash::make($validated['password']),
+            'company_id' => $user->company_id,
+            'business_role' => 'cashier',
+        ]);
+
+        if (Role::where('name', 'user')->exists()) {
+            $cashier->assignRole('user');
+        }
+
+        return response()->json([
+            'message' => 'Usuario cajero creado correctamente.',
+            'data' => [
+                'id' => $cashier->id,
+                'name' => $cashier->name,
+                'email' => $cashier->email,
+            ],
+        ], 201);
     }
 
     public function assignCashRegisterToCashier(Request $request, int $cashRegister)
