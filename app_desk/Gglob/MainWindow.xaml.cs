@@ -11,7 +11,8 @@ using System.Text.Json.Serialization;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Media;
-using System.Text.Json.Serialization;
+using System.Windows.Media.Imaging;
+using QRCoder;
 
 namespace Gglob
 {
@@ -1472,11 +1473,15 @@ namespace Gglob
                 return;
             }
 
+            var checkoutUrl = ExtractCheckoutUrl(intent.QrPayload);
             var payload = JsonSerializer.Serialize(intent.QrPayload, new JsonSerializerOptions
             {
                 WriteIndented = true
             });
+            var qrText = string.IsNullOrWhiteSpace(checkoutUrl) ? payload : checkoutUrl;
 
+            QrImage.Source = BuildQrImageFromText(qrText);
+            QrCheckoutUrlTextBox.Text = checkoutUrl ?? "No aplica para este canal.";
             QrPayloadTextBox.Text = payload;
             QrStatusTextBlock.Text = $"QR generado con referencia {intent.ReferenceCode} para {accountOption.DisplayName}.";
             QrStatusTextBlock.Foreground = Brushes.DarkGreen;
@@ -1510,6 +1515,60 @@ namespace Gglob
             ApplyVerifiedFilterLocal();
             GenerateReportLocal();
             ShowAlert("QR generado y pago guardado en app_web correctamente.");
+        }
+
+        private static string? ExtractCheckoutUrl(object? qrPayload)
+        {
+            if (qrPayload is null)
+            {
+                return null;
+            }
+
+            if (qrPayload is JsonElement element &&
+                element.ValueKind == JsonValueKind.Object &&
+                element.TryGetProperty("checkout_url", out var checkoutElement) &&
+                checkoutElement.ValueKind == JsonValueKind.String)
+            {
+                return checkoutElement.GetString();
+            }
+
+            try
+            {
+                using var document = JsonDocument.Parse(JsonSerializer.Serialize(qrPayload));
+                if (document.RootElement.ValueKind == JsonValueKind.Object &&
+                    document.RootElement.TryGetProperty("checkout_url", out var checkout) &&
+                    checkout.ValueKind == JsonValueKind.String)
+                {
+                    return checkout.GetString();
+                }
+            }
+            catch
+            {
+            }
+
+            return null;
+        }
+
+        private static BitmapImage? BuildQrImageFromText(string qrText)
+        {
+            if (string.IsNullOrWhiteSpace(qrText))
+            {
+                return null;
+            }
+
+            using var generator = new QRCodeGenerator();
+            using var data = generator.CreateQrCode(qrText, QRCodeGenerator.ECCLevel.Q);
+            var png = new PngByteQRCode(data);
+            var qrBytes = png.GetGraphic(10);
+
+            using var stream = new MemoryStream(qrBytes);
+            var bitmap = new BitmapImage();
+            bitmap.BeginInit();
+            bitmap.CacheOption = BitmapCacheOption.OnLoad;
+            bitmap.StreamSource = stream;
+            bitmap.EndInit();
+            bitmap.Freeze();
+            return bitmap;
         }
 
         private async void ApplyVerifiedFilterButton_Click(object sender, RoutedEventArgs e)

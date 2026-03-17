@@ -12,4 +12,8 @@
     <Resource Include="..\..\app_web\public\imagenes\logo.png" Link="Images\logo.png" />
   </ItemGroup>
 
+  <ItemGroup>
+    <PackageReference Include="QRCoder" Version="1.6.0" />
+  </ItemGroup>
+
 </Project>

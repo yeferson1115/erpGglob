@@ -273,6 +273,11 @@
                                 <Border Grid.Column="1" Background="#f8fbff" CornerRadius="10" BorderThickness="1" BorderBrush="#d9e4ff" Padding="12">
                                     <StackPanel>
                                         <TextBlock Text="Código QR generado" FontWeight="SemiBold" FontSize="16" Foreground="#1f2937" />
+                                        <Border Margin="0,12,0,0" BorderBrush="#d1d5db" BorderThickness="1" CornerRadius="8" Padding="8" Background="White" HorizontalAlignment="Center">
+                                            <Image x:Name="QrImage" Width="190" Height="190" Stretch="Uniform" />
+                                        </Border>
+                                        <TextBlock Text="Checkout URL" Margin="0,10,0,0" FontWeight="SemiBold" Foreground="#1f2937" />
+                                        <TextBox x:Name="QrCheckoutUrlTextBox" Margin="0,6,0,0" Height="58" TextWrapping="Wrap" AcceptsReturn="True" IsReadOnly="True" VerticalScrollBarVisibility="Auto" />
                                         <TextBox x:Name="QrPayloadTextBox" Margin="0,12,0,0" Height="170" TextWrapping="Wrap" AcceptsReturn="True" IsReadOnly="True" VerticalScrollBarVisibility="Auto" />
                                         <TextBlock Text="El payload QR contiene referencia, valor y cuenta receptora para verificación inmediata contra el banco receptor." Margin="0,10,0,0" TextWrapping="Wrap" Foreground="#4b5563" />
                                     </StackPanel>
