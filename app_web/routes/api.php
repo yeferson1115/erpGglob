@@ -94,6 +94,7 @@ Route::middleware(['auth:api'])->group(function () {
     Route::post('gglob-pay/destination-accounts', [GglobPayController::class, 'storeDestinationAccount']);
     Route::get('gglob-pay/payments', [GglobPayController::class, 'payments']);
     Route::post('gglob-pay/payments', [GglobPayController::class, 'storePayment']);
+    Route::post('gglob-pay/payments/verify-pending-wompi', [GglobPayController::class, 'verifyPendingWompiPayments']);
     Route::get('gglob-pay/report', [GglobPayController::class, 'report']);
   
 });

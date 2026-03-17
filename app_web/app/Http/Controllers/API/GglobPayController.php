@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Crypt;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Str;
 
 class GglobPayController extends Controller
@@ -13,6 +14,14 @@ class GglobPayController extends Controller
     private function isOwner(Request $request): bool
     {
         return strtolower((string) $request->user()->business_role) === 'owner';
+    }
+
+    private function normalizePaymentStatus(?string $status): string
+    {
+        return match (strtoupper((string) $status)) {
+            'APPROVED', 'DECLINED', 'VOIDED', 'ERROR', 'PENDING' => strtoupper((string) $status),
+            default => 'ERROR',
+        };
     }
 
     public function wompiWebhook(Request $request)
@@ -28,7 +37,7 @@ class GglobPayController extends Controller
         $updated = DB::table('gglob_pay_payments')
             ->where('reference_code', $reference)
             ->update([
-                'status' => $status !== '' ? $status : 'APPROVED',
+                'status' => $this->normalizePaymentStatus($status === '' ? 'PENDING' : $status),
                 'verification_provider' => 'wompi',
                 'verification_trace' => 'webhook:' . $transactionId,
                 'updated_at' => now(),
@@ -533,6 +542,58 @@ class GglobPayController extends Controller
         }
     }
 
+    public function verifyPendingWompiPayments(Request $request)
+    {
+        $companyId = $request->user()->company_id;
+        $setting = $this->readProviderConfig($companyId, 'wompi');
+
+        if (!$setting || empty($setting['private_key'])) {
+            return response()->json(['message' => 'Wompi no está configurado por el dueño.'], 422);
+        }
+
+        $pendingPayments = DB::table('gglob_pay_payments')
+            ->where('company_id', $companyId)
+            ->where('source_channel', 'wompi_credit_card')
+            ->where('status', 'PENDING')
+            ->orderByDesc('verified_at')
+            ->get();
+
+        $updatedCount = 0;
+        foreach ($pendingPayments as $payment) {
+            $response = Http::withToken((string) $setting['private_key'])
+                ->timeout(12)
+                ->get('https://production.wompi.co/v1/transactions', [
+                    'reference' => $payment->reference_code,
+                ]);
+
+            if (!$response->successful()) {
+                continue;
+            }
+
+            $transaction = data_get($response->json(), 'data.0');
+            if (!$transaction) {
+                continue;
+            }
+
+            $newStatus = $this->normalizePaymentStatus((string) data_get($transaction, 'status', 'ERROR'));
+            DB::table('gglob_pay_payments')
+                ->where('id', $payment->id)
+                ->update([
+                    'status' => $newStatus,
+                    'verification_provider' => 'wompi',
+                    'verification_trace' => 'manual_sync:' . (string) data_get($transaction, 'id', $payment->reference_code),
+                    'updated_at' => now(),
+                ]);
+
+            $updatedCount++;
+        }
+
+        return response()->json([
+            'message' => 'Verificación manual completada.',
+            'updated' => $updatedCount,
+        ]);
+    }
+
     public function payments(Request $request)
     {
         $companyId = $request->user()->company_id;
@@ -626,9 +687,9 @@ class GglobPayController extends Controller
             'amount' => $validated['amount'],
             'cashier' => $validated['cashier'],
             'bank' => $validated['bank'],
-            'status' => 'VERIFIED',
+            'status' => 'PENDING',
             'verification_provider' => strtolower($validated['bank']) === 'wompi' ? 'wompi' : 'bancolombia',
-            'verification_trace' => 'instant_bank_callback',
+            'verification_trace' => 'created_from_desk',
             'verified_at' => $verifiedAt,
             'created_at' => now(),
             'updated_at' => now(),

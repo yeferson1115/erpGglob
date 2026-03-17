@@ -300,7 +300,8 @@
                                         <TextBlock Text="Cajero" FontWeight="SemiBold" />
                                         <ComboBox x:Name="VerifiedCashierComboBox" Width="170" Height="32" />
                                     </StackPanel>
-                                    <Button Content="Filtrar" Width="110" Height="32" Margin="0,18,0,0" Click="ApplyVerifiedFilterButton_Click" />
+                                    <Button Content="Filtrar" Width="110" Height="32" Margin="0,18,10,0" Click="ApplyVerifiedFilterButton_Click" />
+                                    <Button Content="Verificación manual Wompi" Width="210" Height="32" Margin="0,18,0,0" Click="ManualVerifyWompiButton_Click" />
                                 </WrapPanel>
                                 <DataGrid x:Name="VerifiedPaymentsDataGrid" AutoGenerateColumns="False" IsReadOnly="True" Height="290">
                                     <DataGrid.Columns>
@@ -309,6 +310,13 @@
                                         <DataGridTextColumn Header="Valor" Binding="{Binding AmountFormatted}" Width="120" />
                                         <DataGridTextColumn Header="Cajero" Binding="{Binding Cashier}" Width="120" />
                                         <DataGridTextColumn Header="Banco" Binding="{Binding Bank}" Width="140" />
+                                        <DataGridTemplateColumn Header="Estado" Width="140">
+                                            <DataGridTemplateColumn.CellTemplate>
+                                                <DataTemplate>
+                                                    <TextBlock Text="{Binding StatusLabel}" Foreground="{Binding StatusBrush}" FontWeight="SemiBold" />
+                                                </DataTemplate>
+                                            </DataGridTemplateColumn.CellTemplate>
+                                        </DataGridTemplateColumn>
                                         <DataGridTextColumn Header="Hora" Binding="{Binding VerifiedAtFormatted}" Width="140" />
                                     </DataGrid.Columns>
                                 </DataGrid>

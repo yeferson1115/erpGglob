@@ -79,7 +79,8 @@ namespace Gglob
                 1,
                 "Caja Principal",
                 "ahorros",
-                0));
+                0,
+                "APPROVED"));
             verifiedPayments.Add(new VerifiedPaymentRecord(
                 "GGPAY-20260614-084519-F4K8",
                 "Julián Torres",
@@ -92,7 +93,8 @@ namespace Gglob
                 1,
                 "Caja Principal",
                 "wompi_credit_card",
-                null));
+                null,
+                "PENDING"));
 
             RefreshQrOptions();
         }
@@ -737,6 +739,26 @@ namespace Gglob
             catch
             {
                 return null;
+            }
+        }
+
+        private async Task<int> VerifyPendingWompiPaymentsApi()
+        {
+            try
+            {
+                using var response = await HttpClient.PostAsync($"{ApiBaseUrl}/gglob-pay/payments/verify-pending-wompi", new StringContent("{}", Encoding.UTF8, "application/json"));
+                if (!response.IsSuccessStatusCode)
+                {
+                    return -1;
+                }
+
+                var content = await response.Content.ReadAsStringAsync();
+                var result = JsonSerializer.Deserialize<ApiManualVerificationResponse>(content, JsonOptions());
+                return result?.Updated ?? 0;
+            }
+            catch
+            {
+                return -1;
             }
         }
 
@@ -1498,7 +1520,8 @@ namespace Gglob
                 currentUser.Id ?? 0,
                 selectedCashRegister.Name,
                 accountOption.Channel,
-                accountOption.Account?.Id);
+                accountOption.Account?.Id,
+                "PENDING");
 
             SetLoading(true);
             var stored = await SaveVerifiedPaymentApi(payment);
@@ -1574,6 +1597,27 @@ namespace Gglob
         private async void ApplyVerifiedFilterButton_Click(object sender, RoutedEventArgs e)
         {
             await LoadVerifiedPaymentsFromApi();
+        }
+
+        private async void ManualVerifyWompiButton_Click(object sender, RoutedEventArgs e)
+        {
+            SetLoading(true);
+            var updated = await VerifyPendingWompiPaymentsApi();
+            await LoadVerifiedPaymentsFromApi();
+            SetLoading(false);
+
+            if (updated >= 0)
+            {
+                QrStatusTextBlock.Text = $"Verificación manual Wompi finalizada. Pagos revisados: {updated}.";
+                QrStatusTextBlock.Foreground = Brushes.DarkGreen;
+                ShowAlert(QrStatusTextBlock.Text);
+            }
+            else
+            {
+                QrStatusTextBlock.Text = "No fue posible verificar pagos pendientes de Wompi.";
+                QrStatusTextBlock.Foreground = Brushes.DarkRed;
+                ShowAlert(QrStatusTextBlock.Text);
+            }
         }
 
         private void ApplyVerifiedFilterLocal()
@@ -2058,6 +2102,9 @@ namespace Gglob
         [JsonPropertyName("destination_account_id")]
         public int? DestinationAccountId { get; set; }
 
+        [JsonPropertyName("status")]
+        public string? Status { get; set; }
+
         public VerifiedPaymentRecord ToDesktopRecord()
         {
             _ = DateTime.TryParse(VerifiedAt, out var verifiedAt);
@@ -2073,7 +2120,8 @@ namespace Gglob
                 CashierUserId ?? 0,
                 CashRegisterName ?? string.Empty,
                 SourceChannel ?? "ahorros",
-                DestinationAccountId);
+                DestinationAccountId,
+                Status ?? "PENDING");
         }
     }
 
@@ -2095,7 +2143,7 @@ namespace Gglob
         public string DisplayName { get; } = displayName;
     }
 
-    public class VerifiedPaymentRecord(string referenceCode, string senderName, string accountNumber, decimal amount, string cashier, string bank, DateTime verifiedAt, int cashRegisterId, int cashierUserId, string cashRegisterName, string sourceChannel, int? destinationAccountId)
+    public class VerifiedPaymentRecord(string referenceCode, string senderName, string accountNumber, decimal amount, string cashier, string bank, DateTime verifiedAt, int cashRegisterId, int cashierUserId, string cashRegisterName, string sourceChannel, int? destinationAccountId, string status)
     {
         public string ReferenceCode { get; } = referenceCode;
         public string SenderName { get; } = senderName;
@@ -2109,10 +2157,35 @@ namespace Gglob
         public string CashRegisterName { get; } = cashRegisterName;
         public string SourceChannel { get; } = sourceChannel;
         public int? DestinationAccountId { get; } = destinationAccountId;
+        public string Status { get; } = (status ?? "PENDING").ToUpperInvariant();
+
+        public string StatusLabel => Status switch
+        {
+            "APPROVED" => "APPROVED ✅",
+            "DECLINED" => "DECLINED",
+            "VOIDED" => "VOIDED",
+            "ERROR" => "ERROR",
+            _ => "PENDING",
+        };
+
+        public Brush StatusBrush => Status switch
+        {
+            "APPROVED" => Brushes.DarkGreen,
+            "DECLINED" => Brushes.IndianRed,
+            "VOIDED" => Brushes.SlateGray,
+            "ERROR" => Brushes.DarkRed,
+            _ => Brushes.DarkOrange,
+        };
 
         public string AmountFormatted => Amount.ToString("C0", CultureInfo.GetCultureInfo("es-CO"));
         public string VerifiedAtFormatted => VerifiedAt.ToString("HH:mm:ss");
         public string VerifiedAtFullFormatted => VerifiedAt.ToString("yyyy-MM-dd HH:mm");
+    }
+
+    public class ApiManualVerificationResponse
+    {
+        [JsonPropertyName("updated")]
+        public int Updated { get; set; }
     }
 
     public class ApiQrIntentResponse
