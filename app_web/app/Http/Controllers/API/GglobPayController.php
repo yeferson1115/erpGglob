@@ -54,9 +54,8 @@ class GglobPayController extends Controller
     public function storeDestinationAccount(Request $request)
     {
         $user = $request->user();
-        $isAdmin = $user->hasRole('admin') || $user->hasRole('Administrador');
-        if (!$isAdmin) {
-            return response()->json(['message' => 'Solo el administrador puede registrar cuentas destino de Bancolombia.'], 403);
+        if (!$this->isOwner($request)) {
+            return response()->json(['message' => 'Solo el dueño puede registrar cuentas destino de Bancolombia.'], 403);
         }
 
         $validated = $request->validate([
@@ -357,6 +356,10 @@ class GglobPayController extends Controller
             return response()->json(['message' => 'Proveedor no soportado.'], 404);
         }
 
+        if (!$this->isOwner($request)) {
+            return response()->json(['message' => 'Solo el dueño puede ver configuración de proveedores.'], 403);
+        }
+
         $setting = DB::table('gglob_pay_provider_settings')
             ->where('company_id', $request->user()->company_id)
             ->where('provider', $provider)
@@ -375,11 +378,14 @@ class GglobPayController extends Controller
 
         if ($provider === 'wompi') {
             $public['public_key'] = $raw['public_key'] ?? null;
+            $public['private_key'] = $raw['private_key'] ?? null;
+            $public['events_secret'] = $raw['events_secret'] ?? null;
             $public['events_secret_configured'] = !empty($raw['events_secret']);
             $public['private_key_configured'] = !empty($raw['private_key']);
         } else {
             $public['base_url'] = $raw['base_url'] ?? null;
             $public['client_id'] = $raw['client_id'] ?? null;
+            $public['client_secret'] = $raw['client_secret'] ?? null;
             $public['client_secret_configured'] = !empty($raw['client_secret']);
         }
 
@@ -395,7 +401,7 @@ class GglobPayController extends Controller
 
         $user = $request->user();
         if ($provider === 'wompi') {
-            if (strtolower((string) $user->business_role) !== 'owner') {
+            if (!$this->isOwner($request)) {
                 return response()->json(['message' => 'Solo el dueño puede configurar llaves de Wompi.'], 403);
             }
             $validated = $request->validate([
@@ -404,9 +410,8 @@ class GglobPayController extends Controller
                 'events_secret' => ['required', 'string', 'max:255'],
             ]);
         } else {
-            $isAdmin = $user->hasRole('admin') || $user->hasRole('Administrador');
-            if (!$isAdmin) {
-                return response()->json(['message' => 'Solo el administrador puede configurar Bancolombia.'], 403);
+            if (!$this->isOwner($request)) {
+                return response()->json(['message' => 'Solo el dueño puede configurar Bancolombia.'], 403);
             }
             $validated = $request->validate([
                 'base_url' => ['required', 'string', 'max:255'],

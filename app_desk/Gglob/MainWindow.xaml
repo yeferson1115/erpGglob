@@ -188,7 +188,7 @@
 
                     <Border x:Name="GglobPayPanel" Visibility="Collapsed" Background="White" CornerRadius="12" Padding="14" BorderBrush="#e2e8f3" BorderThickness="1">
                         <TabControl x:Name="GglobPayTabControl">
-                        <TabItem Header="Wompi">
+                        <TabItem x:Name="WompiConfigTab" Header="Wompi">
                             <Grid Margin="10">
                                 <Grid.ColumnDefinitions>
                                     <ColumnDefinition Width="1.2*" />
@@ -213,7 +213,7 @@
                             </Grid>
                         </TabItem>
 
-                        <TabItem Header="Bancolombia">
+                        <TabItem x:Name="BancolombiaConfigTab" Header="Bancolombia">
                             <Grid Margin="10">
                                 <Grid.ColumnDefinitions>
                                     <ColumnDefinition Width="1.4*" />
@@ -234,7 +234,7 @@
                                     <Button x:Name="SaveBancolombiaDestinationButton" Content="Guardar cuenta destino Bancolombia" Width="280" Style="{StaticResource PrimaryButton}" Click="SaveDestinationAccountButton_Click" />
 
                                     <Separator Margin="0,10,0,10"/>
-                                    <TextBlock Text="Configuración Bancolombia API (Solo Administrador)" FontWeight="SemiBold" Foreground="#1f2937" />
+                                    <TextBlock Text="Configuración Bancolombia API (Solo Dueño)" FontWeight="SemiBold" Foreground="#1f2937" />
                                     <TextBlock Text="Base URL" FontWeight="SemiBold" Margin="0,8,0,0" />
                                     <TextBox x:Name="BancolombiaBaseUrlTextBox" Style="{StaticResource InputText}" />
                                     <TextBlock Text="Client ID" FontWeight="SemiBold" />
@@ -375,6 +375,34 @@
                             </DockPanel>
 
                             <DataGrid x:Name="CashRegistersDataGrid" Grid.Row="1" AutoGenerateColumns="False" IsReadOnly="True" CanUserAddRows="False" HeadersVisibility="Column" RowHeaderWidth="0">
+                                <DataGrid.Resources>
+                                    <Style x:Key="CashRegisterEditButtonStyle" TargetType="Button">
+                                        <Setter Property="Foreground" Value="White" />
+                                        <Setter Property="Background" Value="#1d4ed8" />
+                                        <Setter Property="BorderBrush" Value="#1d4ed8" />
+                                        <Setter Property="BorderThickness" Value="0" />
+                                        <Setter Property="Padding" Value="10,5" />
+                                        <Setter Property="Margin" Value="0,0,6,0" />
+                                        <Setter Property="Cursor" Value="Hand" />
+                                    </Style>
+                                    <Style x:Key="CashRegisterAssignButtonStyle" TargetType="Button">
+                                        <Setter Property="Foreground" Value="White" />
+                                        <Setter Property="Background" Value="#0f766e" />
+                                        <Setter Property="BorderBrush" Value="#0f766e" />
+                                        <Setter Property="BorderThickness" Value="0" />
+                                        <Setter Property="Padding" Value="10,5" />
+                                        <Setter Property="Margin" Value="0,0,6,0" />
+                                        <Setter Property="Cursor" Value="Hand" />
+                                    </Style>
+                                    <Style x:Key="CashRegisterDeleteButtonStyle" TargetType="Button">
+                                        <Setter Property="Foreground" Value="White" />
+                                        <Setter Property="Background" Value="#b91c1c" />
+                                        <Setter Property="BorderBrush" Value="#b91c1c" />
+                                        <Setter Property="BorderThickness" Value="0" />
+                                        <Setter Property="Padding" Value="10,5" />
+                                        <Setter Property="Cursor" Value="Hand" />
+                                    </Style>
+                                </DataGrid.Resources>
                                 <DataGrid.Columns>
                                     <DataGridTextColumn Header="Nombre" Binding="{Binding Name}" Width="2*" />
                                     <DataGridTextColumn Header="Código" Binding="{Binding Code}" Width="*" />
@@ -383,9 +411,9 @@
                                         <DataGridTemplateColumn.CellTemplate>
                                             <DataTemplate>
                                                 <WrapPanel>
-                                                    <Button Content="Editar" Tag="{Binding}" Margin="0,0,6,0" Padding="10,4" Click="EditCashRegisterRowButton_Click" />
-                                                    <Button Content="Asignar" Tag="{Binding}" Margin="0,0,6,0" Padding="10,4" Click="AssignCashRegisterRowButton_Click" />
-                                                    <Button Content="Eliminar" Tag="{Binding}" Padding="10,4" Click="DeleteCashRegisterRowButton_Click" />
+                                                    <Button Content="Editar" Tag="{Binding}" Style="{StaticResource CashRegisterEditButtonStyle}" Click="EditCashRegisterRowButton_Click" />
+                                                    <Button Content="Asignar" Tag="{Binding}" Style="{StaticResource CashRegisterAssignButtonStyle}" Click="AssignCashRegisterRowButton_Click" />
+                                                    <Button Content="Eliminar" Tag="{Binding}" Style="{StaticResource CashRegisterDeleteButtonStyle}" Click="DeleteCashRegisterRowButton_Click" />
                                                 </WrapPanel>
                                             </DataTemplate>
                                         </DataGridTemplateColumn.CellTemplate>

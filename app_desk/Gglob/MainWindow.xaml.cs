@@ -812,9 +812,9 @@ namespace Gglob
 
         private async void SaveDestinationAccountButton_Click(object sender, RoutedEventArgs e)
         {
-            if (currentUser is null || !IsAdmin(currentUser))
+            if (currentUser is null || !IsOwner(currentUser))
             {
-                QrStatusTextBlock.Text = "Solo el administrador puede registrar cuentas destino de Bancolombia.";
+                QrStatusTextBlock.Text = "Solo el dueño puede registrar cuentas destino de Bancolombia.";
                 QrStatusTextBlock.Foreground = Brushes.DarkRed;
                 ShowAlert(QrStatusTextBlock.Text);
                 return;
@@ -862,14 +862,29 @@ namespace Gglob
 
         private void ApplyConfigurationAccess(ApiUser user)
         {
-            SaveWompiSettingsButton.IsEnabled = IsOwner(user);
-            SaveBancolombiaSettingsButton.IsEnabled = IsAdmin(user);
-            SaveBancolombiaDestinationButton.IsEnabled = IsAdmin(user);
-            CreateCashRegisterButton.IsEnabled = IsOwner(user);
+            var isOwner = IsOwner(user);
+            SaveWompiSettingsButton.IsEnabled = isOwner;
+            SaveBancolombiaSettingsButton.IsEnabled = isOwner;
+            SaveBancolombiaDestinationButton.IsEnabled = isOwner;
+            CreateCashRegisterButton.IsEnabled = isOwner;
+
+            WompiConfigTab.Visibility = isOwner ? Visibility.Visible : Visibility.Collapsed;
+            BancolombiaConfigTab.Visibility = isOwner ? Visibility.Visible : Visibility.Collapsed;
         }
 
         private async Task LoadProviderSettingsFromApi()
         {
+            if (currentUser is null || !IsOwner(currentUser))
+            {
+                WompiPublicKeyTextBox.Text = string.Empty;
+                WompiPrivateKeyTextBox.Text = string.Empty;
+                WompiEventsSecretTextBox.Text = string.Empty;
+                BancolombiaBaseUrlTextBox.Text = string.Empty;
+                BancolombiaClientIdTextBox.Text = string.Empty;
+                BancolombiaClientSecretTextBox.Text = string.Empty;
+                return;
+            }
+
             await LoadWompiSettingsFromApi();
             await LoadBancolombiaSettingsFromApi();
         }
@@ -883,6 +898,8 @@ namespace Gglob
             }
 
             WompiPublicKeyTextBox.Text = data.PublicKey ?? string.Empty;
+            WompiPrivateKeyTextBox.Text = data.PrivateKey ?? string.Empty;
+            WompiEventsSecretTextBox.Text = data.EventsSecret ?? string.Empty;
         }
 
         private async Task LoadBancolombiaSettingsFromApi()
@@ -895,6 +912,7 @@ namespace Gglob
 
             BancolombiaBaseUrlTextBox.Text = data.BaseUrl ?? string.Empty;
             BancolombiaClientIdTextBox.Text = data.ClientId ?? string.Empty;
+            BancolombiaClientSecretTextBox.Text = data.ClientSecret ?? string.Empty;
         }
 
         private async Task<ApiProviderSettingsResponse?> GetProviderSettings(string provider)
@@ -956,9 +974,9 @@ namespace Gglob
 
         private async void SaveBancolombiaSettingsButton_Click(object sender, RoutedEventArgs e)
         {
-            if (currentUser is null || !IsAdmin(currentUser))
+            if (currentUser is null || !IsOwner(currentUser))
             {
-                QrStatusTextBlock.Text = "Solo el administrador puede parametrizar Bancolombia API.";
+                QrStatusTextBlock.Text = "Solo el dueño puede parametrizar Bancolombia API.";
                 QrStatusTextBlock.Foreground = Brushes.DarkRed;
                 return;
             }
@@ -2056,11 +2074,20 @@ namespace Gglob
         [JsonPropertyName("public_key")]
         public string? PublicKey { get; set; }
 
+        [JsonPropertyName("private_key")]
+        public string? PrivateKey { get; set; }
+
+        [JsonPropertyName("events_secret")]
+        public string? EventsSecret { get; set; }
+
         [JsonPropertyName("base_url")]
         public string? BaseUrl { get; set; }
 
         [JsonPropertyName("client_id")]
         public string? ClientId { get; set; }
+
+        [JsonPropertyName("client_secret")]
+        public string? ClientSecret { get; set; }
     }
 
     public record AccessValidation(bool IsValid, string Message);
