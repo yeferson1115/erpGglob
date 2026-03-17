@@ -32,7 +32,9 @@ namespace Gglob
         private readonly ObservableCollection<CashRegisterOption> cashRegisterManagementOptions = [];
         private readonly ObservableCollection<CashierOption> cashierOptions = [];
         private readonly ObservableCollection<BusinessCashierItem> businessCashiers = [];
+        private readonly ObservableCollection<ProductCategoryItem> productCategories = [];
         private int? editingCashierId;
+        private int? editingCategoryId;
         private ApiUser? currentUser;
         private bool isGglobPayEnabled;
 
@@ -63,7 +65,9 @@ namespace Gglob
             QrAccountComboBox.ItemsSource = qrAccountOptions;
             CashRegistersDataGrid.ItemsSource = cashRegisterManagementOptions;
             CashiersManagementDataGrid.ItemsSource = businessCashiers;
+            ProductCategoriesDataGrid.ItemsSource = productCategories;
             ResetCashierForm();
+            ResetCategoryForm();
 
             SetSelectedModule(null);
         }
@@ -365,9 +369,26 @@ namespace Gglob
         {
             ApplyModulesVisibilityByRole(moduleKey);
             DefaultPanel.Visibility = Visibility.Visible;
+            GglobPosPanel.Visibility = Visibility.Collapsed;
+            ProductCategoriesPanel.Visibility = Visibility.Collapsed;
             GglobPayPanel.Visibility = Visibility.Collapsed;
             CashRegistersPanel.Visibility = Visibility.Collapsed;
             CashiersManagementPanel.Visibility = Visibility.Collapsed;
+
+            if (moduleKey == "gglob_pos")
+            {
+                DefaultPanel.Visibility = Visibility.Collapsed;
+                GglobPosPanel.Visibility = Visibility.Visible;
+                return;
+            }
+
+            if (moduleKey == "product_categories")
+            {
+                DefaultPanel.Visibility = Visibility.Collapsed;
+                ProductCategoriesPanel.Visibility = Visibility.Visible;
+                _ = LoadProductCategoriesFromApi();
+                return;
+            }
 
             if (moduleKey == "gglob_pay")
             {
@@ -424,7 +445,7 @@ namespace Gglob
 
             var role = currentUser.BusinessRole?.Trim().ToLowerInvariant();
             var hideByRole = role is "cashier";
-            var hideByModule = moduleKey is "gglob_pay" or "cash_register_management" or "cashier_management";
+            var hideByModule = moduleKey is "gglob_pay" or "gglob_pos" or "product_categories" or "cash_register_management" or "cashier_management";
             AvailableModulesPanel.Visibility = (hideByRole || hideByModule) ? Visibility.Collapsed : Visibility.Visible;
         }
 
@@ -921,6 +942,185 @@ namespace Gglob
             if (!string.IsNullOrWhiteSpace(cashier) && cashier != "Todos") parts.Add($"cashier={Uri.EscapeDataString(cashier)}");
 
             return parts.Count == 0 ? string.Empty : $"?{string.Join("&", parts)}";
+        }
+
+        private void OpenCategoriesButton_Click(object sender, RoutedEventArgs e)
+        {
+            SetSelectedModule("product_categories");
+        }
+
+        private void BackToPosButton_Click(object sender, RoutedEventArgs e)
+        {
+            SetSelectedModule("gglob_pos");
+        }
+
+        private async void ReloadCategoriesButton_Click(object sender, RoutedEventArgs e)
+        {
+            await LoadProductCategoriesFromApi();
+        }
+
+        private async void SaveCategoryButton_Click(object sender, RoutedEventArgs e)
+        {
+            var name = CategoryNameTextBox.Text.Trim();
+            var description = CategoryDescriptionTextBox.Text.Trim();
+            var isActive = CategoryActiveCheckBox.IsChecked ?? true;
+
+            if (string.IsNullOrWhiteSpace(name))
+            {
+                ShowAlert("El nombre de la categoría es obligatorio.");
+                return;
+            }
+
+            var payload = JsonSerializer.Serialize(new
+            {
+                name,
+                description,
+                is_active = isActive
+            });
+
+            try
+            {
+                SetLoading(true);
+                using var content = new StringContent(payload, Encoding.UTF8, "application/json");
+                using var response = editingCategoryId.HasValue
+                    ? await HttpClient.PutAsync($"{ApiBaseUrl}/product-categories/{editingCategoryId.Value}", content)
+                    : await HttpClient.PostAsync($"{ApiBaseUrl}/product-categories", content);
+
+                if (!response.IsSuccessStatusCode)
+                {
+                    var body = await response.Content.ReadAsStringAsync();
+                    ShowAlert($"No fue posible guardar la categoría. {body}");
+                    return;
+                }
+
+                var wasEditing = editingCategoryId.HasValue;
+                await LoadProductCategoriesFromApi();
+                ResetCategoryForm();
+                QrStatusTextBlock.Text = wasEditing
+                    ? "Categoría actualizada correctamente."
+                    : "Categoría creada correctamente.";
+                QrStatusTextBlock.Foreground = Brushes.DarkGreen;
+            }
+            catch (Exception ex)
+            {
+                ShowAlert($"Error al guardar categoría: {ex.Message}");
+            }
+            finally
+            {
+                SetLoading(false);
+            }
+        }
+
+        private void CancelCategoryEditButton_Click(object sender, RoutedEventArgs e)
+        {
+            ResetCategoryForm();
+        }
+
+        private void EditCategoryRowButton_Click(object sender, RoutedEventArgs e)
+        {
+            if (sender is not Button { Tag: ProductCategoryItem selected })
+            {
+                return;
+            }
+
+            editingCategoryId = selected.Id;
+            CategoryFormTitleTextBlock.Text = "Editar categoría";
+            CategoryNameTextBox.Text = selected.Name;
+            CategoryDescriptionTextBox.Text = selected.Description;
+            CategoryActiveCheckBox.IsChecked = selected.IsActive;
+            SaveCategoryButton.Content = "💾 Actualizar categoría";
+            CancelCategoryEditButton.Visibility = Visibility.Visible;
+        }
+
+        private async void DeleteCategoryRowButton_Click(object sender, RoutedEventArgs e)
+        {
+            if (sender is not Button { Tag: ProductCategoryItem selected })
+            {
+                return;
+            }
+
+            var confirm = MessageBox.Show(
+                $"¿Seguro que deseas eliminar la categoría '{selected.Name}'?",
+                "Confirmar eliminación",
+                MessageBoxButton.YesNo,
+                MessageBoxImage.Warning);
+
+            if (confirm != MessageBoxResult.Yes)
+            {
+                return;
+            }
+
+            try
+            {
+                SetLoading(true);
+                using var response = await HttpClient.DeleteAsync($"{ApiBaseUrl}/product-categories/{selected.Id}");
+                if (!response.IsSuccessStatusCode)
+                {
+                    ShowAlert("No se pudo eliminar la categoría en app_web.");
+                    return;
+                }
+
+                await LoadProductCategoriesFromApi();
+                ResetCategoryForm();
+                QrStatusTextBlock.Text = "Categoría eliminada correctamente.";
+                QrStatusTextBlock.Foreground = Brushes.DarkGreen;
+            }
+            catch (Exception ex)
+            {
+                ShowAlert($"Error al eliminar categoría: {ex.Message}");
+            }
+            finally
+            {
+                SetLoading(false);
+            }
+        }
+
+        private async Task LoadProductCategoriesFromApi()
+        {
+            try
+            {
+                using var response = await HttpClient.GetAsync($"{ApiBaseUrl}/product-categories");
+                if (!response.IsSuccessStatusCode)
+                {
+                    QrStatusTextBlock.Text = "No se pudieron cargar las categorías del negocio.";
+                    QrStatusTextBlock.Foreground = Brushes.DarkOrange;
+                    return;
+                }
+
+                var body = await response.Content.ReadAsStringAsync();
+                var result = JsonSerializer.Deserialize<ApiListResponse<ApiProductCategory>>(body, JsonOptions());
+
+                productCategories.Clear();
+                foreach (var item in result?.Data ?? [])
+                {
+                    if (item.Id is null || string.IsNullOrWhiteSpace(item.Name))
+                    {
+                        continue;
+                    }
+
+                    productCategories.Add(new ProductCategoryItem(
+                        item.Id.Value,
+                        item.Name,
+                        item.Description ?? string.Empty,
+                        item.IsActive));
+                }
+            }
+            catch (Exception ex)
+            {
+                QrStatusTextBlock.Text = $"Error cargando categorías: {ex.Message}";
+                QrStatusTextBlock.Foreground = Brushes.DarkOrange;
+            }
+        }
+
+        private void ResetCategoryForm()
+        {
+            editingCategoryId = null;
+            CategoryFormTitleTextBlock.Text = "Nueva categoría";
+            CategoryNameTextBox.Text = string.Empty;
+            CategoryDescriptionTextBox.Text = string.Empty;
+            CategoryActiveCheckBox.IsChecked = true;
+            SaveCategoryButton.Content = "💾 Guardar categoría";
+            CancelCategoryEditButton.Visibility = Visibility.Collapsed;
         }
 
         private static JsonSerializerOptions JsonOptions() => new()
@@ -2422,6 +2622,30 @@ namespace Gglob
 
         [JsonPropertyName("account_type")]
         public string? AccountType { get; set; }
+    }
+
+    public class ApiProductCategory
+    {
+        [JsonPropertyName("id")]
+        public int? Id { get; set; }
+
+        [JsonPropertyName("name")]
+        public string? Name { get; set; }
+
+        [JsonPropertyName("description")]
+        public string? Description { get; set; }
+
+        [JsonPropertyName("is_active")]
+        public bool IsActive { get; set; }
+    }
+
+    public class ProductCategoryItem(int id, string name, string description, bool isActive)
+    {
+        public int Id { get; } = id;
+        public string Name { get; } = name;
+        public string Description { get; } = description;
+        public bool IsActive { get; } = isActive;
+        public string StatusLabel => IsActive ? "Activa" : "Inactiva";
     }
 
     public class ApiVerifiedPayment

@@ -98,6 +98,15 @@
                   </li>
                   @endif
 
+                  @if($currentUser?->company_id)
+                  <li class="menu-item">
+                    <a href="{{ route('product-categories.index') }}" class="menu-link">
+                      <i class="menu-icon fa-solid fa-tags"></i>
+                      <div data-i18n="Categorías">Categorías</div>
+                    </a>
+                  </li>
+                  @endif
+
                   @if($currentUser?->business_role === 'owner' && $currentUser?->company_id)
                   <li class="menu-item">
                     <a href="{{ route('companies.edit', $currentUser->company_id) }}" class="menu-link">

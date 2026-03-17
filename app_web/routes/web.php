@@ -16,6 +16,7 @@ use App\Http\Controllers\AdminCreditPaymentController;
 use App\Http\Controllers\AdminPlatformController;
 use App\Http\Controllers\PublicCreditPortalController;
 use App\Http\Controllers\InventoryController;
+use App\Http\Controllers\ProductCategoryController;
 
 Route::get('/login', [LoginController::class, 'showLoginForm'])->name('login');
 Route::post('/login', [LoginController::class, 'login']);
@@ -62,6 +63,7 @@ Route::middleware('auth')->group(function () {
     Route::post('inventories', [InventoryController::class, 'store'])->name('inventories.store');
     Route::get('inventories/{inventory}/edit', [InventoryController::class, 'edit'])->name('inventories.edit');
     Route::put('inventories/{inventory}', [InventoryController::class, 'update'])->name('inventories.update');
+    Route::resource('product-categories', ProductCategoryController::class)->except(['show', 'create']);
 
 });
 
