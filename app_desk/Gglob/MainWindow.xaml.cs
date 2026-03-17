@@ -408,46 +408,86 @@ namespace Gglob
         {
             ServicesMenuPanel.Children.Clear();
 
-            foreach (var service in services)
+            var adminKeys = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
             {
-                var isOwnerOnlyModule = service.Key is "cash_register_management" or "cashier_management";
-                if (isOwnerOnlyModule && (currentUser is null || !IsOwner(currentUser)))
-                {
-                    continue;
-                }
+                "cash_register_management",
+                "cashier_management"
+            };
 
-                var button = new Button
-                {
-                    Padding = new Thickness(10, 8, 10, 8),
-                    Margin = new Thickness(0, 0, 0, 8),
-                    Background = service.IsActive
-                        ? new SolidColorBrush(Color.FromRgb(76, 116, 196))
-                        : new SolidColorBrush(Color.FromArgb(90, 255, 255, 255)),
-                    BorderThickness = new Thickness(0),
-                    Tag = service.Key,
-                    Cursor = System.Windows.Input.Cursors.Hand
-                };
-
-                button.Click += OnServiceMenuClick;
-
-                var panel = new StackPanel();
-                panel.Children.Add(new TextBlock
-                {
-                    Text = service.Name,
-                    Foreground = Brushes.White,
-                    FontWeight = FontWeights.SemiBold
-                });
-                panel.Children.Add(new TextBlock
-                {
-                    Text = service.IsActive ? "Activo" : "Inactivo",
-                    Foreground = Brushes.White,
-                    Opacity = 0.9,
-                    FontSize = 12
-                });
-
-                button.Content = panel;
-                ServicesMenuPanel.Children.Add(button);
+            var standardServices = services.Where(service => !adminKeys.Contains(service.Key)).ToList();
+            foreach (var service in standardServices)
+            {
+                ServicesMenuPanel.Children.Add(CreateServiceMenuButton(service));
             }
+
+            if (currentUser is not null && IsOwner(currentUser))
+            {
+                var adminServices = services.Where(service => adminKeys.Contains(service.Key)).ToList();
+                if (adminServices.Count > 0)
+                {
+                    var adminItemsPanel = new StackPanel { Margin = new Thickness(0, 6, 0, 6) };
+                    foreach (var service in adminServices)
+                    {
+                        var childButton = CreateServiceMenuButton(service);
+                        childButton.Margin = new Thickness(12, 0, 0, 8);
+                        adminItemsPanel.Children.Add(childButton);
+                    }
+
+                    var adminExpander = new Expander
+                    {
+                        Margin = new Thickness(0, 0, 0, 8),
+                        Foreground = Brushes.White,
+                        Background = new SolidColorBrush(Color.FromRgb(59, 100, 180)),
+                        BorderBrush = new SolidColorBrush(Color.FromArgb(100, 255, 255, 255)),
+                        BorderThickness = new Thickness(1),
+                        IsExpanded = false,
+                        Content = adminItemsPanel,
+                        Header = new TextBlock
+                        {
+                            Text = "Administración",
+                            FontWeight = FontWeights.SemiBold,
+                            Margin = new Thickness(10, 8, 10, 8)
+                        }
+                    };
+
+                    ServicesMenuPanel.Children.Add(adminExpander);
+                }
+            }
+        }
+
+        private Button CreateServiceMenuButton(ServiceItem service)
+        {
+            var button = new Button
+            {
+                Padding = new Thickness(10, 8, 10, 8),
+                Margin = new Thickness(0, 0, 0, 8),
+                Background = service.IsActive
+                    ? new SolidColorBrush(Color.FromRgb(76, 116, 196))
+                    : new SolidColorBrush(Color.FromArgb(90, 255, 255, 255)),
+                BorderThickness = new Thickness(0),
+                Tag = service.Key,
+                Cursor = System.Windows.Input.Cursors.Hand
+            };
+
+            button.Click += OnServiceMenuClick;
+
+            var panel = new StackPanel();
+            panel.Children.Add(new TextBlock
+            {
+                Text = service.Name,
+                Foreground = Brushes.White,
+                FontWeight = FontWeights.SemiBold
+            });
+            panel.Children.Add(new TextBlock
+            {
+                Text = service.IsActive ? "Activo" : "Inactivo",
+                Foreground = Brushes.White,
+                Opacity = 0.9,
+                FontSize = 12
+            });
+
+            button.Content = panel;
+            return button;
         }
 
 
@@ -1315,7 +1355,12 @@ namespace Gglob
             buttonRow.Children.Add(saveButton);
             panel.Children.Add(buttonRow);
 
-            dialog.Content = panel;
+            dialog.Content = new ScrollViewer
+            {
+                VerticalScrollBarVisibility = ScrollBarVisibility.Auto,
+                HorizontalScrollBarVisibility = ScrollBarVisibility.Disabled,
+                Content = panel
+            };
 
             if (Application.Current?.MainWindow is Window owner && owner != dialog)
             {
@@ -1378,7 +1423,12 @@ namespace Gglob
             buttonRow.Children.Add(assignButton);
             panel.Children.Add(buttonRow);
 
-            dialog.Content = panel;
+            dialog.Content = new ScrollViewer
+            {
+                VerticalScrollBarVisibility = ScrollBarVisibility.Auto,
+                HorizontalScrollBarVisibility = ScrollBarVisibility.Disabled,
+                Content = panel
+            };
             if (Application.Current?.MainWindow is Window owner && owner != dialog)
             {
                 dialog.Owner = owner;
@@ -1483,7 +1533,7 @@ namespace Gglob
             {
                 Title = "Crear usuario cajero",
                 Width = 460,
-                Height = 420,
+                Height = 500,
                 ResizeMode = ResizeMode.NoResize,
                 WindowStartupLocation = WindowStartupLocation.CenterOwner,
                 Background = Brushes.White
@@ -1558,7 +1608,12 @@ namespace Gglob
             buttonRow.Children.Add(createButton);
             panel.Children.Add(buttonRow);
 
-            dialog.Content = panel;
+            dialog.Content = new ScrollViewer
+            {
+                VerticalScrollBarVisibility = ScrollBarVisibility.Auto,
+                HorizontalScrollBarVisibility = ScrollBarVisibility.Disabled,
+                Content = panel
+            };
             if (Application.Current?.MainWindow is Window owner && owner != dialog)
             {
                 dialog.Owner = owner;
