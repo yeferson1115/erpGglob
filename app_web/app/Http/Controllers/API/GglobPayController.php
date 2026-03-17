@@ -10,6 +10,10 @@ use Illuminate\Support\Str;
 
 class GglobPayController extends Controller
 {
+    private function isOwner(Request $request): bool
+    {
+        return strtolower((string) $request->user()->business_role) === 'owner';
+    }
 
     public function wompiWebhook(Request $request)
     {
@@ -50,9 +54,8 @@ class GglobPayController extends Controller
     public function storeDestinationAccount(Request $request)
     {
         $user = $request->user();
-        $isAdmin = $user->hasRole('admin') || $user->hasRole('Administrador');
-        if (!$isAdmin) {
-            return response()->json(['message' => 'Solo el administrador puede registrar cuentas destino de Bancolombia.'], 403);
+        if (!$this->isOwner($request)) {
+            return response()->json(['message' => 'Solo el dueño puede registrar cuentas destino de Bancolombia.'], 403);
         }
 
         $validated = $request->validate([
@@ -81,7 +84,7 @@ class GglobPayController extends Controller
     public function cashRegisters(Request $request)
     {
         $user = $request->user();
-        $isAdmin = $user->hasRole('admin') || $user->hasRole('Administrador');
+        $isOwner = $this->isOwner($request);
         $scope = strtolower((string) $request->input('scope', 'assigned'));
 
         $rows = DB::table('cash_registers as cr')
@@ -90,7 +93,7 @@ class GglobPayController extends Controller
                     ->where('cru.user_id', '=', $user->id);
             })
             ->where('cr.company_id', $user->company_id)
-            ->when($scope !== 'all' || ! $isAdmin, function ($query) {
+            ->when($scope !== 'all' || ! $isOwner, function ($query) {
                 $query->whereNotNull('cru.id')->where('cr.status', 'active');
             })
             ->select('cr.id', 'cr.name', 'cr.code', 'cr.status', DB::raw('COALESCE(cru.is_primary, 0) as is_primary'))
@@ -106,9 +109,8 @@ class GglobPayController extends Controller
     public function storeCashRegister(Request $request)
     {
         $user = $request->user();
-        $isAdmin = $user->hasRole('admin') || $user->hasRole('Administrador');
-        if (!$isAdmin) {
-            return response()->json(['message' => 'Solo el administrador puede crear cajas.'], 403);
+        if (!$this->isOwner($request)) {
+            return response()->json(['message' => 'Solo el dueño puede crear cajas.'], 403);
         }
 
         $validated = $request->validate([
@@ -144,9 +146,8 @@ class GglobPayController extends Controller
     public function updateCashRegister(Request $request, int $cashRegister)
     {
         $user = $request->user();
-        $isAdmin = $user->hasRole('admin') || $user->hasRole('Administrador');
-        if (!$isAdmin) {
-            return response()->json(['message' => 'Solo el administrador puede editar cajas.'], 403);
+        if (!$this->isOwner($request)) {
+            return response()->json(['message' => 'Solo el dueño puede editar cajas.'], 403);
         }
 
         $validated = $request->validate([
@@ -211,6 +212,10 @@ class GglobPayController extends Controller
     {
         $user = $request->user();
 
+        if ($this->isOwner($request)) {
+            return response()->json(['message' => 'El dueño debe asignar cajas a cajeros desde gestión de cajas.'], 422);
+        }
+
         $validated = $request->validate([
             'is_primary' => ['nullable', 'boolean'],
         ]);
@@ -248,11 +253,111 @@ class GglobPayController extends Controller
         return response()->json(['message' => 'Caja asignada correctamente al usuario.']);
     }
 
+    public function destroyCashRegister(Request $request, int $cashRegister)
+    {
+        $user = $request->user();
+        if (!$this->isOwner($request)) {
+            return response()->json(['message' => 'Solo el dueño puede eliminar cajas.'], 403);
+        }
+
+        $register = DB::table('cash_registers')
+            ->where('id', $cashRegister)
+            ->where('company_id', $user->company_id)
+            ->first();
+
+        if (!$register) {
+            return response()->json(['message' => 'Caja no encontrada para la empresa.'], 404);
+        }
+
+        DB::transaction(function () use ($cashRegister) {
+            DB::table('cash_register_user')->where('cash_register_id', $cashRegister)->delete();
+            DB::table('cash_registers')->where('id', $cashRegister)->delete();
+        });
+
+        return response()->json(['message' => 'Caja eliminada correctamente.']);
+    }
+
+    public function cashiers(Request $request)
+    {
+        $user = $request->user();
+        if (!$this->isOwner($request)) {
+            return response()->json(['message' => 'Solo el dueño puede gestionar cajas y cajeros.'], 403);
+        }
+
+        $rows = DB::table('users')
+            ->where('company_id', $user->company_id)
+            ->where('business_role', 'cashier')
+            ->select('id', 'name', 'email')
+            ->orderBy('name')
+            ->get();
+
+        return response()->json(['data' => $rows]);
+    }
+
+    public function assignCashRegisterToCashier(Request $request, int $cashRegister)
+    {
+        $user = $request->user();
+        if (!$this->isOwner($request)) {
+            return response()->json(['message' => 'Solo el dueño puede asignar cajas a cajeros.'], 403);
+        }
+
+        $validated = $request->validate([
+            'user_id' => ['required', 'integer'],
+            'is_primary' => ['nullable', 'boolean'],
+        ]);
+
+        $register = DB::table('cash_registers')
+            ->where('id', $cashRegister)
+            ->where('company_id', $user->company_id)
+            ->first();
+
+        if (!$register) {
+            return response()->json(['message' => 'Caja no encontrada para la empresa.'], 404);
+        }
+
+        if (($register->status ?? 'inactive') !== 'active') {
+            return response()->json(['message' => 'Solo se pueden asignar cajas activas.'], 422);
+        }
+
+        $cashier = DB::table('users')
+            ->where('id', $validated['user_id'])
+            ->where('company_id', $user->company_id)
+            ->where('business_role', 'cashier')
+            ->first();
+
+        if (!$cashier) {
+            return response()->json(['message' => 'Cajero no válido para la empresa.'], 404);
+        }
+
+        if (!empty($validated['is_primary'])) {
+            DB::table('cash_register_user')
+                ->where('user_id', $validated['user_id'])
+                ->update(['is_primary' => false, 'updated_at' => now()]);
+        }
+
+        DB::table('cash_register_user')->updateOrInsert(
+            ['cash_register_id' => $cashRegister, 'user_id' => $validated['user_id']],
+            [
+                'assigned_by' => $user->id,
+                'assigned_at' => now(),
+                'is_primary' => !empty($validated['is_primary']),
+                'updated_at' => now(),
+                'created_at' => now(),
+            ]
+        );
+
+        return response()->json(['message' => 'Caja asignada al cajero correctamente.']);
+    }
+
     public function providerSettings(Request $request, string $provider)
     {
         $provider = strtolower($provider);
         if (!in_array($provider, ['wompi', 'bancolombia'], true)) {
             return response()->json(['message' => 'Proveedor no soportado.'], 404);
+        }
+
+        if (!$this->isOwner($request)) {
+            return response()->json(['message' => 'Solo el dueño puede ver configuración de proveedores.'], 403);
         }
 
         $setting = DB::table('gglob_pay_provider_settings')
@@ -273,11 +378,14 @@ class GglobPayController extends Controller
 
         if ($provider === 'wompi') {
             $public['public_key'] = $raw['public_key'] ?? null;
+            $public['private_key'] = $raw['private_key'] ?? null;
+            $public['events_secret'] = $raw['events_secret'] ?? null;
             $public['events_secret_configured'] = !empty($raw['events_secret']);
             $public['private_key_configured'] = !empty($raw['private_key']);
         } else {
             $public['base_url'] = $raw['base_url'] ?? null;
             $public['client_id'] = $raw['client_id'] ?? null;
+            $public['client_secret'] = $raw['client_secret'] ?? null;
             $public['client_secret_configured'] = !empty($raw['client_secret']);
         }
 
@@ -293,7 +401,7 @@ class GglobPayController extends Controller
 
         $user = $request->user();
         if ($provider === 'wompi') {
-            if (strtolower((string) $user->business_role) !== 'owner') {
+            if (!$this->isOwner($request)) {
                 return response()->json(['message' => 'Solo el dueño puede configurar llaves de Wompi.'], 403);
             }
             $validated = $request->validate([
@@ -302,9 +410,8 @@ class GglobPayController extends Controller
                 'events_secret' => ['required', 'string', 'max:255'],
             ]);
         } else {
-            $isAdmin = $user->hasRole('admin') || $user->hasRole('Administrador');
-            if (!$isAdmin) {
-                return response()->json(['message' => 'Solo el administrador puede configurar Bancolombia.'], 403);
+            if (!$this->isOwner($request)) {
+                return response()->json(['message' => 'Solo el dueño puede configurar Bancolombia.'], 403);
             }
             $validated = $request->validate([
                 'base_url' => ['required', 'string', 'max:255'],

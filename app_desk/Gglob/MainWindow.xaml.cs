@@ -28,6 +28,7 @@ namespace Gglob
         private readonly ObservableCollection<VerifiedPaymentRecord> verifiedPayments = [];
         private readonly ObservableCollection<CashRegisterOption> cashRegisterOptions = [];
         private readonly ObservableCollection<CashRegisterOption> cashRegisterManagementOptions = [];
+        private readonly ObservableCollection<CashierOption> cashierOptions = [];
         private ApiUser? currentUser;
         private bool isGglobPayEnabled;
 
@@ -56,7 +57,7 @@ namespace Gglob
 
             DestinationAccountsListBox.ItemsSource = destinationAccounts;
             QrAccountComboBox.ItemsSource = qrAccountOptions;
-            CashRegistersListBox.ItemsSource = cashRegisterManagementOptions;
+            CashRegistersDataGrid.ItemsSource = cashRegisterManagementOptions;
 
             SetSelectedModule(null);
         }
@@ -373,6 +374,13 @@ namespace Gglob
 
             if (moduleKey == "cash_register_management")
             {
+                if (currentUser is null || !IsOwner(currentUser))
+                {
+                    QrStatusTextBlock.Text = "Solo el dueño del negocio puede acceder a gestión de cajas.";
+                    QrStatusTextBlock.Foreground = Brushes.DarkOrange;
+                    return;
+                }
+
                 DefaultPanel.Visibility = Visibility.Collapsed;
                 CashRegistersPanel.Visibility = Visibility.Visible;
             }
@@ -496,6 +504,11 @@ namespace Gglob
         {
             await LoadCashRegistersFromApi("assigned");
             await LoadCashRegistersFromApi("all");
+            cashierOptions.Clear();
+            if (currentUser is not null && IsOwner(currentUser))
+            {
+                await LoadCashiersFromApi();
+            }
 
             var loadedAccounts = await LoadDestinationAccountsFromApi();
             if (!loadedAccounts)
@@ -546,6 +559,7 @@ namespace Gglob
                         register.Id.Value,
                         register.Name ?? "Caja",
                         register.Code ?? string.Empty,
+                        register.Status ?? "active",
                         register.IsPrimary == 1));
                 }
 
@@ -564,8 +578,8 @@ namespace Gglob
                     }
                 }
 
-                CashRegistersListBox.ItemsSource = null;
-                CashRegistersListBox.ItemsSource = cashRegisterManagementOptions;
+                CashRegistersDataGrid.ItemsSource = null;
+                CashRegistersDataGrid.ItemsSource = cashRegisterManagementOptions;
                 return true;
             }
             catch
@@ -798,9 +812,9 @@ namespace Gglob
 
         private async void SaveDestinationAccountButton_Click(object sender, RoutedEventArgs e)
         {
-            if (currentUser is null || !IsAdmin(currentUser))
+            if (currentUser is null || !IsOwner(currentUser))
             {
-                QrStatusTextBlock.Text = "Solo el administrador puede registrar cuentas destino de Bancolombia.";
+                QrStatusTextBlock.Text = "Solo el dueño puede registrar cuentas destino de Bancolombia.";
                 QrStatusTextBlock.Foreground = Brushes.DarkRed;
                 ShowAlert(QrStatusTextBlock.Text);
                 return;
@@ -848,13 +862,29 @@ namespace Gglob
 
         private void ApplyConfigurationAccess(ApiUser user)
         {
-            SaveWompiSettingsButton.IsEnabled = IsOwner(user);
-            SaveBancolombiaSettingsButton.IsEnabled = IsAdmin(user);
-            SaveBancolombiaDestinationButton.IsEnabled = IsAdmin(user);
+            var isOwner = IsOwner(user);
+            SaveWompiSettingsButton.IsEnabled = isOwner;
+            SaveBancolombiaSettingsButton.IsEnabled = isOwner;
+            SaveBancolombiaDestinationButton.IsEnabled = isOwner;
+            CreateCashRegisterButton.IsEnabled = isOwner;
+
+            WompiConfigTab.Visibility = isOwner ? Visibility.Visible : Visibility.Collapsed;
+            BancolombiaConfigTab.Visibility = isOwner ? Visibility.Visible : Visibility.Collapsed;
         }
 
         private async Task LoadProviderSettingsFromApi()
         {
+            if (currentUser is null || !IsOwner(currentUser))
+            {
+                WompiPublicKeyTextBox.Text = string.Empty;
+                WompiPrivateKeyTextBox.Text = string.Empty;
+                WompiEventsSecretTextBox.Text = string.Empty;
+                BancolombiaBaseUrlTextBox.Text = string.Empty;
+                BancolombiaClientIdTextBox.Text = string.Empty;
+                BancolombiaClientSecretTextBox.Text = string.Empty;
+                return;
+            }
+
             await LoadWompiSettingsFromApi();
             await LoadBancolombiaSettingsFromApi();
         }
@@ -868,6 +898,8 @@ namespace Gglob
             }
 
             WompiPublicKeyTextBox.Text = data.PublicKey ?? string.Empty;
+            WompiPrivateKeyTextBox.Text = data.PrivateKey ?? string.Empty;
+            WompiEventsSecretTextBox.Text = data.EventsSecret ?? string.Empty;
         }
 
         private async Task LoadBancolombiaSettingsFromApi()
@@ -880,6 +912,7 @@ namespace Gglob
 
             BancolombiaBaseUrlTextBox.Text = data.BaseUrl ?? string.Empty;
             BancolombiaClientIdTextBox.Text = data.ClientId ?? string.Empty;
+            BancolombiaClientSecretTextBox.Text = data.ClientSecret ?? string.Empty;
         }
 
         private async Task<ApiProviderSettingsResponse?> GetProviderSettings(string provider)
@@ -941,9 +974,9 @@ namespace Gglob
 
         private async void SaveBancolombiaSettingsButton_Click(object sender, RoutedEventArgs e)
         {
-            if (currentUser is null || !IsAdmin(currentUser))
+            if (currentUser is null || !IsOwner(currentUser))
             {
-                QrStatusTextBlock.Text = "Solo el administrador puede parametrizar Bancolombia API.";
+                QrStatusTextBlock.Text = "Solo el dueño puede parametrizar Bancolombia API.";
                 QrStatusTextBlock.Foreground = Brushes.DarkRed;
                 return;
             }
@@ -983,13 +1016,19 @@ namespace Gglob
             }
         }
 
-        private async Task<bool> AssignCashRegisterApi(int cashRegisterId)
+        private async Task<bool> UpdateCashRegisterApi(int cashRegisterId, string name, string code, string status)
         {
             try
             {
-                var payload = JsonSerializer.Serialize(new { is_primary = true });
+                var payload = JsonSerializer.Serialize(new
+                {
+                    name,
+                    code,
+                    status,
+                });
+
                 using var content = new StringContent(payload, Encoding.UTF8, "application/json");
-                using var response = await HttpClient.PostAsync($"{ApiBaseUrl}/gglob-pay/cash-registers/{cashRegisterId}/assign-me", content);
+                using var response = await HttpClient.PutAsync($"{ApiBaseUrl}/gglob-pay/cash-registers/{cashRegisterId}", content);
                 return response.IsSuccessStatusCode;
             }
             catch
@@ -998,28 +1037,51 @@ namespace Gglob
             }
         }
 
-        private async void SaveCashRegisterButton_Click(object sender, RoutedEventArgs e)
+        private async Task<bool> DeleteCashRegisterApi(int cashRegisterId)
         {
-            if (currentUser is null || !IsAdmin(currentUser))
+            try
             {
-                QrStatusTextBlock.Text = "Solo el administrador puede crear cajas.";
+                using var response = await HttpClient.DeleteAsync($"{ApiBaseUrl}/gglob-pay/cash-registers/{cashRegisterId}");
+                return response.IsSuccessStatusCode;
+            }
+            catch
+            {
+                return false;
+            }
+        }
+
+        private async Task<bool> AssignCashRegisterApi(int cashRegisterId, int cashierId)
+        {
+            try
+            {
+                var payload = JsonSerializer.Serialize(new { user_id = cashierId, is_primary = true });
+                using var content = new StringContent(payload, Encoding.UTF8, "application/json");
+                using var response = await HttpClient.PostAsync($"{ApiBaseUrl}/gglob-pay/cash-registers/{cashRegisterId}/assign-user", content);
+                return response.IsSuccessStatusCode;
+            }
+            catch
+            {
+                return false;
+            }
+        }
+
+        private async void CreateCashRegisterButton_Click(object sender, RoutedEventArgs e)
+        {
+            if (currentUser is null || !IsOwner(currentUser))
+            {
+                QrStatusTextBlock.Text = "Solo el dueño puede crear cajas.";
                 QrStatusTextBlock.Foreground = Brushes.DarkRed;
                 return;
             }
 
-            var name = CashRegisterNameTextBox.Text.Trim();
-            var code = CashRegisterCodeTextBox.Text.Trim();
-            var status = (CashRegisterStatusComboBox.SelectedItem as ComboBoxItem)?.Content?.ToString() ?? "active";
-
-            if (string.IsNullOrWhiteSpace(name) || string.IsNullOrWhiteSpace(code))
+            var form = ShowCashRegisterForm("Crear caja");
+            if (form is null)
             {
-                QrStatusTextBlock.Text = "Nombre y código de caja son obligatorios.";
-                QrStatusTextBlock.Foreground = Brushes.DarkRed;
                 return;
             }
 
             SetLoading(true);
-            var ok = await SaveCashRegisterApi(name, code, status);
+            var ok = await SaveCashRegisterApi(form.Name, form.Code, form.Status);
             SetLoading(false);
             if (!ok)
             {
@@ -1036,21 +1098,32 @@ namespace Gglob
             ShowAlert(QrStatusTextBlock.Text);
         }
 
-        private async void AssignCashRegisterButton_Click(object sender, RoutedEventArgs e)
+        private async void EditCashRegisterRowButton_Click(object sender, RoutedEventArgs e)
         {
-            if (CashRegistersListBox.SelectedItem is not CashRegisterOption selected)
+            if (sender is not Button { Tag: CashRegisterOption selected })
             {
-                QrStatusTextBlock.Text = "Selecciona una caja para asignarte.";
+                return;
+            }
+
+            if (currentUser is null || !IsOwner(currentUser))
+            {
+                QrStatusTextBlock.Text = "Solo el dueño puede editar cajas.";
                 QrStatusTextBlock.Foreground = Brushes.DarkRed;
                 return;
             }
 
+            var form = ShowCashRegisterForm("Editar caja", selected);
+            if (form is null)
+            {
+                return;
+            }
+
             SetLoading(true);
-            var ok = await AssignCashRegisterApi(selected.Id);
+            var ok = await UpdateCashRegisterApi(selected.Id, form.Name, form.Code, form.Status);
             SetLoading(false);
             if (!ok)
             {
-                QrStatusTextBlock.Text = "No se pudo asignar la caja.";
+                QrStatusTextBlock.Text = "No se pudo editar la caja.";
                 QrStatusTextBlock.Foreground = Brushes.DarkRed;
                 ShowAlert(QrStatusTextBlock.Text);
                 return;
@@ -1058,9 +1131,249 @@ namespace Gglob
 
             await LoadCashRegistersFromApi("all");
             await LoadCashRegistersFromApi("assigned");
-            QrStatusTextBlock.Text = "Caja asignada correctamente.";
+            QrStatusTextBlock.Text = "Caja editada correctamente.";
             QrStatusTextBlock.Foreground = Brushes.DarkGreen;
             ShowAlert(QrStatusTextBlock.Text);
+        }
+
+        private async void DeleteCashRegisterRowButton_Click(object sender, RoutedEventArgs e)
+        {
+            if (sender is not Button { Tag: CashRegisterOption selected })
+            {
+                return;
+            }
+
+            if (currentUser is null || !IsOwner(currentUser))
+            {
+                QrStatusTextBlock.Text = "Solo el dueño puede eliminar cajas.";
+                QrStatusTextBlock.Foreground = Brushes.DarkRed;
+                return;
+            }
+
+            var confirm = MessageBox.Show(
+                $"¿Seguro que deseas eliminar la caja '{selected.Name}' ({selected.Code})?",
+                "Confirmar eliminación",
+                MessageBoxButton.YesNo,
+                MessageBoxImage.Warning);
+
+            if (confirm != MessageBoxResult.Yes)
+            {
+                return;
+            }
+
+            SetLoading(true);
+            var ok = await DeleteCashRegisterApi(selected.Id);
+            SetLoading(false);
+            if (!ok)
+            {
+                QrStatusTextBlock.Text = "No se pudo eliminar la caja.";
+                QrStatusTextBlock.Foreground = Brushes.DarkRed;
+                ShowAlert(QrStatusTextBlock.Text);
+                return;
+            }
+
+            await LoadCashRegistersFromApi("all");
+            await LoadCashRegistersFromApi("assigned");
+            QrStatusTextBlock.Text = "Caja eliminada correctamente.";
+            QrStatusTextBlock.Foreground = Brushes.DarkGreen;
+            ShowAlert(QrStatusTextBlock.Text);
+        }
+
+        private async void AssignCashRegisterRowButton_Click(object sender, RoutedEventArgs e)
+        {
+            if (sender is not Button { Tag: CashRegisterOption selected })
+            {
+                return;
+            }
+
+            if (currentUser is null || !IsOwner(currentUser))
+            {
+                QrStatusTextBlock.Text = "Solo el dueño puede asignar cajas a cajeros.";
+                QrStatusTextBlock.Foreground = Brushes.DarkRed;
+                return;
+            }
+
+            var cashier = ShowAssignCashierForm(selected);
+            if (cashier is null)
+            {
+                return;
+            }
+
+            SetLoading(true);
+            var ok = await AssignCashRegisterApi(selected.Id, cashier.Id);
+            SetLoading(false);
+            if (!ok)
+            {
+                QrStatusTextBlock.Text = "No se pudo asignar la caja al cajero.";
+                QrStatusTextBlock.Foreground = Brushes.DarkRed;
+                ShowAlert(QrStatusTextBlock.Text);
+                return;
+            }
+
+            await LoadCashRegistersFromApi("all");
+            await LoadCashRegistersFromApi("assigned");
+            QrStatusTextBlock.Text = $"Caja asignada correctamente a {cashier.Name}.";
+            QrStatusTextBlock.Foreground = Brushes.DarkGreen;
+            ShowAlert(QrStatusTextBlock.Text);
+        }
+
+        private static CashRegisterFormResult? ShowCashRegisterForm(string title, CashRegisterOption? existing = null)
+        {
+            var dialog = new Window
+            {
+                Title = title,
+                Width = 420,
+                Height = 290,
+                ResizeMode = ResizeMode.NoResize,
+                WindowStartupLocation = WindowStartupLocation.CenterOwner,
+                Background = Brushes.White
+            };
+
+            var panel = new StackPanel { Margin = new Thickness(18) };
+            var nameBox = new TextBox { Text = existing?.Name ?? string.Empty, Height = 34, Margin = new Thickness(0, 4, 0, 12) };
+            var codeBox = new TextBox { Text = existing?.Code ?? string.Empty, Height = 34, Margin = new Thickness(0, 4, 0, 12) };
+            var statusCombo = new ComboBox { Height = 34, Margin = new Thickness(0, 4, 0, 12) };
+            statusCombo.Items.Add("active");
+            statusCombo.Items.Add("inactive");
+            statusCombo.SelectedItem = existing?.Status ?? "active";
+
+            panel.Children.Add(new TextBlock { Text = "Nombre", FontWeight = FontWeights.SemiBold });
+            panel.Children.Add(nameBox);
+            panel.Children.Add(new TextBlock { Text = "Código", FontWeight = FontWeights.SemiBold });
+            panel.Children.Add(codeBox);
+            panel.Children.Add(new TextBlock { Text = "Estado", FontWeight = FontWeights.SemiBold });
+            panel.Children.Add(statusCombo);
+
+            var buttonRow = new WrapPanel { HorizontalAlignment = HorizontalAlignment.Right };
+            var cancelButton = new Button { Content = "Cancelar", Width = 100, Margin = new Thickness(0, 0, 8, 0) };
+            var saveButton = new Button { Content = "Guardar", Width = 100 };
+
+            cancelButton.Click += (_, _) => dialog.Close();
+            saveButton.Click += (_, _) =>
+            {
+                if (string.IsNullOrWhiteSpace(nameBox.Text) || string.IsNullOrWhiteSpace(codeBox.Text))
+                {
+                    MessageBox.Show("Nombre y código son obligatorios.", "Validación", MessageBoxButton.OK, MessageBoxImage.Warning);
+                    return;
+                }
+
+                dialog.Tag = new CashRegisterFormResult(
+                    nameBox.Text.Trim(),
+                    codeBox.Text.Trim(),
+                    statusCombo.SelectedItem?.ToString() ?? "active");
+
+                dialog.DialogResult = true;
+                dialog.Close();
+            };
+
+            buttonRow.Children.Add(cancelButton);
+            buttonRow.Children.Add(saveButton);
+            panel.Children.Add(buttonRow);
+
+            dialog.Content = panel;
+
+            if (Application.Current?.MainWindow is Window owner && owner != dialog)
+            {
+                dialog.Owner = owner;
+            }
+
+            var result = dialog.ShowDialog();
+            return result == true ? dialog.Tag as CashRegisterFormResult : null;
+        }
+
+        private CashierOption? ShowAssignCashierForm(CashRegisterOption register)
+        {
+            if (cashierOptions.Count == 0)
+            {
+                ShowAlert("No tienes cajeros disponibles en tu negocio para asignar esta caja.");
+                return null;
+            }
+
+            var dialog = new Window
+            {
+                Title = $"Asignar caja: {register.Name}",
+                Width = 440,
+                Height = 220,
+                ResizeMode = ResizeMode.NoResize,
+                WindowStartupLocation = WindowStartupLocation.CenterOwner,
+                Background = Brushes.White
+            };
+
+            var panel = new StackPanel { Margin = new Thickness(18) };
+            panel.Children.Add(new TextBlock
+            {
+                Text = "Selecciona el cajero al que deseas asignar esta caja.",
+                Foreground = new SolidColorBrush(Color.FromRgb(31, 41, 55)),
+                Margin = new Thickness(0, 0, 0, 10)
+            });
+
+            var cashierCombo = new ComboBox { Height = 34, DisplayMemberPath = "DisplayName", ItemsSource = cashierOptions.ToList() };
+            cashierCombo.SelectedIndex = 0;
+            panel.Children.Add(cashierCombo);
+
+            var buttonRow = new WrapPanel { HorizontalAlignment = HorizontalAlignment.Right, Margin = new Thickness(0, 14, 0, 0) };
+            var cancelButton = new Button { Content = "Cancelar", Width = 100, Margin = new Thickness(0, 0, 8, 0) };
+            var assignButton = new Button { Content = "Asignar", Width = 100 };
+
+            cancelButton.Click += (_, _) => dialog.Close();
+            assignButton.Click += (_, _) =>
+            {
+                if (cashierCombo.SelectedItem is not CashierOption selectedCashier)
+                {
+                    MessageBox.Show("Selecciona un cajero.", "Validación", MessageBoxButton.OK, MessageBoxImage.Warning);
+                    return;
+                }
+
+                dialog.Tag = selectedCashier;
+                dialog.DialogResult = true;
+                dialog.Close();
+            };
+
+            buttonRow.Children.Add(cancelButton);
+            buttonRow.Children.Add(assignButton);
+            panel.Children.Add(buttonRow);
+
+            dialog.Content = panel;
+            if (Application.Current?.MainWindow is Window owner && owner != dialog)
+            {
+                dialog.Owner = owner;
+            }
+
+            var result = dialog.ShowDialog();
+            return result == true ? dialog.Tag as CashierOption : null;
+        }
+
+        private async Task LoadCashiersFromApi()
+        {
+            try
+            {
+                using var response = await HttpClient.GetAsync($"{ApiBaseUrl}/gglob-pay/cashiers");
+                if (!response.IsSuccessStatusCode)
+                {
+                    return;
+                }
+
+                var content = await response.Content.ReadAsStringAsync();
+                var result = JsonSerializer.Deserialize<ApiListResponse<ApiCashier>>(content, JsonOptions());
+                if (result?.Data is null)
+                {
+                    return;
+                }
+
+                cashierOptions.Clear();
+                foreach (var cashier in result.Data)
+                {
+                    if (cashier.Id is null)
+                    {
+                        continue;
+                    }
+
+                    cashierOptions.Add(new CashierOption(cashier.Id.Value, cashier.Name ?? "Cajero", cashier.Email ?? string.Empty));
+                }
+            }
+            catch
+            {
+            }
         }
 
         private async Task<ApiQrIntentResponse?> CreateQrIntentApi(string sourceChannel, decimal amount, int cashRegisterId, int? destinationAccountId)
@@ -1354,6 +1667,7 @@ namespace Gglob
                     register.Id.Value,
                     register.Name ?? "Caja",
                     register.Code ?? string.Empty,
+                    register.Status ?? "active",
                     register.IsPrimary == 1));
             }
 
@@ -1369,7 +1683,7 @@ namespace Gglob
                 QrCashierComboBox.SelectedIndex = primaryIndex >= 0 ? primaryIndex : 0;
             }
 
-            CashRegistersListBox.ItemsSource = cashRegisterManagementOptions;
+            CashRegistersDataGrid.ItemsSource = cashRegisterManagementOptions;
 
             var filters = new[] { "Todos", cashierName };
             VerifiedCashierComboBox.ItemsSource = filters;
@@ -1525,18 +1839,51 @@ namespace Gglob
         [JsonPropertyName("code")]
         public string? Code { get; set; }
 
+        [JsonPropertyName("status")]
+        public string? Status { get; set; }
+
         [JsonPropertyName("is_primary")]
         public int IsPrimary { get; set; }
     }
 
-    public class CashRegisterOption(int id, string name, string code, bool isPrimary)
+    public class CashRegisterOption(int id, string name, string code, string status, bool isPrimary)
     {
         public int Id { get; } = id;
         public string Name { get; } = name;
         public string Code { get; } = code;
+        public string Status { get; } = status;
+        public string StatusLabel => string.Equals(Status, "active", StringComparison.OrdinalIgnoreCase) ? "Activa" : "Inactiva";
         public bool IsPrimary { get; } = isPrimary;
 
         public override string ToString() => $"{Name} ({Code})";
+    }
+
+    public class ApiCashier
+    {
+        [JsonPropertyName("id")]
+        public int? Id { get; set; }
+
+        [JsonPropertyName("name")]
+        public string? Name { get; set; }
+
+        [JsonPropertyName("email")]
+        public string? Email { get; set; }
+    }
+
+    public class CashierOption(int id, string name, string email)
+    {
+        public int Id { get; } = id;
+        public string Name { get; } = name;
+        public string Email { get; } = email;
+        public string DisplayName => string.IsNullOrWhiteSpace(Email) ? Name : $"{Name} ({Email})";
+        public override string ToString() => DisplayName;
+    }
+
+    public class CashRegisterFormResult(string name, string code, string status)
+    {
+        public string Name { get; } = name;
+        public string Code { get; } = code;
+        public string Status { get; } = status;
     }
 
     public class OfflineSession
@@ -1727,11 +2074,20 @@ namespace Gglob
         [JsonPropertyName("public_key")]
         public string? PublicKey { get; set; }
 
+        [JsonPropertyName("private_key")]
+        public string? PrivateKey { get; set; }
+
+        [JsonPropertyName("events_secret")]
+        public string? EventsSecret { get; set; }
+
         [JsonPropertyName("base_url")]
         public string? BaseUrl { get; set; }
 
         [JsonPropertyName("client_id")]
         public string? ClientId { get; set; }
+
+        [JsonPropertyName("client_secret")]
+        public string? ClientSecret { get; set; }
     }
 
     public record AccessValidation(bool IsValid, string Message);
