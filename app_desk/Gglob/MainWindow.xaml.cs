@@ -31,6 +31,8 @@ namespace Gglob
         private readonly ObservableCollection<CashRegisterOption> cashRegisterOptions = [];
         private readonly ObservableCollection<CashRegisterOption> cashRegisterManagementOptions = [];
         private readonly ObservableCollection<CashierOption> cashierOptions = [];
+        private readonly ObservableCollection<BusinessCashierItem> businessCashiers = [];
+        private int? editingCashierId;
         private ApiUser? currentUser;
         private bool isGglobPayEnabled;
 
@@ -60,6 +62,8 @@ namespace Gglob
             DestinationAccountsListBox.ItemsSource = destinationAccounts;
             QrAccountComboBox.ItemsSource = qrAccountOptions;
             CashRegistersDataGrid.ItemsSource = cashRegisterManagementOptions;
+            CashiersManagementDataGrid.ItemsSource = businessCashiers;
+            ResetCashierForm();
 
             SetSelectedModule(null);
         }
@@ -361,6 +365,7 @@ namespace Gglob
             DefaultPanel.Visibility = Visibility.Visible;
             GglobPayPanel.Visibility = Visibility.Collapsed;
             CashRegistersPanel.Visibility = Visibility.Collapsed;
+            CashiersManagementPanel.Visibility = Visibility.Collapsed;
 
             if (moduleKey == "gglob_pay")
             {
@@ -394,12 +399,14 @@ namespace Gglob
             {
                 if (currentUser is null || !IsOwner(currentUser))
                 {
-                    QrStatusTextBlock.Text = "Solo el dueño puede crear usuarios cajeros.";
+                    QrStatusTextBlock.Text = "Solo el dueño puede gestionar usuarios cajeros.";
                     QrStatusTextBlock.Foreground = Brushes.DarkOrange;
                     return;
                 }
 
-                OpenCreateCashierDialog();
+                DefaultPanel.Visibility = Visibility.Collapsed;
+                CashiersManagementPanel.Visibility = Visibility.Visible;
+                _ = LoadBusinessCashiersFromApi();
                 return;
             }
         }
@@ -1471,50 +1478,111 @@ namespace Gglob
             }
         }
 
-        private void OpenCreateCashierDialog()
+        private async Task LoadBusinessCashiersFromApi()
         {
-            var form = ShowCreateCashierForm();
-            if (form is null)
+            try
             {
+                using var response = await HttpClient.GetAsync($"{ApiBaseUrl}/gglob-pay/cashiers");
+                if (!response.IsSuccessStatusCode)
+                {
+                    return;
+                }
+
+                var content = await response.Content.ReadAsStringAsync();
+                var result = JsonSerializer.Deserialize<ApiListResponse<ApiCashier>>(content, JsonOptions());
+                if (result?.Data is null)
+                {
+                    return;
+                }
+
+                businessCashiers.Clear();
+                foreach (var cashier in result.Data)
+                {
+                    if (cashier.Id is null)
+                    {
+                        continue;
+                    }
+
+                    businessCashiers.Add(new BusinessCashierItem(
+                        cashier.Id.Value,
+                        cashier.Name ?? "Cajero",
+                        cashier.LastName ?? string.Empty,
+                        cashier.Email ?? string.Empty,
+                        cashier.Phone ?? string.Empty));
+                }
+
+                await LoadCashiersFromApi();
+            }
+            catch
+            {
+            }
+        }
+
+        private async void SaveCashierButton_Click(object sender, RoutedEventArgs e)
+        {
+            if (currentUser is null || !IsOwner(currentUser))
+            {
+                QrStatusTextBlock.Text = "Solo el dueño puede gestionar usuarios cajeros.";
+                QrStatusTextBlock.Foreground = Brushes.DarkRed;
                 return;
             }
 
-            _ = CreateCashierAsync(form);
-        }
+            var name = CashierNameTextBox.Text.Trim();
+            var email = CashierEmailTextBox.Text.Trim();
+            var password = CashierPasswordBox.Password;
 
-        private async Task CreateCashierAsync(CreateCashierFormResult form)
-        {
-            SetLoading(true);
-            var ok = await SaveCashierApi(form);
-            if (ok)
+            if (string.IsNullOrWhiteSpace(name) || string.IsNullOrWhiteSpace(email))
             {
-                await LoadCashiersFromApi();
-                QrStatusTextBlock.Text = "Usuario cajero creado correctamente.";
-                QrStatusTextBlock.Foreground = Brushes.DarkGreen;
-                ShowAlert(QrStatusTextBlock.Text);
+                ShowAlert("Nombre y correo son obligatorios.");
+                return;
             }
-            else
+
+            if (!string.IsNullOrWhiteSpace(password) && password.Length < 8)
             {
-                QrStatusTextBlock.Text = "No se pudo crear el usuario cajero.";
+                ShowAlert("La contraseña debe tener al menos 8 caracteres.");
+                return;
+            }
+
+            if (editingCashierId is null && string.IsNullOrWhiteSpace(password))
+            {
+                ShowAlert("La contraseña es obligatoria para crear un cajero.");
+                return;
+            }
+
+            SetLoading(true);
+            var ok = editingCashierId is null
+                ? await CreateCashierApi(name, CashierLastNameTextBox.Text.Trim(), email, CashierPhoneTextBox.Text.Trim(), password)
+                : await UpdateCashierApi(editingCashierId.Value, name, CashierLastNameTextBox.Text.Trim(), email, CashierPhoneTextBox.Text.Trim(), password);
+            SetLoading(false);
+
+            if (!ok)
+            {
+                QrStatusTextBlock.Text = "No se pudo guardar el usuario cajero.";
                 QrStatusTextBlock.Foreground = Brushes.DarkRed;
                 ShowAlert(QrStatusTextBlock.Text);
+                return;
             }
 
-            SetLoading(false);
-            SetSelectedModule(null);
+            await LoadBusinessCashiersFromApi();
+            QrStatusTextBlock.Text = editingCashierId is null
+                ? "Usuario cajero creado correctamente."
+                : "Usuario cajero actualizado correctamente.";
+            QrStatusTextBlock.Foreground = Brushes.DarkGreen;
+            ShowAlert(QrStatusTextBlock.Text);
+            ResetCashierForm();
         }
 
-        private async Task<bool> SaveCashierApi(CreateCashierFormResult form)
+        private async Task<bool> CreateCashierApi(string name, string lastName, string email, string phone, string password)
         {
             try
             {
                 var payload = JsonSerializer.Serialize(new
                 {
-                    name = form.Name,
-                    last_name = form.LastName,
-                    email = form.Email,
-                    phone = form.Phone,
-                    password = form.Password,
+                    name,
+                    last_name = lastName,
+                    email,
+                    phone,
+                    password,
                 });
 
                 using var content = new StringContent(payload, Encoding.UTF8, "application/json");
@@ -1527,100 +1595,117 @@ namespace Gglob
             }
         }
 
-        private CreateCashierFormResult? ShowCreateCashierForm()
+        private async Task<bool> UpdateCashierApi(int cashierId, string name, string lastName, string email, string phone, string? password)
         {
-            var dialog = new Window
+            try
             {
-                Title = "Crear usuario cajero",
-                Width = 460,
-                Height = 500,
-                ResizeMode = ResizeMode.NoResize,
-                WindowStartupLocation = WindowStartupLocation.CenterOwner,
-                Background = Brushes.White
-            };
-
-            var panel = new StackPanel { Margin = new Thickness(18) };
-            panel.Children.Add(new TextBlock { Text = "Nombre", FontWeight = FontWeights.SemiBold });
-            var nameTextBox = new TextBox { Height = 34, Margin = new Thickness(0, 6, 0, 10) };
-            panel.Children.Add(nameTextBox);
-
-            panel.Children.Add(new TextBlock { Text = "Apellido", FontWeight = FontWeights.SemiBold });
-            var lastNameTextBox = new TextBox { Height = 34, Margin = new Thickness(0, 6, 0, 10) };
-            panel.Children.Add(lastNameTextBox);
-
-            panel.Children.Add(new TextBlock { Text = "Correo", FontWeight = FontWeights.SemiBold });
-            var emailTextBox = new TextBox { Height = 34, Margin = new Thickness(0, 6, 0, 10) };
-            panel.Children.Add(emailTextBox);
-
-            panel.Children.Add(new TextBlock { Text = "Teléfono", FontWeight = FontWeights.SemiBold });
-            var phoneTextBox = new TextBox { Height = 34, Margin = new Thickness(0, 6, 0, 10) };
-            panel.Children.Add(phoneTextBox);
-
-            panel.Children.Add(new TextBlock { Text = "Contraseña", FontWeight = FontWeights.SemiBold });
-            var passwordBox = new PasswordBox { Height = 34, Margin = new Thickness(0, 6, 0, 10) };
-            panel.Children.Add(passwordBox);
-
-            panel.Children.Add(new TextBlock { Text = "Confirmar contraseña", FontWeight = FontWeights.SemiBold });
-            var confirmPasswordBox = new PasswordBox { Height = 34, Margin = new Thickness(0, 6, 0, 10) };
-            panel.Children.Add(confirmPasswordBox);
-
-            var buttonRow = new WrapPanel { HorizontalAlignment = HorizontalAlignment.Right, Margin = new Thickness(0, 14, 0, 0) };
-            var cancelButton = new Button { Content = "Cancelar", Width = 100, Margin = new Thickness(0, 0, 8, 0) };
-            var createButton = new Button { Content = "Crear", Width = 100 };
-
-            cancelButton.Click += (_, _) => dialog.Close();
-            createButton.Click += (_, _) =>
-            {
-                var name = nameTextBox.Text.Trim();
-                var email = emailTextBox.Text.Trim();
-                var password = passwordBox.Password;
-                var confirmPassword = confirmPasswordBox.Password;
-
-                if (string.IsNullOrWhiteSpace(name) || string.IsNullOrWhiteSpace(email) || string.IsNullOrWhiteSpace(password))
+                var payload = JsonSerializer.Serialize(new
                 {
-                    MessageBox.Show("Nombre, correo y contraseña son obligatorios.", "Validación", MessageBoxButton.OK, MessageBoxImage.Warning);
-                    return;
-                }
-
-                if (password.Length < 8)
-                {
-                    MessageBox.Show("La contraseña debe tener al menos 8 caracteres.", "Validación", MessageBoxButton.OK, MessageBoxImage.Warning);
-                    return;
-                }
-
-                if (!string.Equals(password, confirmPassword, StringComparison.Ordinal))
-                {
-                    MessageBox.Show("Las contraseñas no coinciden.", "Validación", MessageBoxButton.OK, MessageBoxImage.Warning);
-                    return;
-                }
-
-                dialog.Tag = new CreateCashierFormResult(
                     name,
-                    lastNameTextBox.Text.Trim(),
+                    last_name = lastName,
                     email,
-                    phoneTextBox.Text.Trim(),
-                    password);
-                dialog.DialogResult = true;
-                dialog.Close();
-            };
+                    phone,
+                    password,
+                });
 
-            buttonRow.Children.Add(cancelButton);
-            buttonRow.Children.Add(createButton);
-            panel.Children.Add(buttonRow);
+                using var content = new StringContent(payload, Encoding.UTF8, "application/json");
+                using var response = await HttpClient.PutAsync($"{ApiBaseUrl}/gglob-pay/cashiers/{cashierId}", content);
+                return response.IsSuccessStatusCode;
+            }
+            catch
+            {
+                return false;
+            }
+        }
 
-            dialog.Content = new ScrollViewer
+        private async Task<bool> DeleteCashierApi(int cashierId)
+        {
+            try
             {
-                VerticalScrollBarVisibility = ScrollBarVisibility.Auto,
-                HorizontalScrollBarVisibility = ScrollBarVisibility.Disabled,
-                Content = panel
-            };
-            if (Application.Current?.MainWindow is Window owner && owner != dialog)
+                using var response = await HttpClient.DeleteAsync($"{ApiBaseUrl}/gglob-pay/cashiers/{cashierId}");
+                return response.IsSuccessStatusCode;
+            }
+            catch
             {
-                dialog.Owner = owner;
+                return false;
+            }
+        }
+
+        private void EditCashierRowButton_Click(object sender, RoutedEventArgs e)
+        {
+            if (sender is not Button { Tag: BusinessCashierItem cashier })
+            {
+                return;
             }
 
-            var result = dialog.ShowDialog();
-            return result == true ? dialog.Tag as CreateCashierFormResult : null;
+            editingCashierId = cashier.Id;
+            CashierNameTextBox.Text = cashier.Name;
+            CashierLastNameTextBox.Text = cashier.LastName;
+            CashierEmailTextBox.Text = cashier.Email;
+            CashierPhoneTextBox.Text = cashier.Phone;
+            CashierPasswordBox.Password = string.Empty;
+            CashierPasswordLabel.Text = "Contraseña (opcional para actualizar)";
+            SaveCashierButton.Content = "Actualizar cajero";
+            ClearCashierFormButton.Content = "Cancelar edición";
+        }
+
+        private async void DeleteCashierRowButton_Click(object sender, RoutedEventArgs e)
+        {
+            if (sender is not Button { Tag: BusinessCashierItem cashier })
+            {
+                return;
+            }
+
+            var confirm = MessageBox.Show(
+                $"¿Seguro que deseas eliminar el usuario cajero '{cashier.FullName}'?",
+                "Confirmar eliminación",
+                MessageBoxButton.YesNo,
+                MessageBoxImage.Warning);
+
+            if (confirm != MessageBoxResult.Yes)
+            {
+                return;
+            }
+
+            SetLoading(true);
+            var ok = await DeleteCashierApi(cashier.Id);
+            SetLoading(false);
+
+            if (!ok)
+            {
+                QrStatusTextBlock.Text = "No se pudo eliminar el usuario cajero.";
+                QrStatusTextBlock.Foreground = Brushes.DarkRed;
+                ShowAlert(QrStatusTextBlock.Text);
+                return;
+            }
+
+            await LoadBusinessCashiersFromApi();
+            QrStatusTextBlock.Text = "Usuario cajero eliminado correctamente.";
+            QrStatusTextBlock.Foreground = Brushes.DarkGreen;
+            ShowAlert(QrStatusTextBlock.Text);
+
+            if (editingCashierId == cashier.Id)
+            {
+                ResetCashierForm();
+            }
+        }
+
+        private void ClearCashierFormButton_Click(object sender, RoutedEventArgs e)
+        {
+            ResetCashierForm();
+        }
+
+        private void ResetCashierForm()
+        {
+            editingCashierId = null;
+            CashierNameTextBox.Text = string.Empty;
+            CashierLastNameTextBox.Text = string.Empty;
+            CashierEmailTextBox.Text = string.Empty;
+            CashierPhoneTextBox.Text = string.Empty;
+            CashierPasswordBox.Password = string.Empty;
+            CashierPasswordLabel.Text = "Contraseña";
+            SaveCashierButton.Content = "Crear cajero";
+            ClearCashierFormButton.Content = "Limpiar";
         }
 
         private async Task<ApiQrIntentResponse?> CreateQrIntentApi(string sourceChannel, decimal amount, int cashRegisterId, int? destinationAccountId)
@@ -2194,8 +2279,14 @@ namespace Gglob
         [JsonPropertyName("name")]
         public string? Name { get; set; }
 
+        [JsonPropertyName("last_name")]
+        public string? LastName { get; set; }
+
         [JsonPropertyName("email")]
         public string? Email { get; set; }
+
+        [JsonPropertyName("phone")]
+        public string? Phone { get; set; }
     }
 
     public class CashierOption(int id, string name, string email)
@@ -2205,6 +2296,16 @@ namespace Gglob
         public string Email { get; } = email;
         public string DisplayName => string.IsNullOrWhiteSpace(Email) ? Name : $"{Name} ({Email})";
         public override string ToString() => DisplayName;
+    }
+
+    public class BusinessCashierItem(int id, string name, string lastName, string email, string phone)
+    {
+        public int Id { get; } = id;
+        public string Name { get; } = name;
+        public string LastName { get; } = lastName;
+        public string Email { get; } = email;
+        public string Phone { get; } = phone;
+        public string FullName => string.IsNullOrWhiteSpace(LastName) ? Name : $"{Name} {LastName}";
     }
 
     public class CashRegisterFormResult(string name, string code, string status)

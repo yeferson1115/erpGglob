@@ -299,7 +299,7 @@ class GglobPayController extends Controller
         $rows = DB::table('users')
             ->where('company_id', $user->company_id)
             ->where('business_role', 'cashier')
-            ->select('id', 'name', 'email')
+            ->select('id', 'name', 'last_name', 'email', 'phone')
             ->orderBy('name')
             ->get();
 
@@ -343,6 +343,78 @@ class GglobPayController extends Controller
                 'email' => $cashier->email,
             ],
         ], 201);
+    }
+
+
+    public function updateCashier(Request $request, int $cashier)
+    {
+        $user = $request->user();
+        if (!$this->isOwner($request)) {
+            return response()->json(['message' => 'Solo el dueño puede editar usuarios cajeros.'], 403);
+        }
+
+        $cashierUser = User::where('id', $cashier)
+            ->where('company_id', $user->company_id)
+            ->where('business_role', 'cashier')
+            ->first();
+
+        if (!$cashierUser) {
+            return response()->json(['message' => 'Cajero no encontrado para la empresa.'], 404);
+        }
+
+        $validated = $request->validate([
+            'name' => ['required', 'string', 'max:255'],
+            'last_name' => ['nullable', 'string', 'max:255'],
+            'email' => ['required', 'email', 'max:255', 'unique:users,email,' . $cashierUser->id],
+            'phone' => ['nullable', 'string', 'max:30'],
+            'password' => ['nullable', 'string', 'min:8'],
+        ]);
+
+        $payload = [
+            'name' => trim($validated['name']),
+            'last_name' => $validated['last_name'] ?? null,
+            'email' => strtolower(trim($validated['email'])),
+            'phone' => $validated['phone'] ?? null,
+        ];
+
+        if (!empty($validated['password'])) {
+            $payload['password'] = Hash::make($validated['password']);
+        }
+
+        $cashierUser->update($payload);
+
+        return response()->json([
+            'message' => 'Usuario cajero actualizado correctamente.',
+            'data' => [
+                'id' => $cashierUser->id,
+                'name' => $cashierUser->name,
+                'last_name' => $cashierUser->last_name,
+                'email' => $cashierUser->email,
+                'phone' => $cashierUser->phone,
+            ],
+        ]);
+    }
+
+    public function destroyCashier(Request $request, int $cashier)
+    {
+        $user = $request->user();
+        if (!$this->isOwner($request)) {
+            return response()->json(['message' => 'Solo el dueño puede eliminar usuarios cajeros.'], 403);
+        }
+
+        $cashierUser = User::where('id', $cashier)
+            ->where('company_id', $user->company_id)
+            ->where('business_role', 'cashier')
+            ->first();
+
+        if (!$cashierUser) {
+            return response()->json(['message' => 'Cajero no encontrado para la empresa.'], 404);
+        }
+
+        DB::table('cash_register_user')->where('user_id', $cashierUser->id)->delete();
+        $cashierUser->delete();
+
+        return response()->json(['message' => 'Usuario cajero eliminado correctamente.']);
     }
 
     public function assignCashRegisterToCashier(Request $request, int $cashRegister)
