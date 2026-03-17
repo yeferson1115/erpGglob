@@ -78,8 +78,10 @@ class AuthController extends Controller
             && now()->toDateString() <= $company->active_until->toDateString();
 
         if ($context === 'desk') {
-            if (!in_array(strtolower((string) $user->business_role), ['owner', 'cashier'], true)) {
-                return response()->json(['error' => 'Rol de negocio no permitido para app_desk.'], 403);
+            $isDeskBusinessRole = in_array(strtolower((string) $user->business_role), ['owner', 'cashier'], true);
+            $isAdmin = $user->hasRole('admin') || $user->hasRole('Administrador');
+            if (!$isDeskBusinessRole && !$isAdmin) {
+                return response()->json(['error' => 'Rol no permitido para app_desk. Solo Dueño, Cajero o Administrador.'], 403);
             }
 
             if (!$companyIsActive) {
