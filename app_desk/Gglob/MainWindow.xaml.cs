@@ -387,6 +387,20 @@ namespace Gglob
 
                 DefaultPanel.Visibility = Visibility.Collapsed;
                 CashRegistersPanel.Visibility = Visibility.Visible;
+                return;
+            }
+
+            if (moduleKey == "cashier_management")
+            {
+                if (currentUser is null || !IsOwner(currentUser))
+                {
+                    QrStatusTextBlock.Text = "Solo el dueño puede crear usuarios cajeros.";
+                    QrStatusTextBlock.Foreground = Brushes.DarkOrange;
+                    return;
+                }
+
+                OpenCreateCashierDialog();
+                return;
             }
         }
 
@@ -396,6 +410,12 @@ namespace Gglob
 
             foreach (var service in services)
             {
+                var isOwnerOnlyModule = service.Key is "cash_register_management" or "cashier_management";
+                if (isOwnerOnlyModule && (currentUser is null || !IsOwner(currentUser)))
+                {
+                    continue;
+                }
+
                 var button = new Button
                 {
                     Padding = new Thickness(10, 8, 10, 8),
@@ -1401,6 +1421,153 @@ namespace Gglob
             }
         }
 
+        private void OpenCreateCashierDialog()
+        {
+            var form = ShowCreateCashierForm();
+            if (form is null)
+            {
+                return;
+            }
+
+            _ = CreateCashierAsync(form);
+        }
+
+        private async Task CreateCashierAsync(CreateCashierFormResult form)
+        {
+            SetLoading(true);
+            var ok = await SaveCashierApi(form);
+            if (ok)
+            {
+                await LoadCashiersFromApi();
+                QrStatusTextBlock.Text = "Usuario cajero creado correctamente.";
+                QrStatusTextBlock.Foreground = Brushes.DarkGreen;
+                ShowAlert(QrStatusTextBlock.Text);
+            }
+            else
+            {
+                QrStatusTextBlock.Text = "No se pudo crear el usuario cajero.";
+                QrStatusTextBlock.Foreground = Brushes.DarkRed;
+                ShowAlert(QrStatusTextBlock.Text);
+            }
+
+            SetLoading(false);
+            SetSelectedModule(null);
+        }
+
+        private async Task<bool> SaveCashierApi(CreateCashierFormResult form)
+        {
+            try
+            {
+                var payload = JsonSerializer.Serialize(new
+                {
+                    name = form.Name,
+                    last_name = form.LastName,
+                    email = form.Email,
+                    phone = form.Phone,
+                    password = form.Password,
+                });
+
+                using var content = new StringContent(payload, Encoding.UTF8, "application/json");
+                using var response = await HttpClient.PostAsync($"{ApiBaseUrl}/gglob-pay/cashiers", content);
+                return response.IsSuccessStatusCode;
+            }
+            catch
+            {
+                return false;
+            }
+        }
+
+        private CreateCashierFormResult? ShowCreateCashierForm()
+        {
+            var dialog = new Window
+            {
+                Title = "Crear usuario cajero",
+                Width = 460,
+                Height = 420,
+                ResizeMode = ResizeMode.NoResize,
+                WindowStartupLocation = WindowStartupLocation.CenterOwner,
+                Background = Brushes.White
+            };
+
+            var panel = new StackPanel { Margin = new Thickness(18) };
+            panel.Children.Add(new TextBlock { Text = "Nombre", FontWeight = FontWeights.SemiBold });
+            var nameTextBox = new TextBox { Height = 34, Margin = new Thickness(0, 6, 0, 10) };
+            panel.Children.Add(nameTextBox);
+
+            panel.Children.Add(new TextBlock { Text = "Apellido", FontWeight = FontWeights.SemiBold });
+            var lastNameTextBox = new TextBox { Height = 34, Margin = new Thickness(0, 6, 0, 10) };
+            panel.Children.Add(lastNameTextBox);
+
+            panel.Children.Add(new TextBlock { Text = "Correo", FontWeight = FontWeights.SemiBold });
+            var emailTextBox = new TextBox { Height = 34, Margin = new Thickness(0, 6, 0, 10) };
+            panel.Children.Add(emailTextBox);
+
+            panel.Children.Add(new TextBlock { Text = "Teléfono", FontWeight = FontWeights.SemiBold });
+            var phoneTextBox = new TextBox { Height = 34, Margin = new Thickness(0, 6, 0, 10) };
+            panel.Children.Add(phoneTextBox);
+
+            panel.Children.Add(new TextBlock { Text = "Contraseña", FontWeight = FontWeights.SemiBold });
+            var passwordBox = new PasswordBox { Height = 34, Margin = new Thickness(0, 6, 0, 10) };
+            panel.Children.Add(passwordBox);
+
+            panel.Children.Add(new TextBlock { Text = "Confirmar contraseña", FontWeight = FontWeights.SemiBold });
+            var confirmPasswordBox = new PasswordBox { Height = 34, Margin = new Thickness(0, 6, 0, 10) };
+            panel.Children.Add(confirmPasswordBox);
+
+            var buttonRow = new WrapPanel { HorizontalAlignment = HorizontalAlignment.Right, Margin = new Thickness(0, 14, 0, 0) };
+            var cancelButton = new Button { Content = "Cancelar", Width = 100, Margin = new Thickness(0, 0, 8, 0) };
+            var createButton = new Button { Content = "Crear", Width = 100 };
+
+            cancelButton.Click += (_, _) => dialog.Close();
+            createButton.Click += (_, _) =>
+            {
+                var name = nameTextBox.Text.Trim();
+                var email = emailTextBox.Text.Trim();
+                var password = passwordBox.Password;
+                var confirmPassword = confirmPasswordBox.Password;
+
+                if (string.IsNullOrWhiteSpace(name) || string.IsNullOrWhiteSpace(email) || string.IsNullOrWhiteSpace(password))
+                {
+                    MessageBox.Show("Nombre, correo y contraseña son obligatorios.", "Validación", MessageBoxButton.OK, MessageBoxImage.Warning);
+                    return;
+                }
+
+                if (password.Length < 8)
+                {
+                    MessageBox.Show("La contraseña debe tener al menos 8 caracteres.", "Validación", MessageBoxButton.OK, MessageBoxImage.Warning);
+                    return;
+                }
+
+                if (!string.Equals(password, confirmPassword, StringComparison.Ordinal))
+                {
+                    MessageBox.Show("Las contraseñas no coinciden.", "Validación", MessageBoxButton.OK, MessageBoxImage.Warning);
+                    return;
+                }
+
+                dialog.Tag = new CreateCashierFormResult(
+                    name,
+                    lastNameTextBox.Text.Trim(),
+                    email,
+                    phoneTextBox.Text.Trim(),
+                    password);
+                dialog.DialogResult = true;
+                dialog.Close();
+            };
+
+            buttonRow.Children.Add(cancelButton);
+            buttonRow.Children.Add(createButton);
+            panel.Children.Add(buttonRow);
+
+            dialog.Content = panel;
+            if (Application.Current?.MainWindow is Window owner && owner != dialog)
+            {
+                dialog.Owner = owner;
+            }
+
+            var result = dialog.ShowDialog();
+            return result == true ? dialog.Tag as CreateCashierFormResult : null;
+        }
+
         private async Task<ApiQrIntentResponse?> CreateQrIntentApi(string sourceChannel, decimal amount, int cashRegisterId, int? destinationAccountId)
         {
             try
@@ -1673,6 +1840,7 @@ namespace Gglob
                 new ServiceItem("gglob_pay", "Gglob Pay", "Cobros y movimientos de pago.", company?.GglobPayEnabled ?? false),
                 new ServiceItem("gglob_pos", "Gglob POS", "Punto de venta y cajas.", company?.GglobPosEnabled ?? false),
                 new ServiceItem("cash_register_management", "Gestión de Cajas", "Asignación de cajas y cajeros.", (company?.GglobPayEnabled ?? false) || (company?.GglobPosEnabled ?? false)),
+                new ServiceItem("cashier_management", "Usuarios Cajeros", "Crear usuarios cajeros del negocio.", (company?.GglobPayEnabled ?? false) || (company?.GglobPosEnabled ?? false)),
                 new ServiceItem("gglob_accounting", "Gglob Contable", "Módulo de contabilidad.", company?.GglobAccountingEnabled ?? false),
             ];
         }
@@ -1989,6 +2157,15 @@ namespace Gglob
         public string Name { get; } = name;
         public string Code { get; } = code;
         public string Status { get; } = status;
+    }
+
+    public class CreateCashierFormResult(string name, string lastName, string email, string phone, string password)
+    {
+        public string Name { get; } = name;
+        public string LastName { get; } = lastName;
+        public string Email { get; } = email;
+        public string Phone { get; } = phone;
+        public string Password { get; } = password;
     }
 
     public class OfflineSession
