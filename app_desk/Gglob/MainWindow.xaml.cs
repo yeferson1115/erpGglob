@@ -332,6 +332,7 @@ namespace Gglob
 
             RenderServicesMenu(services);
             RenderActiveServicesCards(activeServices);
+            ApplyModulesVisibilityByRole();
             isGglobPayEnabled = user.Company?.GglobPayEnabled ?? false;
             ToggleGglobPayModuleAvailability();
             RenderPermissions(permissionsList);
@@ -362,6 +363,7 @@ namespace Gglob
 
         private void SetSelectedModule(string? moduleKey)
         {
+            ApplyModulesVisibilityByRole(moduleKey);
             DefaultPanel.Visibility = Visibility.Visible;
             GglobPayPanel.Visibility = Visibility.Collapsed;
             CashRegistersPanel.Visibility = Visibility.Collapsed;
@@ -411,6 +413,21 @@ namespace Gglob
             }
         }
 
+
+        private void ApplyModulesVisibilityByRole(string? moduleKey = null)
+        {
+            if (currentUser is null)
+            {
+                AvailableModulesPanel.Visibility = Visibility.Visible;
+                return;
+            }
+
+            var role = currentUser.BusinessRole?.Trim().ToLowerInvariant();
+            var hideByRole = role is "cashier";
+            var hideByModule = moduleKey is "gglob_pay" or "cash_register_management" or "cashier_management";
+            AvailableModulesPanel.Visibility = (hideByRole || hideByModule) ? Visibility.Collapsed : Visibility.Visible;
+        }
+
         private void RenderServicesMenu(List<ServiceItem> services)
         {
             ServicesMenuPanel.Children.Clear();
@@ -442,22 +459,32 @@ namespace Gglob
 
                     var adminExpander = new Expander
                     {
-                        Margin = new Thickness(0, 0, 0, 8),
                         Foreground = Brushes.White,
                         Background = new SolidColorBrush(Color.FromRgb(59, 100, 180)),
-                        BorderBrush = new SolidColorBrush(Color.FromArgb(100, 255, 255, 255)),
-                        BorderThickness = new Thickness(1),
+                        BorderBrush = Brushes.Transparent,
+                        BorderThickness = new Thickness(0),
                         IsExpanded = false,
                         Content = adminItemsPanel,
                         Header = new TextBlock
                         {
                             Text = "Administración",
+                            Foreground = Brushes.White,
                             FontWeight = FontWeights.SemiBold,
                             Margin = new Thickness(10, 8, 10, 8)
                         }
                     };
 
-                    ServicesMenuPanel.Children.Add(adminExpander);
+                    var adminContainer = new Border
+                    {
+                        CornerRadius = new CornerRadius(10),
+                        Margin = new Thickness(0, 0, 0, 8),
+                        Background = new SolidColorBrush(Color.FromRgb(59, 100, 180)),
+                        BorderBrush = new SolidColorBrush(Color.FromArgb(90, 255, 255, 255)),
+                        BorderThickness = new Thickness(1),
+                        Child = adminExpander
+                    };
+
+                    ServicesMenuPanel.Children.Add(adminContainer);
                 }
             }
         }
@@ -1337,8 +1364,8 @@ namespace Gglob
             panel.Children.Add(statusCombo);
 
             var buttonRow = new WrapPanel { HorizontalAlignment = HorizontalAlignment.Right };
-            var cancelButton = new Button { Content = "Cancelar", Width = 100, Margin = new Thickness(0, 0, 8, 0) };
-            var saveButton = new Button { Content = "Guardar", Width = 100 };
+            var cancelButton = new Button { Content = "Cancelar", Width = 100, Margin = new Thickness(0, 0, 8, 0), Background = new SolidColorBrush(Color.FromRgb(226, 232, 240)), Foreground = new SolidColorBrush(Color.FromRgb(30, 41, 59)), BorderBrush = new SolidColorBrush(Color.FromRgb(203, 213, 225)), Padding = new Thickness(10, 6, 10, 6) };
+            var saveButton = new Button { Content = "Guardar", Width = 100, Background = new SolidColorBrush(Color.FromRgb(37, 99, 235)), Foreground = Brushes.White, BorderBrush = new SolidColorBrush(Color.FromRgb(29, 78, 216)), Padding = new Thickness(12, 6, 12, 6) };
 
             cancelButton.Click += (_, _) => dialog.Close();
             saveButton.Click += (_, _) =>
@@ -1645,8 +1672,8 @@ namespace Gglob
             CashierPhoneTextBox.Text = cashier.Phone;
             CashierPasswordBox.Password = string.Empty;
             CashierPasswordLabel.Text = "Contraseña (opcional para actualizar)";
-            SaveCashierButton.Content = "Actualizar cajero";
-            ClearCashierFormButton.Content = "Cancelar edición";
+            SaveCashierButton.Content = "💾 Actualizar cajero";
+            ClearCashierFormButton.Content = "↩ Cancelar edición";
         }
 
         private async void DeleteCashierRowButton_Click(object sender, RoutedEventArgs e)
@@ -1704,8 +1731,8 @@ namespace Gglob
             CashierPhoneTextBox.Text = string.Empty;
             CashierPasswordBox.Password = string.Empty;
             CashierPasswordLabel.Text = "Contraseña";
-            SaveCashierButton.Content = "Crear cajero";
-            ClearCashierFormButton.Content = "Limpiar";
+            SaveCashierButton.Content = "👤 Crear cajero";
+            ClearCashierFormButton.Content = "🧹 Limpiar";
         }
 
         private async Task<ApiQrIntentResponse?> CreateQrIntentApi(string sourceChannel, decimal amount, int cashRegisterId, int? destinationAccountId)
