@@ -462,6 +462,12 @@ class GglobPayController extends Controller
             if (!$setting || empty($setting['public_key']) || empty($setting['private_key'])) {
                 return response()->json(['message' => 'Wompi no está configurado por el dueño.'], 422);
             }
+            $amountInCents = (int) round(((float) $validated['amount']) * 100);
+
+            $checkoutUrl = "https://checkout.wompi.co/l/{$setting['public_key']}"
+                . "?reference=" . urlencode($referenceCode)
+                . "&amount-in-cents={$amountInCents}"
+                . "&currency=COP";
 
             $payload = [
                 'provider' => 'wompi',
@@ -469,7 +475,7 @@ class GglobPayController extends Controller
                 'amount_in_cents' => (int) round(((float) $validated['amount']) * 100),
                 'currency' => 'COP',
                 'public_key' => $setting['public_key'],
-                'checkout_url' => rtrim('https://checkout.wompi.co/l', '/') . '?reference=' . urlencode($referenceCode),
+                'checkout_url' => $checkoutUrl,
             ];
         } else {
             $setting = $this->readProviderConfig($companyId, 'bancolombia');
@@ -630,7 +636,22 @@ class GglobPayController extends Controller
 
         $payment = DB::table('gglob_pay_payments')->where('id', $id)->first();
 
-        return response()->json(['message' => 'Pago verificado guardado', 'data' => $payment], 201);
+        return response()->json([
+            'message' => 'Pago verificado guardado',
+            'data' => [
+                'reference_code' => $payment->reference_code,
+                'sender_name' => $payment->sender_name,
+                'account_number' => $payment->account_number,
+                'amount' => (float)$payment->amount,
+                'cashier' => $payment->cashier,
+                'bank' => $payment->bank,
+                'verified_at' => $payment->verified_at,
+                'cash_register_id' => $payment->cash_register_id,
+                'cashier_user_id' => $payment->cashier_user_id,
+                'destination_account_id' => $payment->destination_account_id,
+                'source_channel' => $payment->source_channel
+            ]
+        ], 201);
     }
 
     public function report(Request $request)

@@ -11,6 +11,7 @@ using System.Text.Json.Serialization;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Media;
+using System.Text.Json.Serialization;
 
 namespace Gglob
 {
@@ -807,7 +808,8 @@ namespace Gglob
 
         private static JsonSerializerOptions JsonOptions() => new()
         {
-            PropertyNameCaseInsensitive = true
+            PropertyNameCaseInsensitive = true,
+            NumberHandling = JsonNumberHandling.AllowReadingFromString
         };
 
         private async void SaveDestinationAccountButton_Click(object sender, RoutedEventArgs e)
@@ -1913,6 +1915,9 @@ namespace Gglob
 
     public class ApiSingleResponse<T>
     {
+        [JsonPropertyName("message")]
+        public string? Message { get; set; }
+
         [JsonPropertyName("data")]
         public T? Data { get; set; }
     }
