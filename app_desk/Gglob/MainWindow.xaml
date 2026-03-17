@@ -195,7 +195,7 @@
                                     <ColumnDefinition Width="*" />
                                 </Grid.ColumnDefinitions>
                                 <StackPanel Margin="0,0,12,0">
-                                    <TextBlock Text="Banco destino" FontWeight="SemiBold" />
+                                    <TextBlock Text="Banco destino (solo Bancolombia)" FontWeight="SemiBold" />
                                     <ComboBox x:Name="DestinationBankComboBox" Margin="0,6,0,12" Height="34" />
                                     <TextBlock Text="Titular de cuenta" FontWeight="SemiBold" />
                                     <TextBox x:Name="DestinationHolderTextBox" Style="{StaticResource InputText}" />
@@ -206,13 +206,33 @@
                                         <ComboBoxItem Content="Ahorros" IsSelected="True" />
                                         <ComboBoxItem Content="Corriente" />
                                     </ComboBox>
-                                    <Button Content="Guardar cuenta destino" Width="220" Style="{StaticResource PrimaryButton}" Click="SaveDestinationAccountButton_Click" />
+                                    <Button x:Name="SaveBancolombiaDestinationButton" Content="Guardar cuenta destino Bancolombia" Width="280" Style="{StaticResource PrimaryButton}" Click="SaveDestinationAccountButton_Click" />
+
+                                    <Separator Margin="0,10,0,10"/>
+                                    <TextBlock Text="Configuración Wompi (Solo Dueño)" FontWeight="SemiBold" Foreground="#1f2937" />
+                                    <TextBlock Text="Llave pública" FontWeight="SemiBold" Margin="0,8,0,0" />
+                                    <TextBox x:Name="WompiPublicKeyTextBox" Style="{StaticResource InputText}" />
+                                    <TextBlock Text="Llave privada" FontWeight="SemiBold" />
+                                    <TextBox x:Name="WompiPrivateKeyTextBox" Style="{StaticResource InputText}" />
+                                    <TextBlock Text="Events secret" FontWeight="SemiBold" />
+                                    <TextBox x:Name="WompiEventsSecretTextBox" Style="{StaticResource InputText}" />
+                                    <Button x:Name="SaveWompiSettingsButton" Content="Guardar llaves Wompi" Width="220" Style="{StaticResource PrimaryButton}" Click="SaveWompiSettingsButton_Click" />
+
+                                    <Separator Margin="0,10,0,10"/>
+                                    <TextBlock Text="Configuración Bancolombia API (Solo Administrador)" FontWeight="SemiBold" Foreground="#1f2937" />
+                                    <TextBlock Text="Base URL" FontWeight="SemiBold" Margin="0,8,0,0" />
+                                    <TextBox x:Name="BancolombiaBaseUrlTextBox" Style="{StaticResource InputText}" />
+                                    <TextBlock Text="Client ID" FontWeight="SemiBold" />
+                                    <TextBox x:Name="BancolombiaClientIdTextBox" Style="{StaticResource InputText}" />
+                                    <TextBlock Text="Client Secret" FontWeight="SemiBold" />
+                                    <TextBox x:Name="BancolombiaClientSecretTextBox" Style="{StaticResource InputText}" />
+                                    <Button x:Name="SaveBancolombiaSettingsButton" Content="Guardar parámetros Bancolombia" Width="260" Style="{StaticResource PrimaryButton}" Click="SaveBancolombiaSettingsButton_Click" />
                                 </StackPanel>
                                 <Border Grid.Column="1" Background="#f8fbff" CornerRadius="10" BorderThickness="1" BorderBrush="#d9e4ff" Padding="12">
                                     <StackPanel>
                                         <TextBlock Text="Cuentas registradas" FontWeight="SemiBold" FontSize="16" Foreground="#1f2937" />
                                         <ListBox x:Name="DestinationAccountsListBox" Margin="0,12,0,0" Height="250" />
-                                        <TextBlock Text="Incluye soporte para bancos de Colombia (Bancolombia, Davivienda, BBVA, entre otros)." Margin="0,12,0,0" TextWrapping="Wrap" Foreground="#4b5563" />
+                                        <TextBlock Text="Configuración de cuentas destino para QR bancario en Bancolombia y parametrización de llaves por proveedor." Margin="0,12,0,0" TextWrapping="Wrap" Foreground="#4b5563" />
                                     </StackPanel>
                                 </Border>
                             </Grid>

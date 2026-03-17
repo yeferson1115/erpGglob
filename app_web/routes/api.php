@@ -79,6 +79,10 @@ Route::middleware(['auth:api'])->group(function () {
     });
     Route::post('ingreso/import', [IngresoController::class, 'import']);
 
+    Route::get('gglob-pay/cash-registers', [GglobPayController::class, 'cashRegisters']);
+    Route::get('gglob-pay/provider-settings/{provider}', [GglobPayController::class, 'providerSettings']);
+    Route::post('gglob-pay/provider-settings/{provider}', [GglobPayController::class, 'saveProviderSettings']);
+    Route::post('gglob-pay/qr/intents', [GglobPayController::class, 'createQrIntent']);
     Route::get('gglob-pay/destination-accounts', [GglobPayController::class, 'destinationAccounts']);
     Route::post('gglob-pay/destination-accounts', [GglobPayController::class, 'storeDestinationAccount']);
     Route::get('gglob-pay/payments', [GglobPayController::class, 'payments']);

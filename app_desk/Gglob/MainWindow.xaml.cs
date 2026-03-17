@@ -26,6 +26,8 @@ namespace Gglob
         private readonly ObservableCollection<DestinationAccount> destinationAccounts = [];
         private readonly ObservableCollection<QrAccountOption> qrAccountOptions = [];
         private readonly ObservableCollection<VerifiedPaymentRecord> verifiedPayments = [];
+        private readonly ObservableCollection<CashRegisterOption> cashRegisterOptions = [];
+        private ApiUser? currentUser;
         private bool isGglobPayEnabled;
 
         public MainWindow()
@@ -38,20 +40,14 @@ namespace Gglob
         {
             DestinationBankComboBox.ItemsSource = new[]
             {
-                "Bancolombia",
-                "Davivienda",
-                "Banco de Bogotá",
-                "BBVA Colombia",
-                "Banco Popular",
-                "Nequi",
-                "Daviplata"
+                "Bancolombia"
             };
             DestinationBankComboBox.SelectedIndex = 0;
 
-            QrCashierComboBox.ItemsSource = new[] { "Caja Principal", "Caja Norte", "Cajero Ana", "Cajero Luis" };
+            QrCashierComboBox.ItemsSource = new[] { "Sin caja asignada" };
             QrCashierComboBox.SelectedIndex = 0;
 
-            var cashierFilter = new[] { "Todos", "Caja Principal", "Caja Norte", "Cajero Ana", "Cajero Luis" };
+            var cashierFilter = new[] { "Todos" };
             VerifiedCashierComboBox.ItemsSource = cashierFilter;
             ReportCashierComboBox.ItemsSource = cashierFilter;
             VerifiedCashierComboBox.SelectedIndex = 0;
@@ -73,7 +69,12 @@ namespace Gglob
                 235000m,
                 "Caja Principal",
                 "Bancolombia",
-                DateTime.Now.AddHours(-2)));
+                DateTime.Now.AddHours(-2),
+                1,
+                1,
+                "Caja Principal",
+                "ahorros",
+                0));
             verifiedPayments.Add(new VerifiedPaymentRecord(
                 "GGPAY-20260614-084519-F4K8",
                 "Julián Torres",
@@ -81,7 +82,12 @@ namespace Gglob
                 115000m,
                 "Cajero Ana",
                 "Davivienda",
-                DateTime.Now.AddHours(-1)));
+                DateTime.Now.AddHours(-1),
+                1,
+                1,
+                "Caja Principal",
+                "wompi_credit_card",
+                null));
 
             RefreshQrOptions();
         }
@@ -113,7 +119,7 @@ namespace Gglob
         {
             try
             {
-                var payload = JsonSerializer.Serialize(new { email, password });
+                var payload = JsonSerializer.Serialize(new { email, password, app_context = "desk" });
                 using var content = new StringContent(payload, Encoding.UTF8, "application/json");
                 using var response = await HttpClient.PostAsync($"{ApiBaseUrl}/login", content);
                 var body = await response.Content.ReadAsStringAsync();
@@ -217,9 +223,10 @@ namespace Gglob
             }
 
             var normalizedRole = user.BusinessRole.Trim().ToLowerInvariant();
-            if (normalizedRole is not ("owner" or "cashier"))
+            var isAdmin = IsAdmin(user);
+            if (normalizedRole is not ("owner" or "cashier") && !isAdmin)
             {
-                return new AccessValidation(false, "Rol de negocio no permitido para Desk. Solo Dueño o Cajero.");
+                return new AccessValidation(false, "Rol no permitido para Desk. Solo Dueño, Cajero o Administrador.");
             }
 
             if (!string.Equals(user.Company.ServiceStatus, "active", StringComparison.OrdinalIgnoreCase))
@@ -279,10 +286,24 @@ namespace Gglob
             return DateTime.TryParse(value, out parsedDate);
         }
 
+        private static bool IsOwner(ApiUser user)
+        {
+            return string.Equals(user.BusinessRole, "owner", StringComparison.OrdinalIgnoreCase);
+        }
+
+        private static bool IsAdmin(ApiUser user)
+        {
+            var roles = user.Roles ?? [];
+            return roles.Any(r => string.Equals(r.Name, "admin", StringComparison.OrdinalIgnoreCase)
+                || string.Equals(r.Name, "Administrador", StringComparison.OrdinalIgnoreCase));
+        }
+
         private void ShowDashboard(ApiUser user, List<ApiPermission>? permissionsList, string statusMessage)
         {
             LoginRoot.Visibility = Visibility.Collapsed;
             DashboardRoot.Visibility = Visibility.Visible;
+
+            currentUser = user;
 
             DashboardUserTextBlock.Text = $"{user.Name} ({user.Email})";
             DashboardBusinessTextBlock.Text = user.Company is null
@@ -303,8 +324,11 @@ namespace Gglob
             isGglobPayEnabled = user.Company?.GglobPayEnabled ?? false;
             ToggleGglobPayModuleAvailability();
             RenderPermissions(permissionsList);
+            BindCashiersAndCashRegisters(user);
+            ApplyConfigurationAccess(user);
 
             _ = LoadGglobPayDataFromApi();
+            _ = LoadProviderSettingsFromApi();
             SetSelectedModule(null);
 
             ShowStatus(statusMessage, isError: false);
@@ -468,7 +492,7 @@ namespace Gglob
             {
                 if (destinationAccounts.Count == 0)
                 {
-                    destinationAccounts.Add(new DestinationAccount("Bancolombia", "Gglob SAS", "01872365019", "Ahorros"));
+                    destinationAccounts.Add(new DestinationAccount(0, "Bancolombia", "Gglob SAS", "01872365019", "Ahorros"));
                 }
 
                 SeedVerifiedPayments();
@@ -502,6 +526,7 @@ namespace Gglob
                 foreach (var account in result.Data)
                 {
                     destinationAccounts.Add(new DestinationAccount(
+                        account.Id ?? 0,
                         account.Bank ?? "N/A",
                         account.HolderName ?? "N/A",
                         account.AccountNumber ?? "N/A",
@@ -546,7 +571,7 @@ namespace Gglob
                     return null;
                 }
 
-                return new DestinationAccount(data.Bank ?? bank, data.HolderName ?? holder, data.AccountNumber ?? accountNumber, data.AccountType ?? accountType);
+                return new DestinationAccount(data.Id ?? 0, data.Bank ?? bank, data.HolderName ?? holder, data.AccountNumber ?? accountNumber, data.AccountType ?? accountType);
             }
             catch
             {
@@ -606,6 +631,10 @@ namespace Gglob
                     amount = payment.Amount,
                     cashier = payment.Cashier,
                     bank = payment.Bank,
+                    cash_register_id = payment.CashRegisterId,
+                    cashier_user_id = payment.CashierUserId,
+                    source_channel = payment.SourceChannel,
+                    destination_account_id = payment.DestinationAccountId,
                     verified_at = payment.VerifiedAt.ToString("yyyy-MM-dd HH:mm:ss")
                 });
 
@@ -669,9 +698,13 @@ namespace Gglob
             qrAccountOptions.Clear();
             foreach (var account in destinationAccounts)
             {
-                qrAccountOptions.Add(new QrAccountOption("Cuenta de ahorro", account));
-                qrAccountOptions.Add(new QrAccountOption("WOMPI tarjetas crédito", account));
+                if (string.Equals(account.Bank, "Bancolombia", StringComparison.OrdinalIgnoreCase))
+                {
+                    qrAccountOptions.Add(new QrAccountOption("bancolombia_ahorros", "Bancolombia - Ahorros", account));
+                }
             }
+
+            qrAccountOptions.Add(new QrAccountOption("wompi_credit_card", "Wompi - Tarjeta de Crédito", null));
 
             if (qrAccountOptions.Count > 0)
             {
@@ -696,9 +729,16 @@ namespace Gglob
 
         private async void SaveDestinationAccountButton_Click(object sender, RoutedEventArgs e)
         {
-            if (DestinationBankComboBox.SelectedItem is not string bank)
+            if (currentUser is null || !IsAdmin(currentUser))
             {
-                QrStatusTextBlock.Text = "Selecciona un banco destino válido.";
+                QrStatusTextBlock.Text = "Solo el administrador puede registrar cuentas destino de Bancolombia.";
+                QrStatusTextBlock.Foreground = Brushes.DarkRed;
+                return;
+            }
+
+            if (DestinationBankComboBox.SelectedItem is not string bank || !string.Equals(bank, "Bancolombia", StringComparison.OrdinalIgnoreCase))
+            {
+                QrStatusTextBlock.Text = "Solo se permite configurar cuentas destino de Bancolombia.";
                 QrStatusTextBlock.Foreground = Brushes.DarkRed;
                 return;
             }
@@ -728,8 +768,146 @@ namespace Gglob
             DestinationHolderTextBox.Text = string.Empty;
             DestinationAccountNumberTextBox.Text = string.Empty;
 
-            QrStatusTextBlock.Text = $"Cuenta {accountType} de {bank} agregada y disponible para QR/WOMPI.";
+            QrStatusTextBlock.Text = $"Cuenta {accountType} de {bank} agregada y disponible para QR bancario.";
             QrStatusTextBlock.Foreground = Brushes.DarkGreen;
+        }
+
+        private void ApplyConfigurationAccess(ApiUser user)
+        {
+            SaveWompiSettingsButton.IsEnabled = IsOwner(user);
+            SaveBancolombiaSettingsButton.IsEnabled = IsAdmin(user);
+            SaveBancolombiaDestinationButton.IsEnabled = IsAdmin(user);
+        }
+
+        private async Task LoadProviderSettingsFromApi()
+        {
+            await LoadWompiSettingsFromApi();
+            await LoadBancolombiaSettingsFromApi();
+        }
+
+        private async Task LoadWompiSettingsFromApi()
+        {
+            var data = await GetProviderSettings("wompi");
+            if (data is null)
+            {
+                return;
+            }
+
+            WompiPublicKeyTextBox.Text = data.PublicKey ?? string.Empty;
+        }
+
+        private async Task LoadBancolombiaSettingsFromApi()
+        {
+            var data = await GetProviderSettings("bancolombia");
+            if (data is null)
+            {
+                return;
+            }
+
+            BancolombiaBaseUrlTextBox.Text = data.BaseUrl ?? string.Empty;
+            BancolombiaClientIdTextBox.Text = data.ClientId ?? string.Empty;
+        }
+
+        private async Task<ApiProviderSettingsResponse?> GetProviderSettings(string provider)
+        {
+            try
+            {
+                using var response = await HttpClient.GetAsync($"{ApiBaseUrl}/gglob-pay/provider-settings/{provider}");
+                if (!response.IsSuccessStatusCode)
+                {
+                    return null;
+                }
+
+                var body = await response.Content.ReadAsStringAsync();
+                return JsonSerializer.Deserialize<ApiProviderSettingsResponse>(body, JsonOptions());
+            }
+            catch
+            {
+                return null;
+            }
+        }
+
+        private async Task<bool> SaveProviderSettings(string provider, object payload)
+        {
+            try
+            {
+                var json = JsonSerializer.Serialize(payload);
+                using var content = new StringContent(json, Encoding.UTF8, "application/json");
+                using var response = await HttpClient.PostAsync($"{ApiBaseUrl}/gglob-pay/provider-settings/{provider}", content);
+                return response.IsSuccessStatusCode;
+            }
+            catch
+            {
+                return false;
+            }
+        }
+
+        private async void SaveWompiSettingsButton_Click(object sender, RoutedEventArgs e)
+        {
+            if (currentUser is null || !IsOwner(currentUser))
+            {
+                QrStatusTextBlock.Text = "Solo el dueño puede configurar Wompi.";
+                QrStatusTextBlock.Foreground = Brushes.DarkRed;
+                return;
+            }
+
+            var ok = await SaveProviderSettings("wompi", new
+            {
+                public_key = WompiPublicKeyTextBox.Text.Trim(),
+                private_key = WompiPrivateKeyTextBox.Text.Trim(),
+                events_secret = WompiEventsSecretTextBox.Text.Trim(),
+            });
+
+            QrStatusTextBlock.Text = ok ? "Llaves de Wompi guardadas correctamente." : "No se pudieron guardar las llaves de Wompi.";
+            QrStatusTextBlock.Foreground = ok ? Brushes.DarkGreen : Brushes.DarkRed;
+        }
+
+        private async void SaveBancolombiaSettingsButton_Click(object sender, RoutedEventArgs e)
+        {
+            if (currentUser is null || !IsAdmin(currentUser))
+            {
+                QrStatusTextBlock.Text = "Solo el administrador puede parametrizar Bancolombia API.";
+                QrStatusTextBlock.Foreground = Brushes.DarkRed;
+                return;
+            }
+
+            var ok = await SaveProviderSettings("bancolombia", new
+            {
+                base_url = BancolombiaBaseUrlTextBox.Text.Trim(),
+                client_id = BancolombiaClientIdTextBox.Text.Trim(),
+                client_secret = BancolombiaClientSecretTextBox.Text.Trim(),
+            });
+
+            QrStatusTextBlock.Text = ok ? "Parámetros de Bancolombia guardados correctamente." : "No se pudieron guardar los parámetros de Bancolombia.";
+            QrStatusTextBlock.Foreground = ok ? Brushes.DarkGreen : Brushes.DarkRed;
+        }
+
+        private async Task<ApiQrIntentResponse?> CreateQrIntentApi(string sourceChannel, decimal amount, int cashRegisterId, int? destinationAccountId)
+        {
+            try
+            {
+                var payload = JsonSerializer.Serialize(new
+                {
+                    source_channel = sourceChannel,
+                    amount,
+                    cash_register_id = cashRegisterId,
+                    destination_account_id = destinationAccountId,
+                });
+
+                using var content = new StringContent(payload, Encoding.UTF8, "application/json");
+                using var response = await HttpClient.PostAsync($"{ApiBaseUrl}/gglob-pay/qr/intents", content);
+                if (!response.IsSuccessStatusCode)
+                {
+                    return null;
+                }
+
+                var body = await response.Content.ReadAsStringAsync();
+                return JsonSerializer.Deserialize<ApiQrIntentResponse>(body, JsonOptions());
+            }
+            catch
+            {
+                return null;
+            }
         }
 
         private async void GenerateQrButton_Click(object sender, RoutedEventArgs e)
@@ -737,7 +915,7 @@ namespace Gglob
             var accountOption = QrAccountComboBox.SelectedItem as QrAccountOption;
             if (accountOption is null)
             {
-                QrStatusTextBlock.Text = "Selecciona una cuenta para generar el QR.";
+                QrStatusTextBlock.Text = "Selecciona un origen para generar el QR.";
                 QrStatusTextBlock.Foreground = Brushes.DarkRed;
                 return;
             }
@@ -757,39 +935,60 @@ namespace Gglob
                 return;
             }
 
-            var cashier = QrCashierComboBox.SelectedItem?.ToString() ?? "Caja Principal";
-            var referenceCode = $"GGPAY-{DateTime.Now:yyyyMMdd-HHmmss}-{Guid.NewGuid().ToString()[..4].ToUpperInvariant()}";
-
-            var payloadObject = new
+            if (currentUser is null)
             {
-                reference = referenceCode,
-                channel = accountOption.Channel,
-                amount = decimal.Round(amount, 2),
-                currency = "COP",
-                cashier,
-                destination_bank = accountOption.Account.Bank,
-                destination_account = accountOption.Account.AccountNumber,
-                destination_type = accountOption.Account.AccountType,
-                verification = "instant_bank_callback"
-            };
+                QrStatusTextBlock.Text = "No hay usuario en sesión.";
+                QrStatusTextBlock.Foreground = Brushes.DarkRed;
+                return;
+            }
 
-            var payload = JsonSerializer.Serialize(payloadObject, new JsonSerializerOptions
+            var selectedCashRegister = QrCashierComboBox.SelectedItem as CashRegisterOption;
+            if (selectedCashRegister is null)
+            {
+                QrStatusTextBlock.Text = "Debes tener una caja activa asignada para generar QR.";
+                QrStatusTextBlock.Foreground = Brushes.DarkRed;
+                return;
+            }
+
+            var normalizedRole = (currentUser.BusinessRole ?? string.Empty).Trim().ToLowerInvariant();
+            if (normalizedRole is not ("owner" or "cashier"))
+            {
+                QrStatusTextBlock.Text = "Solo el Dueño o Cajero puede generar QR.";
+                QrStatusTextBlock.Foreground = Brushes.DarkRed;
+                return;
+            }
+
+            var cashier = currentUser.Name ?? "Cajero";
+            var intent = await CreateQrIntentApi(accountOption.Channel, amount, selectedCashRegister.Id, accountOption.Account?.Id);
+            if (intent is null || string.IsNullOrWhiteSpace(intent.ReferenceCode))
+            {
+                QrStatusTextBlock.Text = "No fue posible generar el QR. Verifica la parametrización de Wompi/Bancolombia.";
+                QrStatusTextBlock.Foreground = Brushes.DarkRed;
+                return;
+            }
+
+            var payload = JsonSerializer.Serialize(intent.QrPayload, new JsonSerializerOptions
             {
                 WriteIndented = true
             });
 
             QrPayloadTextBox.Text = payload;
-            QrStatusTextBlock.Text = $"QR generado con referencia {referenceCode}. Verificación inmediata configurada para {accountOption.Account.Bank}.";
+            QrStatusTextBlock.Text = $"QR generado con referencia {intent.ReferenceCode} para {accountOption.DisplayName}.";
             QrStatusTextBlock.Foreground = Brushes.DarkGreen;
 
             var payment = new VerifiedPaymentRecord(
-                referenceCode,
+                intent.ReferenceCode,
                 "Transferencia validada",
-                accountOption.Account.AccountNumber,
+                accountOption.Account?.AccountNumber ?? "WOMPI",
                 amount,
                 cashier,
-                accountOption.Account.Bank,
-                DateTime.Now);
+                accountOption.Account?.Bank ?? "Wompi",
+                DateTime.Now,
+                selectedCashRegister.Id,
+                currentUser.Id ?? 0,
+                selectedCashRegister.Name,
+                accountOption.Channel,
+                accountOption.Account?.Id);
 
             var stored = await SaveVerifiedPaymentApi(payment);
             if (stored is null)
@@ -861,6 +1060,7 @@ namespace Gglob
                 new ServiceItem("gglob_cloud", "Gglob Cloud", "Gestión principal en la nube.", company?.GglobCloudEnabled ?? false),
                 new ServiceItem("gglob_pay", "Gglob Pay", "Cobros y movimientos de pago.", company?.GglobPayEnabled ?? false),
                 new ServiceItem("gglob_pos", "Gglob POS", "Punto de venta y cajas.", company?.GglobPosEnabled ?? false),
+                new ServiceItem("cash_register_management", "Gestión de Cajas", "Asignación de cajas y cajeros.", (company?.GglobPayEnabled ?? false) || (company?.GglobPosEnabled ?? false)),
                 new ServiceItem("gglob_accounting", "Gglob Contable", "Módulo de contabilidad.", company?.GglobAccountingEnabled ?? false),
             ];
         }
@@ -943,6 +1143,45 @@ namespace Gglob
             return string.Equals(hash, expectedHash, StringComparison.Ordinal);
         }
 
+
+        private void BindCashiersAndCashRegisters(ApiUser user)
+        {
+            var cashierName = string.IsNullOrWhiteSpace(user.Name) ? "Cajero" : user.Name;
+
+            cashRegisterOptions.Clear();
+            foreach (var register in user.CashRegisters ?? [])
+            {
+                if (register.Id is null)
+                {
+                    continue;
+                }
+
+                cashRegisterOptions.Add(new CashRegisterOption(
+                    register.Id.Value,
+                    register.Name ?? "Caja",
+                    register.Code ?? string.Empty,
+                    register.IsPrimary));
+            }
+
+            if (cashRegisterOptions.Count == 0)
+            {
+                QrCashierComboBox.ItemsSource = new[] { "Sin caja asignada" };
+                QrCashierComboBox.SelectedIndex = 0;
+            }
+            else
+            {
+                QrCashierComboBox.ItemsSource = cashRegisterOptions;
+                var primaryIndex = cashRegisterOptions.ToList().FindIndex(x => x.IsPrimary);
+                QrCashierComboBox.SelectedIndex = primaryIndex >= 0 ? primaryIndex : 0;
+            }
+
+            var filters = new[] { "Todos", cashierName };
+            VerifiedCashierComboBox.ItemsSource = filters;
+            ReportCashierComboBox.ItemsSource = filters;
+            VerifiedCashierComboBox.SelectedIndex = 0;
+            ReportCashierComboBox.SelectedIndex = 0;
+        }
+
         private void ShowStatus(string message, bool isError, bool isWarning = false)
         {
             StatusTextBlock.Text = message;
@@ -987,6 +1226,9 @@ namespace Gglob
 
     public class ApiUser
     {
+        [JsonPropertyName("id")]
+        public int? Id { get; set; }
+
         [JsonPropertyName("name")]
         public string? Name { get; set; }
 
@@ -1004,6 +1246,9 @@ namespace Gglob
 
         [JsonPropertyName("company")]
         public ApiCompany? Company { get; set; }
+
+        [JsonPropertyName("cash_registers")]
+        public List<ApiCashRegister>? CashRegisters { get; set; }
     }
 
     public class ApiRole
@@ -1052,6 +1297,40 @@ namespace Gglob
 
         [JsonPropertyName("gglob_accounting_enabled")]
         public bool GglobAccountingEnabled { get; set; }
+
+        [JsonPropertyName("pos_mode")]
+        public string? PosMode { get; set; }
+
+        [JsonPropertyName("pos_boxes")]
+        public int PosBoxes { get; set; }
+
+        public bool IsMultiCaja => string.Equals(PosMode, "multi", StringComparison.OrdinalIgnoreCase)
+            || PosBoxes > 1;
+    }
+
+    public class ApiCashRegister
+    {
+        [JsonPropertyName("id")]
+        public int? Id { get; set; }
+
+        [JsonPropertyName("name")]
+        public string? Name { get; set; }
+
+        [JsonPropertyName("code")]
+        public string? Code { get; set; }
+
+        [JsonPropertyName("is_primary")]
+        public bool IsPrimary { get; set; }
+    }
+
+    public class CashRegisterOption(int id, string name, string code, bool isPrimary)
+    {
+        public int Id { get; } = id;
+        public string Name { get; } = name;
+        public string Code { get; } = code;
+        public bool IsPrimary { get; } = isPrimary;
+
+        public override string ToString() => $"{Name} ({Code})";
     }
 
     public class OfflineSession
@@ -1108,6 +1387,9 @@ namespace Gglob
 
     public class ApiDestinationAccount
     {
+        [JsonPropertyName("id")]
+        public int? Id { get; set; }
+
         [JsonPropertyName("bank")]
         public string? Bank { get; set; }
 
@@ -1144,6 +1426,21 @@ namespace Gglob
         [JsonPropertyName("verified_at")]
         public string? VerifiedAt { get; set; }
 
+        [JsonPropertyName("cash_register_id")]
+        public int? CashRegisterId { get; set; }
+
+        [JsonPropertyName("cashier_user_id")]
+        public int? CashierUserId { get; set; }
+
+        [JsonPropertyName("source_channel")]
+        public string? SourceChannel { get; set; }
+
+        [JsonPropertyName("cash_register_name")]
+        public string? CashRegisterName { get; set; }
+
+        [JsonPropertyName("destination_account_id")]
+        public int? DestinationAccountId { get; set; }
+
         public VerifiedPaymentRecord ToDesktopRecord()
         {
             _ = DateTime.TryParse(VerifiedAt, out var verifiedAt);
@@ -1154,12 +1451,18 @@ namespace Gglob
                 Amount,
                 Cashier ?? string.Empty,
                 Bank ?? string.Empty,
-                verifiedAt == default ? DateTime.Now : verifiedAt);
+                verifiedAt == default ? DateTime.Now : verifiedAt,
+                CashRegisterId ?? 0,
+                CashierUserId ?? 0,
+                CashRegisterName ?? string.Empty,
+                SourceChannel ?? "ahorros",
+                DestinationAccountId);
         }
     }
 
-    public class DestinationAccount(string bank, string holderName, string accountNumber, string accountType)
+    public class DestinationAccount(int id, string bank, string holderName, string accountNumber, string accountType)
     {
+        public int Id { get; } = id;
         public string Bank { get; } = bank;
         public string HolderName { get; } = holderName;
         public string AccountNumber { get; } = accountNumber;
@@ -1168,14 +1471,14 @@ namespace Gglob
         public override string ToString() => $"{Bank} - {AccountType} - {AccountNumber} ({HolderName})";
     }
 
-    public class QrAccountOption(string channel, DestinationAccount account)
+    public class QrAccountOption(string channel, string displayName, DestinationAccount? account)
     {
         public string Channel { get; } = channel;
-        public DestinationAccount Account { get; } = account;
-        public string DisplayName => $"{channel} | {account.Bank} {account.AccountType} {account.AccountNumber}";
+        public DestinationAccount? Account { get; } = account;
+        public string DisplayName { get; } = displayName;
     }
 
-    public class VerifiedPaymentRecord(string referenceCode, string senderName, string accountNumber, decimal amount, string cashier, string bank, DateTime verifiedAt)
+    public class VerifiedPaymentRecord(string referenceCode, string senderName, string accountNumber, decimal amount, string cashier, string bank, DateTime verifiedAt, int cashRegisterId, int cashierUserId, string cashRegisterName, string sourceChannel, int? destinationAccountId)
     {
         public string ReferenceCode { get; } = referenceCode;
         public string SenderName { get; } = senderName;
@@ -1184,10 +1487,45 @@ namespace Gglob
         public string Cashier { get; } = cashier;
         public string Bank { get; } = bank;
         public DateTime VerifiedAt { get; } = verifiedAt;
+        public int CashRegisterId { get; } = cashRegisterId;
+        public int CashierUserId { get; } = cashierUserId;
+        public string CashRegisterName { get; } = cashRegisterName;
+        public string SourceChannel { get; } = sourceChannel;
+        public int? DestinationAccountId { get; } = destinationAccountId;
 
         public string AmountFormatted => Amount.ToString("C0", CultureInfo.GetCultureInfo("es-CO"));
         public string VerifiedAtFormatted => VerifiedAt.ToString("HH:mm:ss");
         public string VerifiedAtFullFormatted => VerifiedAt.ToString("yyyy-MM-dd HH:mm");
+    }
+
+    public class ApiQrIntentResponse
+    {
+        [JsonPropertyName("reference_code")]
+        public string? ReferenceCode { get; set; }
+
+        [JsonPropertyName("source_channel")]
+        public string? SourceChannel { get; set; }
+
+        [JsonPropertyName("qr_payload")]
+        public object? QrPayload { get; set; }
+    }
+
+    public class ApiProviderSettingsResponse
+    {
+        [JsonPropertyName("provider")]
+        public string? Provider { get; set; }
+
+        [JsonPropertyName("configured")]
+        public bool Configured { get; set; }
+
+        [JsonPropertyName("public_key")]
+        public string? PublicKey { get; set; }
+
+        [JsonPropertyName("base_url")]
+        public string? BaseUrl { get; set; }
+
+        [JsonPropertyName("client_id")]
+        public string? ClientId { get; set; }
     }
 
     public record AccessValidation(bool IsValid, string Message);
