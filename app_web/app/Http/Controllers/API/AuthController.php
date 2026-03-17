@@ -97,8 +97,8 @@ class AuthController extends Controller
             return response()->json(['error' => 'Acceso app_web permitido solo para Administradores o Dueños de Negocio.'], 403);
         }
 
-        if (!$companyIsActive || !($company?->gglob_cloud_enabled)) {
-            return response()->json(['error' => 'Para ingresar a app_web se requiere plan activo con Gglob Nube habilitado.'], 403);
+        if (!$hasAdminRole && (!$companyIsActive || !($company?->gglob_cloud_enabled))) {
+            return response()->json(['error' => 'Para ingresar a app_web como Dueño se requiere plan activo con Gglob Nube habilitado.'], 403);
         }
 
         return null;

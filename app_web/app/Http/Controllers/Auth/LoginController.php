@@ -42,10 +42,10 @@ class LoginController extends Controller
                 ])->onlyInput('email');
             }
 
-            if (!$companyIsActive || !($company?->gglob_cloud_enabled)) {
+            if (!$hasAdminRole && (!$companyIsActive || !($company?->gglob_cloud_enabled))) {
                 Auth::logout();
                 return back()->withErrors([
-                    'email' => 'Para ingresar a app_web se requiere plan activo con Gglob Nube habilitado.',
+                    'email' => 'Para ingresar a app_web como Dueño se requiere plan activo con Gglob Nube habilitado.',
                 ])->onlyInput('email');
             }
 
