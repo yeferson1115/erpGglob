@@ -252,34 +252,7 @@
                             </Grid>
                         </TabItem>
 
-                        <TabItem Header="Cajas">
-                            <Grid Margin="10">
-                                <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="1.2*" />
-                                    <ColumnDefinition Width="*" />
-                                </Grid.ColumnDefinitions>
-                                <StackPanel Margin="0,0,12,0">
-                                    <TextBlock Text="Gestión de cajas (admin)" FontWeight="SemiBold" />
-                                    <TextBlock Text="Nombre" FontWeight="SemiBold" Margin="0,8,0,0" />
-                                    <TextBox x:Name="CashRegisterNameTextBox" Style="{StaticResource InputText}" />
-                                    <TextBlock Text="Código" FontWeight="SemiBold" />
-                                    <TextBox x:Name="CashRegisterCodeTextBox" Style="{StaticResource InputText}" />
-                                    <TextBlock Text="Estado" FontWeight="SemiBold" />
-                                    <ComboBox x:Name="CashRegisterStatusComboBox" Margin="0,6,0,12" Height="34">
-                                        <ComboBoxItem Content="active" IsSelected="True" />
-                                        <ComboBoxItem Content="inactive" />
-                                    </ComboBox>
-                                    <Button x:Name="SaveCashRegisterButton" Content="Guardar caja" Width="180" Style="{StaticResource PrimaryButton}" Click="SaveCashRegisterButton_Click" />
-                                    <Button x:Name="AssignCashRegisterButton" Content="Asignarme caja seleccionada" Width="220" Style="{StaticResource PrimaryButton}" Click="AssignCashRegisterButton_Click" />
-                                </StackPanel>
-                                <Border Grid.Column="1" Background="#f8fbff" CornerRadius="10" BorderThickness="1" BorderBrush="#d9e4ff" Padding="12">
-                                    <StackPanel>
-                                        <TextBlock Text="Cajas asignadas al usuario" FontWeight="SemiBold" FontSize="16" Foreground="#1f2937" />
-                                        <ListBox x:Name="CashRegistersListBox" Margin="0,12,0,0" Height="220" DisplayMemberPath="Name" />
-                                    </StackPanel>
-                                </Border>
-                            </Grid>
-                        </TabItem>
+                        
 
                         <TabItem Header="Generar QR">
                             <Grid Margin="10">
@@ -384,6 +357,42 @@
                             </StackPanel>
                         </TabItem>
                         </TabControl>
+                    </Border>
+
+                    <Border x:Name="CashRegistersPanel" Visibility="Collapsed" Background="White" CornerRadius="12" Padding="14" BorderBrush="#e2e8f3" BorderThickness="1">
+                        <Grid Margin="10">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="1.2*" />
+                                <ColumnDefinition Width="*" />
+                            </Grid.ColumnDefinitions>
+                            <StackPanel Margin="0,0,12,0">
+                                <TextBlock Text="Gestión de cajas (admin)" FontWeight="SemiBold" />
+                                <TextBlock Text="Nombre" FontWeight="SemiBold" Margin="0,8,0,0" />
+                                <TextBox x:Name="CashRegisterNameTextBox" Style="{StaticResource InputText}" />
+                                <TextBlock Text="Código" FontWeight="SemiBold" />
+                                <TextBox x:Name="CashRegisterCodeTextBox" Style="{StaticResource InputText}" />
+                                <TextBlock Text="Estado" FontWeight="SemiBold" />
+                                <ComboBox x:Name="CashRegisterStatusComboBox" Margin="0,6,0,12" Height="34">
+                                    <ComboBoxItem Content="active" IsSelected="True" />
+                                    <ComboBoxItem Content="inactive" />
+                                </ComboBox>
+                                <Button x:Name="SaveCashRegisterButton" Content="Guardar caja" Width="180" Style="{StaticResource PrimaryButton}" Click="SaveCashRegisterButton_Click" />
+                                <Button x:Name="AssignCashRegisterButton" Content="Asignarme caja seleccionada" Width="220" Style="{StaticResource PrimaryButton}" Click="AssignCashRegisterButton_Click" />
+                            </StackPanel>
+                            <Border Grid.Column="1" Background="#f8fbff" CornerRadius="10" BorderThickness="1" BorderBrush="#d9e4ff" Padding="12">
+                                <StackPanel>
+                                    <TextBlock Text="Cajas disponibles" FontWeight="SemiBold" FontSize="16" Foreground="#1f2937" />
+                                    <ListBox x:Name="CashRegistersListBox" Margin="0,12,0,0" Height="220" DisplayMemberPath="Name" />
+                                </StackPanel>
+                            </Border>
+                        </Grid>
+                    </Border>
+
+                    <Border x:Name="LoadingOverlay" Visibility="Collapsed" Background="#7F111827" CornerRadius="12">
+                        <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center" Width="240">
+                            <TextBlock Text="Procesando..." Foreground="White" FontSize="18" FontWeight="SemiBold" HorizontalAlignment="Center" Margin="0,0,0,10"/>
+                            <ProgressBar IsIndeterminate="True" Height="16" />
+                        </StackPanel>
                     </Border>
                 </Grid>
             </Grid>

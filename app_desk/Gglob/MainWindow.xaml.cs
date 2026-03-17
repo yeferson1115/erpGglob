@@ -27,6 +27,7 @@ namespace Gglob
         private readonly ObservableCollection<QrAccountOption> qrAccountOptions = [];
         private readonly ObservableCollection<VerifiedPaymentRecord> verifiedPayments = [];
         private readonly ObservableCollection<CashRegisterOption> cashRegisterOptions = [];
+        private readonly ObservableCollection<CashRegisterOption> cashRegisterManagementOptions = [];
         private ApiUser? currentUser;
         private bool isGglobPayEnabled;
 
@@ -55,7 +56,7 @@ namespace Gglob
 
             DestinationAccountsListBox.ItemsSource = destinationAccounts;
             QrAccountComboBox.ItemsSource = qrAccountOptions;
-            CashRegistersListBox.ItemsSource = cashRegisterOptions;
+            CashRegistersListBox.ItemsSource = cashRegisterManagementOptions;
 
             SetSelectedModule(null);
         }
@@ -352,14 +353,16 @@ namespace Gglob
 
         private void SetSelectedModule(string? moduleKey)
         {
+            DefaultPanel.Visibility = Visibility.Visible;
+            GglobPayPanel.Visibility = Visibility.Collapsed;
+            CashRegistersPanel.Visibility = Visibility.Collapsed;
+
             if (moduleKey == "gglob_pay")
             {
                 if (!isGglobPayEnabled)
                 {
                     QrStatusTextBlock.Foreground = Brushes.DarkOrange;
                     QrStatusTextBlock.Text = "El servicio Gglob Pay está inactivo para esta empresa.";
-                    DefaultPanel.Visibility = Visibility.Visible;
-                    GglobPayPanel.Visibility = Visibility.Collapsed;
                     return;
                 }
 
@@ -368,8 +371,11 @@ namespace Gglob
                 return;
             }
 
-            DefaultPanel.Visibility = Visibility.Visible;
-            GglobPayPanel.Visibility = Visibility.Collapsed;
+            if (moduleKey == "cash_register_management")
+            {
+                DefaultPanel.Visibility = Visibility.Collapsed;
+                CashRegistersPanel.Visibility = Visibility.Visible;
+            }
         }
 
         private void RenderServicesMenu(List<ServiceItem> services)
@@ -488,7 +494,8 @@ namespace Gglob
 
         private async Task LoadGglobPayDataFromApi()
         {
-            await LoadCashRegistersFromApi();
+            await LoadCashRegistersFromApi("assigned");
+            await LoadCashRegistersFromApi("all");
 
             var loadedAccounts = await LoadDestinationAccountsFromApi();
             if (!loadedAccounts)
@@ -508,11 +515,11 @@ namespace Gglob
             await GenerateReportFromApi();
         }
 
-        private async Task<bool> LoadCashRegistersFromApi()
+        private async Task<bool> LoadCashRegistersFromApi(string scope)
         {
             try
             {
-                using var response = await HttpClient.GetAsync($"{ApiBaseUrl}/gglob-pay/cash-registers");
+                using var response = await HttpClient.GetAsync($"{ApiBaseUrl}/gglob-pay/cash-registers?scope={Uri.EscapeDataString(scope)}");
                 if (!response.IsSuccessStatusCode)
                 {
                     return false;
@@ -525,7 +532,9 @@ namespace Gglob
                     return false;
                 }
 
-                cashRegisterOptions.Clear();
+                var target = scope == "all" ? cashRegisterManagementOptions : cashRegisterOptions;
+                target.Clear();
+
                 foreach (var register in result.Data)
                 {
                     if (register.Id is null)
@@ -533,27 +542,30 @@ namespace Gglob
                         continue;
                     }
 
-                    cashRegisterOptions.Add(new CashRegisterOption(
+                    target.Add(new CashRegisterOption(
                         register.Id.Value,
                         register.Name ?? "Caja",
                         register.Code ?? string.Empty,
                         register.IsPrimary == 1));
                 }
 
-                if (cashRegisterOptions.Count == 0)
+                if (scope != "all")
                 {
-                    QrCashierComboBox.ItemsSource = new[] { "Sin caja asignada" };
-                    QrCashierComboBox.SelectedIndex = 0;
-                }
-                else
-                {
-                    QrCashierComboBox.ItemsSource = cashRegisterOptions;
-                    var primaryIndex = cashRegisterOptions.ToList().FindIndex(x => x.IsPrimary);
-                    QrCashierComboBox.SelectedIndex = primaryIndex >= 0 ? primaryIndex : 0;
+                    if (cashRegisterOptions.Count == 0)
+                    {
+                        QrCashierComboBox.ItemsSource = new[] { "Sin caja asignada" };
+                        QrCashierComboBox.SelectedIndex = 0;
+                    }
+                    else
+                    {
+                        QrCashierComboBox.ItemsSource = cashRegisterOptions;
+                        var primaryIndex = cashRegisterOptions.ToList().FindIndex(x => x.IsPrimary);
+                        QrCashierComboBox.SelectedIndex = primaryIndex >= 0 ? primaryIndex : 0;
+                    }
                 }
 
                 CashRegistersListBox.ItemsSource = null;
-                CashRegistersListBox.ItemsSource = cashRegisterOptions;
+                CashRegistersListBox.ItemsSource = cashRegisterManagementOptions;
                 return true;
             }
             catch
@@ -790,6 +802,7 @@ namespace Gglob
             {
                 QrStatusTextBlock.Text = "Solo el administrador puede registrar cuentas destino de Bancolombia.";
                 QrStatusTextBlock.Foreground = Brushes.DarkRed;
+                ShowAlert(QrStatusTextBlock.Text);
                 return;
             }
 
@@ -811,11 +824,14 @@ namespace Gglob
                 return;
             }
 
+            SetLoading(true);
             var account = await SaveDestinationAccountApi(bank, holder, accountNumber, accountType);
+            SetLoading(false);
             if (account is null)
             {
                 QrStatusTextBlock.Text = "No se pudo guardar la cuenta en app_web.";
                 QrStatusTextBlock.Foreground = Brushes.DarkRed;
+                ShowAlert(QrStatusTextBlock.Text);
                 return;
             }
 
@@ -827,6 +843,7 @@ namespace Gglob
 
             QrStatusTextBlock.Text = $"Cuenta {accountType} de {bank} agregada y disponible para QR bancario.";
             QrStatusTextBlock.Foreground = Brushes.DarkGreen;
+            ShowAlert(QrStatusTextBlock.Text);
         }
 
         private void ApplyConfigurationAccess(ApiUser user)
@@ -908,15 +925,18 @@ namespace Gglob
                 return;
             }
 
+            SetLoading(true);
             var ok = await SaveProviderSettings("wompi", new
             {
                 public_key = WompiPublicKeyTextBox.Text.Trim(),
                 private_key = WompiPrivateKeyTextBox.Text.Trim(),
                 events_secret = WompiEventsSecretTextBox.Text.Trim(),
             });
+            SetLoading(false);
 
             QrStatusTextBlock.Text = ok ? "Llaves de Wompi guardadas correctamente." : "No se pudieron guardar las llaves de Wompi.";
             QrStatusTextBlock.Foreground = ok ? Brushes.DarkGreen : Brushes.DarkRed;
+            ShowAlert(QrStatusTextBlock.Text);
         }
 
         private async void SaveBancolombiaSettingsButton_Click(object sender, RoutedEventArgs e)
@@ -928,15 +948,119 @@ namespace Gglob
                 return;
             }
 
+            SetLoading(true);
             var ok = await SaveProviderSettings("bancolombia", new
             {
                 base_url = BancolombiaBaseUrlTextBox.Text.Trim(),
                 client_id = BancolombiaClientIdTextBox.Text.Trim(),
                 client_secret = BancolombiaClientSecretTextBox.Text.Trim(),
             });
+            SetLoading(false);
 
             QrStatusTextBlock.Text = ok ? "Parámetros de Bancolombia guardados correctamente." : "No se pudieron guardar los parámetros de Bancolombia.";
             QrStatusTextBlock.Foreground = ok ? Brushes.DarkGreen : Brushes.DarkRed;
+            ShowAlert(QrStatusTextBlock.Text);
+        }
+
+        private async Task<bool> SaveCashRegisterApi(string name, string code, string status)
+        {
+            try
+            {
+                var payload = JsonSerializer.Serialize(new
+                {
+                    name,
+                    code,
+                    status,
+                });
+
+                using var content = new StringContent(payload, Encoding.UTF8, "application/json");
+                using var response = await HttpClient.PostAsync($"{ApiBaseUrl}/gglob-pay/cash-registers", content);
+                return response.IsSuccessStatusCode;
+            }
+            catch
+            {
+                return false;
+            }
+        }
+
+        private async Task<bool> AssignCashRegisterApi(int cashRegisterId)
+        {
+            try
+            {
+                var payload = JsonSerializer.Serialize(new { is_primary = true });
+                using var content = new StringContent(payload, Encoding.UTF8, "application/json");
+                using var response = await HttpClient.PostAsync($"{ApiBaseUrl}/gglob-pay/cash-registers/{cashRegisterId}/assign-me", content);
+                return response.IsSuccessStatusCode;
+            }
+            catch
+            {
+                return false;
+            }
+        }
+
+        private async void SaveCashRegisterButton_Click(object sender, RoutedEventArgs e)
+        {
+            if (currentUser is null || !IsAdmin(currentUser))
+            {
+                QrStatusTextBlock.Text = "Solo el administrador puede crear cajas.";
+                QrStatusTextBlock.Foreground = Brushes.DarkRed;
+                return;
+            }
+
+            var name = CashRegisterNameTextBox.Text.Trim();
+            var code = CashRegisterCodeTextBox.Text.Trim();
+            var status = (CashRegisterStatusComboBox.SelectedItem as ComboBoxItem)?.Content?.ToString() ?? "active";
+
+            if (string.IsNullOrWhiteSpace(name) || string.IsNullOrWhiteSpace(code))
+            {
+                QrStatusTextBlock.Text = "Nombre y código de caja son obligatorios.";
+                QrStatusTextBlock.Foreground = Brushes.DarkRed;
+                return;
+            }
+
+            SetLoading(true);
+            var ok = await SaveCashRegisterApi(name, code, status);
+            SetLoading(false);
+            if (!ok)
+            {
+                QrStatusTextBlock.Text = "No se pudo guardar la caja.";
+                QrStatusTextBlock.Foreground = Brushes.DarkRed;
+                ShowAlert(QrStatusTextBlock.Text);
+                return;
+            }
+
+            await LoadCashRegistersFromApi("all");
+            await LoadCashRegistersFromApi("assigned");
+            QrStatusTextBlock.Text = "Caja guardada correctamente.";
+            QrStatusTextBlock.Foreground = Brushes.DarkGreen;
+            ShowAlert(QrStatusTextBlock.Text);
+        }
+
+        private async void AssignCashRegisterButton_Click(object sender, RoutedEventArgs e)
+        {
+            if (CashRegistersListBox.SelectedItem is not CashRegisterOption selected)
+            {
+                QrStatusTextBlock.Text = "Selecciona una caja para asignarte.";
+                QrStatusTextBlock.Foreground = Brushes.DarkRed;
+                return;
+            }
+
+            SetLoading(true);
+            var ok = await AssignCashRegisterApi(selected.Id);
+            SetLoading(false);
+            if (!ok)
+            {
+                QrStatusTextBlock.Text = "No se pudo asignar la caja.";
+                QrStatusTextBlock.Foreground = Brushes.DarkRed;
+                ShowAlert(QrStatusTextBlock.Text);
+                return;
+            }
+
+            await LoadCashRegistersFromApi("all");
+            await LoadCashRegistersFromApi("assigned");
+            QrStatusTextBlock.Text = "Caja asignada correctamente.";
+            QrStatusTextBlock.Foreground = Brushes.DarkGreen;
+            ShowAlert(QrStatusTextBlock.Text);
         }
 
         private async Task<bool> SaveCashRegisterApi(string name, string code, string status)
@@ -1065,6 +1189,7 @@ namespace Gglob
             {
                 QrStatusTextBlock.Text = "Selecciona un origen para generar el QR.";
                 QrStatusTextBlock.Foreground = Brushes.DarkRed;
+                ShowAlert(QrStatusTextBlock.Text);
                 return;
             }
 
@@ -1073,6 +1198,7 @@ namespace Gglob
             {
                 QrStatusTextBlock.Text = "Precio inválido. Usa solo números.";
                 QrStatusTextBlock.Foreground = Brushes.DarkRed;
+                ShowAlert(QrStatusTextBlock.Text);
                 return;
             }
 
@@ -1080,6 +1206,7 @@ namespace Gglob
             {
                 QrStatusTextBlock.Text = "El precio debe ser mayor a cero.";
                 QrStatusTextBlock.Foreground = Brushes.DarkRed;
+                ShowAlert(QrStatusTextBlock.Text);
                 return;
             }
 
@@ -1087,6 +1214,7 @@ namespace Gglob
             {
                 QrStatusTextBlock.Text = "No hay usuario en sesión.";
                 QrStatusTextBlock.Foreground = Brushes.DarkRed;
+                ShowAlert(QrStatusTextBlock.Text);
                 return;
             }
 
@@ -1095,6 +1223,7 @@ namespace Gglob
             {
                 QrStatusTextBlock.Text = "Debes tener una caja activa asignada para generar QR.";
                 QrStatusTextBlock.Foreground = Brushes.DarkRed;
+                ShowAlert(QrStatusTextBlock.Text);
                 return;
             }
 
@@ -1103,15 +1232,19 @@ namespace Gglob
             {
                 QrStatusTextBlock.Text = "Solo el Dueño o Cajero puede generar QR.";
                 QrStatusTextBlock.Foreground = Brushes.DarkRed;
+                ShowAlert(QrStatusTextBlock.Text);
                 return;
             }
 
             var cashier = currentUser.Name ?? "Cajero";
+            SetLoading(true);
             var intent = await CreateQrIntentApi(accountOption.Channel, amount, selectedCashRegister.Id, accountOption.Account?.Id);
+            SetLoading(false);
             if (intent is null || string.IsNullOrWhiteSpace(intent.ReferenceCode))
             {
                 QrStatusTextBlock.Text = "No fue posible generar el QR. Verifica la parametrización de Wompi/Bancolombia.";
                 QrStatusTextBlock.Foreground = Brushes.DarkRed;
+                ShowAlert(QrStatusTextBlock.Text);
                 return;
             }
 
@@ -1138,17 +1271,21 @@ namespace Gglob
                 accountOption.Channel,
                 accountOption.Account?.Id);
 
+            SetLoading(true);
             var stored = await SaveVerifiedPaymentApi(payment);
+            SetLoading(false);
             if (stored is null)
             {
                 QrStatusTextBlock.Foreground = Brushes.DarkOrange;
                 QrStatusTextBlock.Text += " No se pudo guardar en app_web, revisa la conexión.";
+                ShowAlert(QrStatusTextBlock.Text);
                 return;
             }
 
             verifiedPayments.Insert(0, stored);
             ApplyVerifiedFilterLocal();
             GenerateReportLocal();
+            ShowAlert("QR generado y pago guardado en app_web correctamente.");
         }
 
         private async void ApplyVerifiedFilterButton_Click(object sender, RoutedEventArgs e)
@@ -1308,7 +1445,7 @@ namespace Gglob
                     register.Id.Value,
                     register.Name ?? "Caja",
                     register.Code ?? string.Empty,
-                    register.IsPrimary));
+                    register.IsPrimary == 1));
             }
 
             if (cashRegisterOptions.Count == 0)
@@ -1323,13 +1460,23 @@ namespace Gglob
                 QrCashierComboBox.SelectedIndex = primaryIndex >= 0 ? primaryIndex : 0;
             }
 
-            CashRegistersListBox.ItemsSource = cashRegisterOptions;
+            CashRegistersListBox.ItemsSource = cashRegisterManagementOptions;
 
             var filters = new[] { "Todos", cashierName };
             VerifiedCashierComboBox.ItemsSource = filters;
             ReportCashierComboBox.ItemsSource = filters;
             VerifiedCashierComboBox.SelectedIndex = 0;
             ReportCashierComboBox.SelectedIndex = 0;
+        }
+
+        private void SetLoading(bool isLoading)
+        {
+            LoadingOverlay.Visibility = isLoading ? Visibility.Visible : Visibility.Collapsed;
+        }
+
+        private static void ShowAlert(string message, string title = "Gglob Desk")
+        {
+            MessageBox.Show(message, title, MessageBoxButton.OK, MessageBoxImage.Information);
         }
 
         private void ShowStatus(string message, bool isError, bool isWarning = false)

@@ -82,6 +82,7 @@ class GglobPayController extends Controller
     {
         $user = $request->user();
         $isAdmin = $user->hasRole('admin') || $user->hasRole('Administrador');
+        $scope = strtolower((string) $request->input('scope', 'assigned'));
 
         $rows = DB::table('cash_registers as cr')
             ->leftJoin('cash_register_user as cru', function ($join) use ($user) {
@@ -89,7 +90,7 @@ class GglobPayController extends Controller
                     ->where('cru.user_id', '=', $user->id);
             })
             ->where('cr.company_id', $user->company_id)
-            ->when(! $isAdmin, function ($query) {
+            ->when($scope !== 'all' || ! $isAdmin, function ($query) {
                 $query->whereNotNull('cru.id')->where('cr.status', 'active');
             })
             ->select('cr.id', 'cr.name', 'cr.code', 'cr.status', DB::raw('COALESCE(cru.is_primary, 0) as is_primary'))
