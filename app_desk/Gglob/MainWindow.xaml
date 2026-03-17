@@ -366,7 +366,7 @@
                                 <ColumnDefinition Width="*" />
                             </Grid.ColumnDefinitions>
                             <StackPanel Margin="0,0,12,0">
-                                <TextBlock Text="Gestión de cajas (admin)" FontWeight="SemiBold" />
+                                <TextBlock Text="Gestión de cajas (solo dueño)" FontWeight="SemiBold" />
                                 <TextBlock Text="Nombre" FontWeight="SemiBold" Margin="0,8,0,0" />
                                 <TextBox x:Name="CashRegisterNameTextBox" Style="{StaticResource InputText}" />
                                 <TextBlock Text="Código" FontWeight="SemiBold" />
@@ -376,13 +376,19 @@
                                     <ComboBoxItem Content="active" IsSelected="True" />
                                     <ComboBoxItem Content="inactive" />
                                 </ComboBox>
-                                <Button x:Name="SaveCashRegisterButton" Content="Guardar caja" Width="180" Style="{StaticResource PrimaryButton}" Click="SaveCashRegisterButton_Click" />
-                                <Button x:Name="AssignCashRegisterButton" Content="Asignarme caja seleccionada" Width="220" Style="{StaticResource PrimaryButton}" Click="AssignCashRegisterButton_Click" />
+                                <TextBlock Text="Asignar a cajero" FontWeight="SemiBold" />
+                                <ComboBox x:Name="CashierAssignComboBox" Margin="0,6,0,12" Height="34" DisplayMemberPath="DisplayName" />
+                                <WrapPanel Margin="0,0,0,6">
+                                    <Button x:Name="SaveCashRegisterButton" Content="Crear caja" Width="120" Style="{StaticResource PrimaryButton}" Click="SaveCashRegisterButton_Click" />
+                                    <Button x:Name="UpdateCashRegisterButton" Content="Editar seleccionada" Width="150" Margin="8,0,0,0" Style="{StaticResource PrimaryButton}" Click="UpdateCashRegisterButton_Click" />
+                                    <Button x:Name="DeleteCashRegisterButton" Content="Eliminar seleccionada" Width="160" Margin="8,0,0,0" Style="{StaticResource PrimaryButton}" Click="DeleteCashRegisterButton_Click" />
+                                </WrapPanel>
+                                <Button x:Name="AssignCashRegisterButton" Content="Asignar caja seleccionada al cajero" Width="260" Style="{StaticResource PrimaryButton}" Click="AssignCashRegisterButton_Click" />
                             </StackPanel>
                             <Border Grid.Column="1" Background="#f8fbff" CornerRadius="10" BorderThickness="1" BorderBrush="#d9e4ff" Padding="12">
                                 <StackPanel>
                                     <TextBlock Text="Cajas disponibles" FontWeight="SemiBold" FontSize="16" Foreground="#1f2937" />
-                                    <ListBox x:Name="CashRegistersListBox" Margin="0,12,0,0" Height="220" DisplayMemberPath="Name" />
+                                    <ListBox x:Name="CashRegistersListBox" Margin="0,12,0,0" Height="220" DisplayMemberPath="Name" SelectionChanged="CashRegistersListBox_SelectionChanged" />
                                 </StackPanel>
                             </Border>
                         </Grid>
