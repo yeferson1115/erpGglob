@@ -116,17 +116,50 @@ namespace Gglob
 
         [JsonPropertyName("is_primary")]
         public int IsPrimary { get; set; }
+
+        [JsonPropertyName("sales_point_id")]
+        public int? SalesPointId { get; set; }
+
+        [JsonPropertyName("sales_point_name")]
+        public string? SalesPointName { get; set; }
     }
 
-    public class CashRegisterOption(int id, string name, string code, string status, bool isPrimary)
+    public class CashRegisterOption(int id, string name, string code, string status, bool isPrimary, int? salesPointId, string salesPointName)
     {
         public int Id { get; } = id;
         public string Name { get; } = name;
         public string Code { get; } = code;
         public string Status { get; } = status;
+        public int? SalesPointId { get; } = salesPointId;
+        public string SalesPointName { get; } = salesPointName;
         public string StatusLabel => string.Equals(Status, "active", StringComparison.OrdinalIgnoreCase) ? "Activa" : "Inactiva";
         public bool IsPrimary { get; } = isPrimary;
 
+        public override string ToString() => $"{Name} ({Code}) - {SalesPointName}";
+    }
+
+    public class ApiSalesPoint
+    {
+        [JsonPropertyName("id")]
+        public int? Id { get; set; }
+
+        [JsonPropertyName("name")]
+        public string? Name { get; set; }
+
+        [JsonPropertyName("code")]
+        public string? Code { get; set; }
+
+        [JsonPropertyName("status")]
+        public string? Status { get; set; }
+    }
+
+    public class SalesPointOption(int id, string name, string code, string status)
+    {
+        public int Id { get; } = id;
+        public string Name { get; } = name;
+        public string Code { get; } = code;
+        public string Status { get; } = status;
+        public string StatusLabel => string.Equals(Status, "active", StringComparison.OrdinalIgnoreCase) ? "Activo" : "Inactivo";
         public override string ToString() => $"{Name} ({Code})";
     }
 
@@ -167,7 +200,15 @@ namespace Gglob
         public string FullName => string.IsNullOrWhiteSpace(LastName) ? Name : $"{Name} {LastName}";
     }
 
-    public class CashRegisterFormResult(string name, string code, string status)
+    public class CashRegisterFormResult(string name, string code, string status, int? salesPointId)
+    {
+        public string Name { get; } = name;
+        public string Code { get; } = code;
+        public string Status { get; } = status;
+        public int? SalesPointId { get; } = salesPointId;
+    }
+
+    public class SalesPointFormResult(string name, string code, string status)
     {
         public string Name { get; } = name;
         public string Code { get; } = code;
@@ -321,6 +362,12 @@ namespace Gglob
         [JsonPropertyName("status")]
         public string? Status { get; set; }
 
+        [JsonPropertyName("sales_point_id")]
+        public int? SalesPointId { get; set; }
+
+        [JsonPropertyName("sales_point_name")]
+        public string? SalesPointName { get; set; }
+
         public VerifiedPaymentRecord ToDesktopRecord()
         {
             _ = DateTime.TryParse(VerifiedAt, out var verifiedAt);
@@ -335,6 +382,7 @@ namespace Gglob
                 CashRegisterId ?? 0,
                 CashierUserId ?? 0,
                 CashRegisterName ?? string.Empty,
+                SalesPointName ?? string.Empty,
                 SourceChannel ?? "ahorros",
                 DestinationAccountId,
                 Status ?? "PENDING");
@@ -359,7 +407,7 @@ namespace Gglob
         public string DisplayName { get; } = displayName;
     }
 
-    public class VerifiedPaymentRecord(string referenceCode, string senderName, string accountNumber, decimal amount, string cashier, string bank, DateTime verifiedAt, int cashRegisterId, int cashierUserId, string cashRegisterName, string sourceChannel, int? destinationAccountId, string status)
+    public class VerifiedPaymentRecord(string referenceCode, string senderName, string accountNumber, decimal amount, string cashier, string bank, DateTime verifiedAt, int cashRegisterId, int cashierUserId, string cashRegisterName, string salesPointName, string sourceChannel, int? destinationAccountId, string status)
     {
         public string ReferenceCode { get; } = referenceCode;
         public string SenderName { get; } = senderName;
@@ -371,6 +419,7 @@ namespace Gglob
         public int CashRegisterId { get; } = cashRegisterId;
         public int CashierUserId { get; } = cashierUserId;
         public string CashRegisterName { get; } = cashRegisterName;
+        public string SalesPointName { get; } = salesPointName;
         public string SourceChannel { get; } = sourceChannel;
         public int? DestinationAccountId { get; } = destinationAccountId;
         public string Status { get; } = (status ?? "PENDING").ToUpperInvariant();

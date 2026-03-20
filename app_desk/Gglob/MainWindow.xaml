@@ -463,6 +463,10 @@
                                         <TextBlock Text="Cajero" FontWeight="SemiBold" />
                                         <ComboBox x:Name="VerifiedCashierComboBox" Width="170" Height="32" />
                                     </StackPanel>
+                                    <StackPanel Margin="0,0,10,0">
+                                        <TextBlock Text="Punto de venta" FontWeight="SemiBold" />
+                                        <ComboBox x:Name="VerifiedSalesPointComboBox" Width="180" Height="32" DisplayMemberPath="Name" />
+                                    </StackPanel>
                                     <Button Content="Filtrar" Width="110" Height="32" Margin="0,18,10,0" Click="ApplyVerifiedFilterButton_Click" />
                                     <Button Content="Verificación manual Wompi" Width="210" Height="32" Margin="0,18,0,0" Click="ManualVerifyWompiButton_Click" />
                                 </WrapPanel>
@@ -471,6 +475,7 @@
                                         <DataGridTextColumn Header="Persona" Binding="{Binding SenderName}" Width="*" />
                                         <DataGridTextColumn Header="Cuenta" Binding="{Binding AccountNumber}" Width="*" />
                                         <DataGridTextColumn Header="Valor" Binding="{Binding AmountFormatted}" Width="120" />
+                                        <DataGridTextColumn Header="Punto venta" Binding="{Binding SalesPointName}" Width="150" />
                                         <DataGridTextColumn Header="Cajero" Binding="{Binding Cashier}" Width="120" />
                                         <DataGridTextColumn Header="Banco" Binding="{Binding Bank}" Width="140" />
                                         <DataGridTemplateColumn Header="Estado" Width="140">
@@ -501,6 +506,10 @@
                                         <TextBlock Text="Cajero" FontWeight="SemiBold" />
                                         <ComboBox x:Name="ReportCashierComboBox" Width="170" Height="32" />
                                     </StackPanel>
+                                    <StackPanel Margin="0,0,10,0">
+                                        <TextBlock Text="Punto de venta" FontWeight="SemiBold" />
+                                        <ComboBox x:Name="ReportSalesPointComboBox" Width="180" Height="32" DisplayMemberPath="Name" />
+                                    </StackPanel>
                                     <Button Content="Generar reporte" Width="140" Height="32" Margin="0,18,0,0" Click="GenerateReportButton_Click" />
                                 </WrapPanel>
 
@@ -526,6 +535,7 @@
                                         <DataGridTextColumn Header="Referencia" Binding="{Binding ReferenceCode}" Width="*" />
                                         <DataGridTextColumn Header="Persona" Binding="{Binding SenderName}" Width="*" />
                                         <DataGridTextColumn Header="Valor" Binding="{Binding AmountFormatted}" Width="140" />
+                                        <DataGridTextColumn Header="Punto venta" Binding="{Binding SalesPointName}" Width="170" />
                                         <DataGridTextColumn Header="Cajero" Binding="{Binding Cashier}" Width="140" />
                                         <DataGridTextColumn Header="Fecha" Binding="{Binding VerifiedAtFullFormatted}" Width="170" />
                                     </DataGrid.Columns>
@@ -534,6 +544,41 @@
                         </TabItem>
                             </TabControl>
                         </ScrollViewer>
+                    </Border>
+
+                    <Border x:Name="SalesPointsPanel" Visibility="Collapsed" Background="White" CornerRadius="12" Padding="14" BorderBrush="#e2e8f3" BorderThickness="1">
+                        <Grid Margin="10">
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto" />
+                                <RowDefinition Height="*" />
+                            </Grid.RowDefinitions>
+                            <DockPanel Grid.Row="0" Margin="0,0,0,12">
+                                <StackPanel DockPanel.Dock="Left">
+                                    <TextBlock Text="Configuración · Puntos de venta" FontWeight="SemiBold" FontSize="18" Foreground="#1f2937" />
+                                    <TextBlock Text="Crea y gestiona sedes para agrupar cajas, QR y pagos." Foreground="#6b7280" FontSize="12" />
+                                </StackPanel>
+                                <Button x:Name="CreateSalesPointButton" DockPanel.Dock="Right" Content="+ Crear punto" Width="140" Height="34" Style="{StaticResource PrimaryButton}" Click="CreateSalesPointButton_Click" />
+                            </DockPanel>
+
+                            <DataGrid x:Name="SalesPointsDataGrid" Grid.Row="1" AutoGenerateColumns="False" IsReadOnly="True" CanUserAddRows="False" HeadersVisibility="Column" RowHeaderWidth="0">
+                                <DataGrid.Columns>
+                                    <DataGridTextColumn Header="Nombre" Binding="{Binding Name}" Width="2*" />
+                                    <DataGridTextColumn Header="Código" Binding="{Binding Code}" Width="*" />
+                                    <DataGridTextColumn Header="Punto venta" Binding="{Binding SalesPointName}" Width="1.5*" />
+                                    <DataGridTextColumn Header="Estado" Binding="{Binding StatusLabel}" Width="*" />
+                                    <DataGridTemplateColumn Header="Acciones" Width="2*">
+                                        <DataGridTemplateColumn.CellTemplate>
+                                            <DataTemplate>
+                                                <StackPanel Orientation="Horizontal">
+                                                    <Button Content="✏️ Editar" Tag="{Binding}" Margin="0,0,8,0" MinWidth="95" Height="34" Padding="12,6" Background="#e0ecff" BorderBrush="#bdd3ff" Click="EditSalesPointRowButton_Click" />
+                                                    <Button Content="🗑 Eliminar" Tag="{Binding}" MinWidth="95" Height="34" Padding="12,6" Background="#ffe2e2" BorderBrush="#ffc6c6" Click="DeleteSalesPointRowButton_Click" />
+                                                </StackPanel>
+                                            </DataTemplate>
+                                        </DataGridTemplateColumn.CellTemplate>
+                                    </DataGridTemplateColumn>
+                                </DataGrid.Columns>
+                            </DataGrid>
+                        </Grid>
                     </Border>
 
                     <Border x:Name="CashRegistersPanel" Visibility="Collapsed" Background="White" CornerRadius="12" Padding="14" BorderBrush="#e2e8f3" BorderThickness="1">

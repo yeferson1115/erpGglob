@@ -30,6 +30,7 @@ namespace Gglob
         private readonly ObservableCollection<VerifiedPaymentRecord> verifiedPayments = [];
         private readonly ObservableCollection<CashRegisterOption> cashRegisterOptions = [];
         private readonly ObservableCollection<CashRegisterOption> cashRegisterManagementOptions = [];
+        private readonly ObservableCollection<SalesPointOption> salesPointOptions = [];
         private readonly ObservableCollection<CashierOption> cashierOptions = [];
         private readonly ObservableCollection<BusinessCashierItem> businessCashiers = [];
         private readonly ObservableCollection<ProductCategoryItem> productCategories = [];
@@ -60,10 +61,13 @@ namespace Gglob
             ReportCashierComboBox.ItemsSource = cashierFilter;
             VerifiedCashierComboBox.SelectedIndex = 0;
             ReportCashierComboBox.SelectedIndex = 0;
+            VerifiedSalesPointComboBox.ItemsSource = salesPointOptions;
+            ReportSalesPointComboBox.ItemsSource = salesPointOptions;
 
             DestinationAccountsListBox.ItemsSource = destinationAccounts;
             QrAccountComboBox.ItemsSource = qrAccountOptions;
             CashRegistersDataGrid.ItemsSource = cashRegisterManagementOptions;
+            SalesPointsDataGrid.ItemsSource = salesPointOptions;
             CashiersManagementDataGrid.ItemsSource = businessCashiers;
             ProductCategoriesDataGrid.ItemsSource = productCategories;
             ResetCashierForm();
@@ -86,6 +90,7 @@ namespace Gglob
                 1,
                 1,
                 "Caja Principal",
+                "Principal",
                 "ahorros",
                 0,
                 "APPROVED"));
@@ -100,6 +105,7 @@ namespace Gglob
                 1,
                 1,
                 "Caja Principal",
+                "Principal",
                 "wompi_credit_card",
                 null,
                 "PENDING"));
@@ -374,6 +380,7 @@ namespace Gglob
             GglobPayPanel.Visibility = Visibility.Collapsed;
             CashRegistersPanel.Visibility = Visibility.Collapsed;
             CashiersManagementPanel.Visibility = Visibility.Collapsed;
+            SalesPointsPanel.Visibility = Visibility.Collapsed;
 
             if (moduleKey == "gglob_pos")
             {
@@ -418,6 +425,20 @@ namespace Gglob
                 return;
             }
 
+            if (moduleKey == "sales_point_management")
+            {
+                if (currentUser is null || !IsOwner(currentUser))
+                {
+                    QrStatusTextBlock.Text = "Solo el dueño puede gestionar puntos de venta.";
+                    QrStatusTextBlock.Foreground = Brushes.DarkOrange;
+                    return;
+                }
+
+                DefaultPanel.Visibility = Visibility.Collapsed;
+                SalesPointsPanel.Visibility = Visibility.Visible;
+                return;
+            }
+
             if (moduleKey == "cashier_management")
             {
                 if (currentUser is null || !IsOwner(currentUser))
@@ -445,7 +466,7 @@ namespace Gglob
 
             var role = currentUser.BusinessRole?.Trim().ToLowerInvariant();
             var hideByRole = role is "cashier";
-            var hideByModule = moduleKey is "gglob_pay" or "gglob_pos" or "product_categories" or "cash_register_management" or "cashier_management";
+            var hideByModule = moduleKey is "gglob_pay" or "gglob_pos" or "product_categories" or "cash_register_management" or "cashier_management" or "sales_point_management";
             AvailableModulesPanel.Visibility = (hideByRole || hideByModule) ? Visibility.Collapsed : Visibility.Visible;
         }
 
@@ -456,7 +477,8 @@ namespace Gglob
             var adminKeys = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
             {
                 "cash_register_management",
-                "cashier_management"
+                "cashier_management",
+                "sales_point_management"
             };
 
             var standardServices = services.Where(service => !adminKeys.Contains(service.Key)).ToList();
@@ -621,6 +643,7 @@ namespace Gglob
 
         private async Task LoadGglobPayDataFromApi()
         {
+            await LoadSalesPointsFromApi();
             await LoadCashRegistersFromApi("assigned");
             await LoadCashRegistersFromApi("all");
             cashierOptions.Clear();
@@ -679,7 +702,9 @@ namespace Gglob
                         register.Name ?? "Caja",
                         register.Code ?? string.Empty,
                         register.Status ?? "active",
-                        register.IsPrimary == 1));
+                        register.IsPrimary == 1,
+                        register.SalesPointId,
+                        register.SalesPointName ?? "Sin punto de venta"));
                 }
 
                 if (scope != "all")
@@ -744,6 +769,56 @@ namespace Gglob
             }
         }
 
+        private async Task<bool> LoadSalesPointsFromApi()
+        {
+            try
+            {
+                using var response = await HttpClient.GetAsync($"{ApiBaseUrl}/gglob-pay/sales-points");
+                if (!response.IsSuccessStatusCode)
+                {
+                    return false;
+                }
+
+                var content = await response.Content.ReadAsStringAsync();
+                var result = JsonSerializer.Deserialize<ApiListResponse<ApiSalesPoint>>(content, JsonOptions());
+                if (result?.Data is null)
+                {
+                    return false;
+                }
+
+                salesPointOptions.Clear();
+                foreach (var point in result.Data)
+                {
+                    if (point.Id is null)
+                    {
+                        continue;
+                    }
+
+                    salesPointOptions.Add(new SalesPointOption(
+                        point.Id.Value,
+                        point.Name ?? "Punto de venta",
+                        point.Code ?? string.Empty,
+                        point.Status ?? "active"));
+                }
+
+                VerifiedSalesPointComboBox.ItemsSource = null;
+                VerifiedSalesPointComboBox.ItemsSource = salesPointOptions;
+                VerifiedSalesPointComboBox.SelectedIndex = -1;
+
+                ReportSalesPointComboBox.ItemsSource = null;
+                ReportSalesPointComboBox.ItemsSource = salesPointOptions;
+                ReportSalesPointComboBox.SelectedIndex = -1;
+
+                SalesPointsDataGrid.ItemsSource = null;
+                SalesPointsDataGrid.ItemsSource = salesPointOptions;
+                return true;
+            }
+            catch
+            {
+                return false;
+            }
+        }
+
         private async Task<DestinationAccount?> SaveDestinationAccountApi(string bank, string holder, string accountNumber, string accountType)
         {
             try
@@ -788,8 +863,8 @@ namespace Gglob
                 var from = VerifiedFromDatePicker.SelectedDate?.ToString("yyyy-MM-dd");
                 var to = VerifiedToDatePicker.SelectedDate?.ToString("yyyy-MM-dd");
                 var cashier = VerifiedCashierComboBox.SelectedItem?.ToString();
-
-                var query = BuildPaymentsQuery(from, to, cashier);
+                var salesPointId = (VerifiedSalesPointComboBox.SelectedItem as SalesPointOption)?.Id;
+                var query = BuildPaymentsQuery(from, to, cashier, salesPointId);
                 using var response = await HttpClient.GetAsync($"{ApiBaseUrl}/gglob-pay/payments{query}");
 
                 if (!response.IsSuccessStatusCode)
@@ -884,7 +959,8 @@ namespace Gglob
                 var from = ReportFromDatePicker.SelectedDate?.ToString("yyyy-MM-dd");
                 var to = ReportToDatePicker.SelectedDate?.ToString("yyyy-MM-dd");
                 var cashier = ReportCashierComboBox.SelectedItem?.ToString();
-                var query = BuildPaymentsQuery(from, to, cashier);
+                var salesPointId = (ReportSalesPointComboBox.SelectedItem as SalesPointOption)?.Id;
+                var query = BuildPaymentsQuery(from, to, cashier, salesPointId);
 
                 using var response = await HttpClient.GetAsync($"{ApiBaseUrl}/gglob-pay/report{query}");
                 if (!response.IsSuccessStatusCode)
@@ -934,12 +1010,13 @@ namespace Gglob
             }
         }
 
-        private static string BuildPaymentsQuery(string? from, string? to, string? cashier)
+        private static string BuildPaymentsQuery(string? from, string? to, string? cashier, int? salesPointId = null)
         {
             var parts = new List<string>();
             if (!string.IsNullOrWhiteSpace(from)) parts.Add($"from={Uri.EscapeDataString(from)}");
             if (!string.IsNullOrWhiteSpace(to)) parts.Add($"to={Uri.EscapeDataString(to)}");
             if (!string.IsNullOrWhiteSpace(cashier) && cashier != "Todos") parts.Add($"cashier={Uri.EscapeDataString(cashier)}");
+            if (salesPointId.HasValue) parts.Add($"sales_point_id={salesPointId.Value}");
 
             return parts.Count == 0 ? string.Empty : $"?{string.Join("&", parts)}";
         }
@@ -961,7 +1038,9 @@ namespace Gglob
                     register.Name ?? "Caja",
                     register.Code ?? string.Empty,
                     register.Status ?? "active",
-                    register.IsPrimary == 1));
+                    register.IsPrimary == 1,
+                    register.SalesPointId,
+                    register.SalesPointName ?? "Sin punto de venta"));
             }
 
             if (cashRegisterOptions.Count == 0)
