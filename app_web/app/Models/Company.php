@@ -27,6 +27,8 @@ class Company extends Model
         'gglob_pos_enabled',
         'pos_mode',
         'pos_boxes',
+        'pos_locations_count',
+        'pos_locations',
         'gglob_accounting_enabled',
     ];
 
@@ -37,6 +39,7 @@ class Company extends Model
         'gglob_pay_enabled' => 'boolean',
         'gglob_pos_enabled' => 'boolean',
         'gglob_accounting_enabled' => 'boolean',
+        'pos_locations' => 'array',
     ];
 
 
@@ -67,5 +70,10 @@ class Company extends Model
     public function cashRegisters(): HasMany
     {
         return $this->hasMany(CashRegister::class);
+    }
+
+    public function salesPoints(): HasMany
+    {
+        return $this->hasMany(SalesPoint::class);
     }
 }

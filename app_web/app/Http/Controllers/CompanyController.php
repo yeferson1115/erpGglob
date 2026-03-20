@@ -52,6 +52,8 @@ class CompanyController extends Controller
             'address' => ['required', 'string', 'max:255'],
             'email' => ['required', 'email', 'max:255'],
             'contact_name' => ['required', 'string', 'max:255'],
+            'pos_locations_count' => ['nullable', 'integer', 'min:0', 'max:100'],
+            'pos_locations_text' => ['nullable', 'string', 'max:5000'],
 
             'plan_id' => ['required', 'exists:plans,id'],
             'service_status' => ['required', 'in:active,inactive,suspended'],
@@ -66,6 +68,10 @@ class CompanyController extends Controller
         ]);
 
         $plan = Plan::findOrFail($data['plan_id']);
+        $posLocations = $this->parsePosLocations($data['pos_locations_text'] ?? null);
+        $posLocationsCount = count($posLocations) > 0
+            ? count($posLocations)
+            : (int) ($data['pos_locations_count'] ?? 0);
 
         $company = Company::create([
             'name' => $data['name'],
@@ -73,6 +79,8 @@ class CompanyController extends Controller
             'address' => $data['address'],
             'email' => $data['email'],
             'contact_name' => $data['contact_name'],
+            'pos_locations_count' => $posLocationsCount,
+            'pos_locations' => $posLocations,
             ...$this->planDataForCompany($plan),
             'service_status' => $data['service_status'],
             'started_at' => $data['started_at'] ?? null,
@@ -119,6 +127,8 @@ class CompanyController extends Controller
             'address' => ['required', 'string', 'max:255'],
             'email' => ['required', 'email', 'max:255'],
             'contact_name' => ['required', 'string', 'max:255'],
+            'pos_locations_count' => ['nullable', 'integer', 'min:0', 'max:100'],
+            'pos_locations_text' => ['nullable', 'string', 'max:5000'],
             'plan_id' => ['required', 'exists:plans,id'],
             'service_status' => ['required', 'in:active,inactive,suspended'],
             'started_at' => ['nullable', 'date'],
@@ -126,6 +136,10 @@ class CompanyController extends Controller
         ]);
 
         $plan = Plan::findOrFail($data['plan_id']);
+        $posLocations = $this->parsePosLocations($data['pos_locations_text'] ?? null);
+        $posLocationsCount = count($posLocations) > 0
+            ? count($posLocations)
+            : (int) ($data['pos_locations_count'] ?? 0);
 
         $company->update([
             'name' => $data['name'],
@@ -133,6 +147,8 @@ class CompanyController extends Controller
             'address' => $data['address'],
             'email' => $data['email'],
             'contact_name' => $data['contact_name'],
+            'pos_locations_count' => $posLocationsCount,
+            'pos_locations' => $posLocations,
             ...$this->planDataForCompany($plan),
             'service_status' => $data['service_status'],
             'started_at' => $data['started_at'] ?? null,
@@ -299,5 +315,22 @@ class CompanyController extends Controller
         $user = Auth::user();
 
         return (bool) ($user && $user->business_role === 'owner' && !$user->hasRole('admin'));
+    }
+
+    private function parsePosLocations(?string $value): array
+    {
+        if (!$value) {
+            return [];
+        }
+
+        $lines = preg_split('/\r\n|\r|\n/', $value) ?: [];
+
+        return collect($lines)
+            ->map(fn ($line) => trim((string) $line))
+            ->filter()
+            ->unique()
+            ->values()
+            ->take(100)
+            ->all();
     }
 }

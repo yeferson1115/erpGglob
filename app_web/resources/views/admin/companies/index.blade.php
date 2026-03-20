@@ -56,6 +56,7 @@
                             {{ $company->gglob_cloud_enabled ? 'Nube ' : '' }}
                             {{ $company->gglob_pay_enabled ? 'Pay ' : '' }}
                             {{ $company->gglob_pos_enabled ? 'POS('.($company->pos_mode === 'multi' ? 'Multi x'.$company->pos_boxes : 'Mono').') ' : '' }}
+                            {{ ($company->pos_locations_count ?? 0) > 0 ? 'PDV x'.$company->pos_locations_count.' ' : '' }}
                             {{ $company->gglob_accounting_enabled ? 'Contable' : '' }}
                         </td>
                         <td>{{ optional($company->active_until)->format('d/m/Y') ?? '-' }}</td>

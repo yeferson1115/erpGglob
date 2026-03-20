@@ -388,7 +388,7 @@ namespace Gglob
             ShowAlert(QrStatusTextBlock.Text);
         }
 
-        private async Task<bool> SaveCashRegisterApi(string name, string code, string status)
+        private async Task<bool> SaveCashRegisterApi(string name, string code, string status, int? salesPointId)
         {
             try
             {
@@ -397,6 +397,7 @@ namespace Gglob
                     name,
                     code,
                     status,
+                    sales_point_id = salesPointId,
                 });
 
                 using var content = new StringContent(payload, Encoding.UTF8, "application/json");
@@ -409,7 +410,7 @@ namespace Gglob
             }
         }
 
-        private async Task<bool> UpdateCashRegisterApi(int cashRegisterId, string name, string code, string status)
+        private async Task<bool> UpdateCashRegisterApi(int cashRegisterId, string name, string code, string status, int? salesPointId)
         {
             try
             {
@@ -418,6 +419,7 @@ namespace Gglob
                     name,
                     code,
                     status,
+                    sales_point_id = salesPointId,
                 });
 
                 using var content = new StringContent(payload, Encoding.UTF8, "application/json");
@@ -474,7 +476,7 @@ namespace Gglob
             }
 
             SetLoading(true);
-            var ok = await SaveCashRegisterApi(form.Name, form.Code, form.Status);
+            var ok = await SaveCashRegisterApi(form.Name, form.Code, form.Status, form.SalesPointId);
             SetLoading(false);
             if (!ok)
             {
@@ -512,7 +514,7 @@ namespace Gglob
             }
 
             SetLoading(true);
-            var ok = await UpdateCashRegisterApi(selected.Id, form.Name, form.Code, form.Status);
+            var ok = await UpdateCashRegisterApi(selected.Id, form.Name, form.Code, form.Status, form.SalesPointId);
             SetLoading(false);
             if (!ok)
             {
@@ -610,13 +612,147 @@ namespace Gglob
             ShowAlert(QrStatusTextBlock.Text);
         }
 
-        private static CashRegisterFormResult? ShowCashRegisterForm(string title, CashRegisterOption? existing = null)
+        private async Task<bool> SaveSalesPointApi(string name, string code, string status)
+        {
+            try
+            {
+                var payload = JsonSerializer.Serialize(new { name, code, status });
+                using var content = new StringContent(payload, Encoding.UTF8, "application/json");
+                using var response = await HttpClient.PostAsync($"{ApiBaseUrl}/gglob-pay/sales-points", content);
+                return response.IsSuccessStatusCode;
+            }
+            catch
+            {
+                return false;
+            }
+        }
+
+        private async Task<bool> UpdateSalesPointApi(int salesPointId, string name, string code, string status)
+        {
+            try
+            {
+                var payload = JsonSerializer.Serialize(new { name, code, status });
+                using var content = new StringContent(payload, Encoding.UTF8, "application/json");
+                using var response = await HttpClient.PutAsync($"{ApiBaseUrl}/gglob-pay/sales-points/{salesPointId}", content);
+                return response.IsSuccessStatusCode;
+            }
+            catch
+            {
+                return false;
+            }
+        }
+
+        private async Task<bool> DeleteSalesPointApi(int salesPointId)
+        {
+            try
+            {
+                using var response = await HttpClient.DeleteAsync($"{ApiBaseUrl}/gglob-pay/sales-points/{salesPointId}");
+                return response.IsSuccessStatusCode;
+            }
+            catch
+            {
+                return false;
+            }
+        }
+
+        private async void CreateSalesPointButton_Click(object sender, RoutedEventArgs e)
+        {
+            if (currentUser is null || !IsOwner(currentUser))
+            {
+                QrStatusTextBlock.Text = "Solo el dueño puede crear puntos de venta.";
+                QrStatusTextBlock.Foreground = Brushes.DarkRed;
+                return;
+            }
+
+            var form = ShowSalesPointForm("Crear punto de venta");
+            if (form is null)
+            {
+                return;
+            }
+
+            SetLoading(true);
+            var ok = await SaveSalesPointApi(form.Name, form.Code, form.Status);
+            if (ok)
+            {
+                await LoadSalesPointsFromApi();
+                await LoadCashRegistersFromApi("all");
+                await LoadCashRegistersFromApi("assigned");
+            }
+            SetLoading(false);
+
+            QrStatusTextBlock.Text = ok ? "Punto de venta creado correctamente." : "No se pudo crear el punto de venta.";
+            QrStatusTextBlock.Foreground = ok ? Brushes.DarkGreen : Brushes.DarkRed;
+            ShowAlert(QrStatusTextBlock.Text);
+        }
+
+        private async void EditSalesPointRowButton_Click(object sender, RoutedEventArgs e)
+        {
+            if (sender is not Button { Tag: SalesPointOption selected })
+            {
+                return;
+            }
+
+            var form = ShowSalesPointForm("Editar punto de venta", selected);
+            if (form is null)
+            {
+                return;
+            }
+
+            SetLoading(true);
+            var ok = await UpdateSalesPointApi(selected.Id, form.Name, form.Code, form.Status);
+            if (ok)
+            {
+                await LoadSalesPointsFromApi();
+                await LoadCashRegistersFromApi("all");
+                await LoadCashRegistersFromApi("assigned");
+            }
+            SetLoading(false);
+
+            QrStatusTextBlock.Text = ok ? "Punto de venta actualizado." : "No se pudo actualizar el punto de venta.";
+            QrStatusTextBlock.Foreground = ok ? Brushes.DarkGreen : Brushes.DarkRed;
+            ShowAlert(QrStatusTextBlock.Text);
+        }
+
+        private async void DeleteSalesPointRowButton_Click(object sender, RoutedEventArgs e)
+        {
+            if (sender is not Button { Tag: SalesPointOption selected })
+            {
+                return;
+            }
+
+            var confirm = MessageBox.Show(
+                $"¿Eliminar el punto de venta '{selected.Name}'?",
+                "Confirmar eliminación",
+                MessageBoxButton.YesNo,
+                MessageBoxImage.Warning);
+
+            if (confirm != MessageBoxResult.Yes)
+            {
+                return;
+            }
+
+            SetLoading(true);
+            var ok = await DeleteSalesPointApi(selected.Id);
+            if (ok)
+            {
+                await LoadSalesPointsFromApi();
+                await LoadCashRegistersFromApi("all");
+                await LoadCashRegistersFromApi("assigned");
+            }
+            SetLoading(false);
+
+            QrStatusTextBlock.Text = ok ? "Punto de venta eliminado." : "No se pudo eliminar el punto de venta.";
+            QrStatusTextBlock.Foreground = ok ? Brushes.DarkGreen : Brushes.DarkRed;
+            ShowAlert(QrStatusTextBlock.Text);
+        }
+
+        private static SalesPointFormResult? ShowSalesPointForm(string title, SalesPointOption? existing = null)
         {
             var dialog = new Window
             {
                 Title = title,
                 Width = 420,
-                Height = 290,
+                Height = 300,
                 ResizeMode = ResizeMode.NoResize,
                 WindowStartupLocation = WindowStartupLocation.CenterOwner,
                 Background = Brushes.White
@@ -637,6 +773,74 @@ namespace Gglob
             panel.Children.Add(new TextBlock { Text = "Estado", FontWeight = FontWeights.SemiBold });
             panel.Children.Add(statusCombo);
 
+            var buttons = new WrapPanel { HorizontalAlignment = HorizontalAlignment.Right };
+            var cancelButton = new Button { Content = "Cancelar", Width = 100, Margin = new Thickness(0, 0, 8, 0) };
+            var saveButton = new Button { Content = "Guardar", Width = 100 };
+
+            cancelButton.Click += (_, _) => dialog.Close();
+            saveButton.Click += (_, _) =>
+            {
+                if (string.IsNullOrWhiteSpace(nameBox.Text) || string.IsNullOrWhiteSpace(codeBox.Text))
+                {
+                    MessageBox.Show("Nombre y código son obligatorios.", "Validación", MessageBoxButton.OK, MessageBoxImage.Warning);
+                    return;
+                }
+
+                dialog.Tag = new SalesPointFormResult(
+                    nameBox.Text.Trim(),
+                    codeBox.Text.Trim(),
+                    statusCombo.SelectedItem?.ToString() ?? "active");
+                dialog.DialogResult = true;
+                dialog.Close();
+            };
+
+            buttons.Children.Add(cancelButton);
+            buttons.Children.Add(saveButton);
+            panel.Children.Add(buttons);
+            dialog.Content = panel;
+            if (Application.Current?.MainWindow is Window owner && owner != dialog)
+            {
+                dialog.Owner = owner;
+            }
+
+            var result = dialog.ShowDialog();
+            return result == true ? dialog.Tag as SalesPointFormResult : null;
+        }
+
+        private CashRegisterFormResult? ShowCashRegisterForm(string title, CashRegisterOption? existing = null)
+        {
+            var dialog = new Window
+            {
+                Title = title,
+                Width = 420,
+                Height = 360,
+                ResizeMode = ResizeMode.NoResize,
+                WindowStartupLocation = WindowStartupLocation.CenterOwner,
+                Background = Brushes.White
+            };
+
+            var panel = new StackPanel { Margin = new Thickness(18) };
+            var nameBox = new TextBox { Text = existing?.Name ?? string.Empty, Height = 34, Margin = new Thickness(0, 4, 0, 12) };
+            var codeBox = new TextBox { Text = existing?.Code ?? string.Empty, Height = 34, Margin = new Thickness(0, 4, 0, 12) };
+            var statusCombo = new ComboBox { Height = 34, Margin = new Thickness(0, 4, 0, 12) };
+            var salesPointCombo = new ComboBox { Height = 34, Margin = new Thickness(0, 4, 0, 12), DisplayMemberPath = "Name", ItemsSource = salesPointOptions.ToList() };
+            statusCombo.Items.Add("active");
+            statusCombo.Items.Add("inactive");
+            statusCombo.SelectedItem = existing?.Status ?? "active";
+            if (existing?.SalesPointId is int existingSalesPointId)
+            {
+                salesPointCombo.SelectedItem = salesPointOptions.FirstOrDefault(x => x.Id == existingSalesPointId);
+            }
+
+            panel.Children.Add(new TextBlock { Text = "Nombre", FontWeight = FontWeights.SemiBold });
+            panel.Children.Add(nameBox);
+            panel.Children.Add(new TextBlock { Text = "Código", FontWeight = FontWeights.SemiBold });
+            panel.Children.Add(codeBox);
+            panel.Children.Add(new TextBlock { Text = "Punto de venta", FontWeight = FontWeights.SemiBold });
+            panel.Children.Add(salesPointCombo);
+            panel.Children.Add(new TextBlock { Text = "Estado", FontWeight = FontWeights.SemiBold });
+            panel.Children.Add(statusCombo);
+
             var buttonRow = new WrapPanel { HorizontalAlignment = HorizontalAlignment.Right };
             var cancelButton = new Button { Content = "Cancelar", Width = 100, Margin = new Thickness(0, 0, 8, 0), Background = new SolidColorBrush(Color.FromRgb(226, 232, 240)), Foreground = new SolidColorBrush(Color.FromRgb(30, 41, 59)), BorderBrush = new SolidColorBrush(Color.FromRgb(203, 213, 225)), Padding = new Thickness(10, 6, 10, 6) };
             var saveButton = new Button { Content = "Guardar", Width = 100, Background = new SolidColorBrush(Color.FromRgb(37, 99, 235)), Foreground = Brushes.White, BorderBrush = new SolidColorBrush(Color.FromRgb(29, 78, 216)), Padding = new Thickness(12, 6, 12, 6) };
@@ -653,7 +857,8 @@ namespace Gglob
                 dialog.Tag = new CashRegisterFormResult(
                     nameBox.Text.Trim(),
                     codeBox.Text.Trim(),
-                    statusCombo.SelectedItem?.ToString() ?? "active");
+                    statusCombo.SelectedItem?.ToString() ?? "active",
+                    (salesPointCombo.SelectedItem as SalesPointOption)?.Id);
 
                 dialog.DialogResult = true;
                 dialog.Close();
@@ -1127,6 +1332,7 @@ namespace Gglob
                 selectedCashRegister.Id,
                 currentUser.Id ?? 0,
                 selectedCashRegister.Name,
+                selectedCashRegister.SalesPointName,
                 accountOption.Channel,
                 accountOption.Account?.Id,
                 "PENDING");
@@ -1233,11 +1439,13 @@ namespace Gglob
             var from = VerifiedFromDatePicker.SelectedDate?.Date;
             var to = VerifiedToDatePicker.SelectedDate?.Date;
             var cashier = VerifiedCashierComboBox.SelectedItem?.ToString();
+            var salesPoint = (VerifiedSalesPointComboBox.SelectedItem as SalesPointOption)?.Name;
 
             var filtered = verifiedPayments.Where(record =>
                 (!from.HasValue || record.VerifiedAt.Date >= from.Value) &&
                 (!to.HasValue || record.VerifiedAt.Date <= to.Value) &&
-                (string.IsNullOrWhiteSpace(cashier) || cashier == "Todos" || record.Cashier == cashier))
+                (string.IsNullOrWhiteSpace(cashier) || cashier == "Todos" || record.Cashier == cashier) &&
+                (string.IsNullOrWhiteSpace(salesPoint) || record.SalesPointName == salesPoint))
                 .OrderByDescending(record => record.VerifiedAt)
                 .ToList();
 
@@ -1254,11 +1462,13 @@ namespace Gglob
             var from = ReportFromDatePicker.SelectedDate?.Date;
             var to = ReportToDatePicker.SelectedDate?.Date;
             var cashier = ReportCashierComboBox.SelectedItem?.ToString();
+            var salesPoint = (ReportSalesPointComboBox.SelectedItem as SalesPointOption)?.Name;
 
             var filtered = verifiedPayments.Where(record =>
                 (!from.HasValue || record.VerifiedAt.Date >= from.Value) &&
                 (!to.HasValue || record.VerifiedAt.Date <= to.Value) &&
-                (string.IsNullOrWhiteSpace(cashier) || cashier == "Todos" || record.Cashier == cashier))
+                (string.IsNullOrWhiteSpace(cashier) || cashier == "Todos" || record.Cashier == cashier) &&
+                (string.IsNullOrWhiteSpace(salesPoint) || record.SalesPointName == salesPoint))
                 .OrderByDescending(record => record.VerifiedAt)
                 .ToList();
 
@@ -1280,6 +1490,7 @@ namespace Gglob
                 new ServiceItem("gglob_cloud", "Gglob Cloud", "Gestión principal en la nube.", company?.GglobCloudEnabled ?? false),
                 new ServiceItem("gglob_pay", "Gglob Pay", "Cobros y movimientos de pago.", company?.GglobPayEnabled ?? false),
                 new ServiceItem("gglob_pos", "Gglob POS", "Punto de venta y cajas.", company?.GglobPosEnabled ?? false),
+                new ServiceItem("sales_point_management", "Configuración · Puntos de venta", "Crear y administrar puntos de venta.", (company?.GglobPayEnabled ?? false) || (company?.GglobPosEnabled ?? false)),
                 new ServiceItem("cash_register_management", "Gestión de Cajas", "Asignación de cajas y cajeros.", (company?.GglobPayEnabled ?? false) || (company?.GglobPosEnabled ?? false)),
                 new ServiceItem("cashier_management", "Usuarios Cajeros", "Crear usuarios cajeros del negocio.", (company?.GglobPayEnabled ?? false) || (company?.GglobPosEnabled ?? false)),
                 new ServiceItem("gglob_accounting", "Gglob Contable", "Módulo de contabilidad.", company?.GglobAccountingEnabled ?? false),

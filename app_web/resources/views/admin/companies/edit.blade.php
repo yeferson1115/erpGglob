@@ -4,6 +4,7 @@
 @php
     $isAdmin = $currentUser?->hasRole('admin');
     $isOwner = $currentUser?->business_role === 'owner';
+    $posLocationsText = old('pos_locations_text', collect($company->pos_locations ?? [])->implode(PHP_EOL));
 @endphp
 
 @if($isAdmin)
@@ -19,6 +20,8 @@
             <div class="col-md-6"><label class="form-label">Dirección</label><input name="address" class="form-control" value="{{ old('address', $company->address) }}" required></div>
             <div class="col-md-6"><label class="form-label">Email negocio</label><input type="email" name="email" class="form-control" value="{{ old('email', $company->email) }}" required></div>
             <div class="col-md-6"><label class="form-label">Contacto negocio</label><input name="contact_name" class="form-control" value="{{ old('contact_name', $company->contact_name) }}" required></div>
+            <div class="col-md-3"><label class="form-label"># Puntos de venta</label><input type="number" name="pos_locations_count" class="form-control" min="0" max="100" value="{{ old('pos_locations_count', $company->pos_locations_count ?? 0) }}"></div>
+            <div class="col-md-9"><label class="form-label">Puntos de venta (uno por línea)</label><textarea name="pos_locations_text" class="form-control" rows="2" placeholder="Sede Centro&#10;Sede Norte">{{ $posLocationsText }}</textarea></div>
 
             <div class="col-md-4"><label class="form-label">Plan</label><select name="plan_id" class="form-select" required><option value="">Selecciona un plan</option>@foreach($plans as $plan)<option value="{{ $plan->id }}" @selected((int) old('plan_id', $company->plan_id) === $plan->id)>{{ $plan->name }}</option>@endforeach</select></div>
             <div class="col-md-3"><label class="form-label">Estado servicio</label><select name="service_status" class="form-select"><option value="active" @selected(old('service_status', $company->service_status)==='active')>Activo</option><option value="inactive" @selected(old('service_status', $company->service_status)==='inactive')>Inactivo</option><option value="suspended" @selected(old('service_status', $company->service_status)==='suspended')>Suspendido</option></select></div>

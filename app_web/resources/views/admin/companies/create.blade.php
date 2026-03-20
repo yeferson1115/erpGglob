@@ -13,6 +13,8 @@
             <div class="col-md-6"><label class="form-label">Dirección</label><input name="address" class="form-control" value="{{ old('address') }}" required></div>
             <div class="col-md-6"><label class="form-label">Email negocio</label><input type="email" name="email" class="form-control" value="{{ old('email') }}" required></div>
             <div class="col-md-6"><label class="form-label">Contacto negocio</label><input name="contact_name" class="form-control" value="{{ old('contact_name') }}" required></div>
+            <div class="col-md-3"><label class="form-label"># Puntos de venta</label><input type="number" name="pos_locations_count" class="form-control" min="0" max="100" value="{{ old('pos_locations_count', 0) }}"></div>
+            <div class="col-md-9"><label class="form-label">Puntos de venta (uno por línea)</label><textarea name="pos_locations_text" class="form-control" rows="2" placeholder="Sede Centro&#10;Sede Norte">{{ old('pos_locations_text') }}</textarea></div>
         </div>
 
         <h6 class="mb-2">Activación de servicios del negocio</h6>

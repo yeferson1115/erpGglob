@@ -13,6 +13,7 @@ class CashRegister extends Model
 
     protected $fillable = [
         'company_id',
+        'sales_point_id',
         'name',
         'code',
         'status',
@@ -28,5 +29,10 @@ class CashRegister extends Model
         return $this->belongsToMany(User::class, 'cash_register_user')
             ->withPivot(['assigned_by', 'assigned_at', 'is_primary'])
             ->withTimestamps();
+    }
+
+    public function salesPoint(): BelongsTo
+    {
+        return $this->belongsTo(SalesPoint::class);
     }
 }

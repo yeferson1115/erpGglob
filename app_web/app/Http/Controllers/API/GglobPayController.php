@@ -100,6 +100,7 @@ class GglobPayController extends Controller
         $scope = strtolower((string) $request->input('scope', 'assigned'));
 
         $rows = DB::table('cash_registers as cr')
+            ->leftJoin('sales_points as sp', 'sp.id', '=', 'cr.sales_point_id')
             ->leftJoin('cash_register_user as cru', function ($join) use ($user) {
                 $join->on('cru.cash_register_id', '=', 'cr.id')
                     ->where('cru.user_id', '=', $user->id);
@@ -108,7 +109,15 @@ class GglobPayController extends Controller
             ->when($scope !== 'all' || ! $isOwner, function ($query) {
                 $query->whereNotNull('cru.id')->where('cr.status', 'active');
             })
-            ->select('cr.id', 'cr.name', 'cr.code', 'cr.status', DB::raw('COALESCE(cru.is_primary, 0) as is_primary'))
+            ->select(
+                'cr.id',
+                'cr.name',
+                'cr.code',
+                'cr.status',
+                'cr.sales_point_id',
+                'sp.name as sales_point_name',
+                DB::raw('COALESCE(cru.is_primary, 0) as is_primary')
+            )
             ->orderByDesc('is_primary')
             ->orderBy('cr.name')
             ->get();
@@ -129,7 +138,18 @@ class GglobPayController extends Controller
             'name' => ['required', 'string', 'max:120'],
             'code' => ['required', 'string', 'max:40'],
             'status' => ['nullable', 'string', 'in:active,inactive'],
+            'sales_point_id' => ['nullable', 'integer', 'exists:sales_points,id'],
         ]);
+
+        if (!empty($validated['sales_point_id'])) {
+            $isValidSalesPoint = DB::table('sales_points')
+                ->where('id', $validated['sales_point_id'])
+                ->where('company_id', $user->company_id)
+                ->exists();
+            if (!$isValidSalesPoint) {
+                return response()->json(['message' => 'El punto de venta no pertenece a la empresa.'], 422);
+            }
+        }
 
         $code = strtoupper(trim($validated['code']));
         $exists = DB::table('cash_registers')
@@ -143,6 +163,7 @@ class GglobPayController extends Controller
 
         $id = DB::table('cash_registers')->insertGetId([
             'company_id' => $user->company_id,
+            'sales_point_id' => $validated['sales_point_id'] ?? null,
             'name' => trim($validated['name']),
             'code' => $code,
             'status' => $validated['status'] ?? 'active',
@@ -166,8 +187,19 @@ class GglobPayController extends Controller
             'name' => ['required', 'string', 'max:120'],
             'code' => ['required', 'string', 'max:40'],
             'status' => ['required', 'string', 'in:active,inactive'],
+            'sales_point_id' => ['nullable', 'integer', 'exists:sales_points,id'],
             'is_primary_for_current_user' => ['nullable', 'boolean'],
         ]);
+
+        if (!empty($validated['sales_point_id'])) {
+            $isValidSalesPoint = DB::table('sales_points')
+                ->where('id', $validated['sales_point_id'])
+                ->where('company_id', $user->company_id)
+                ->exists();
+            if (!$isValidSalesPoint) {
+                return response()->json(['message' => 'El punto de venta no pertenece a la empresa.'], 422);
+            }
+        }
 
         $register = DB::table('cash_registers')
             ->where('id', $cashRegister)
@@ -195,6 +227,7 @@ class GglobPayController extends Controller
                 'name' => trim($validated['name']),
                 'code' => $code,
                 'status' => $validated['status'],
+                'sales_point_id' => $validated['sales_point_id'] ?? null,
                 'updated_at' => now(),
             ]);
 
@@ -263,6 +296,125 @@ class GglobPayController extends Controller
         );
 
         return response()->json(['message' => 'Caja asignada correctamente al usuario.']);
+    }
+
+    public function salesPoints(Request $request)
+    {
+        $user = $request->user();
+
+        $rows = DB::table('sales_points')
+            ->where('company_id', $user->company_id)
+            ->orderBy('name')
+            ->get();
+
+        return response()->json(['data' => $rows]);
+    }
+
+    public function storeSalesPoint(Request $request)
+    {
+        $user = $request->user();
+        if (!$this->isOwner($request)) {
+            return response()->json(['message' => 'Solo el dueño puede crear puntos de venta.'], 403);
+        }
+
+        $validated = $request->validate([
+            'name' => ['required', 'string', 'max:120'],
+            'code' => ['required', 'string', 'max:40'],
+            'status' => ['nullable', 'string', 'in:active,inactive'],
+        ]);
+
+        $code = strtoupper(trim($validated['code']));
+        $exists = DB::table('sales_points')
+            ->where('company_id', $user->company_id)
+            ->whereRaw('LOWER(code) = ?', [strtolower($code)])
+            ->exists();
+
+        if ($exists) {
+            return response()->json(['message' => 'Ya existe un punto de venta con ese código en la empresa.'], 409);
+        }
+
+        $id = DB::table('sales_points')->insertGetId([
+            'company_id' => $user->company_id,
+            'name' => trim($validated['name']),
+            'code' => $code,
+            'status' => $validated['status'] ?? 'active',
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+
+        return response()->json([
+            'message' => 'Punto de venta creado correctamente.',
+            'data' => DB::table('sales_points')->where('id', $id)->first(),
+        ], 201);
+    }
+
+    public function updateSalesPoint(Request $request, int $salesPoint)
+    {
+        $user = $request->user();
+        if (!$this->isOwner($request)) {
+            return response()->json(['message' => 'Solo el dueño puede editar puntos de venta.'], 403);
+        }
+
+        $validated = $request->validate([
+            'name' => ['required', 'string', 'max:120'],
+            'code' => ['required', 'string', 'max:40'],
+            'status' => ['required', 'string', 'in:active,inactive'],
+        ]);
+
+        $existing = DB::table('sales_points')
+            ->where('id', $salesPoint)
+            ->where('company_id', $user->company_id)
+            ->first();
+
+        if (!$existing) {
+            return response()->json(['message' => 'Punto de venta no encontrado para la empresa.'], 404);
+        }
+
+        $code = strtoupper(trim($validated['code']));
+        $exists = DB::table('sales_points')
+            ->where('company_id', $user->company_id)
+            ->where('id', '!=', $salesPoint)
+            ->whereRaw('LOWER(code) = ?', [strtolower($code)])
+            ->exists();
+
+        if ($exists) {
+            return response()->json(['message' => 'Ya existe otro punto de venta con ese código en la empresa.'], 409);
+        }
+
+        DB::table('sales_points')
+            ->where('id', $salesPoint)
+            ->update([
+                'name' => trim($validated['name']),
+                'code' => $code,
+                'status' => $validated['status'],
+                'updated_at' => now(),
+            ]);
+
+        return response()->json([
+            'message' => 'Punto de venta actualizado correctamente.',
+            'data' => DB::table('sales_points')->where('id', $salesPoint)->first(),
+        ]);
+    }
+
+    public function destroySalesPoint(Request $request, int $salesPoint)
+    {
+        $user = $request->user();
+        if (!$this->isOwner($request)) {
+            return response()->json(['message' => 'Solo el dueño puede eliminar puntos de venta.'], 403);
+        }
+
+        $existing = DB::table('sales_points')
+            ->where('id', $salesPoint)
+            ->where('company_id', $user->company_id)
+            ->first();
+
+        if (!$existing) {
+            return response()->json(['message' => 'Punto de venta no encontrado para la empresa.'], 404);
+        }
+
+        DB::table('sales_points')->where('id', $salesPoint)->delete();
+
+        return response()->json(['message' => 'Punto de venta eliminado correctamente.']);
     }
 
     public function destroyCashRegister(Request $request, int $cashRegister)
@@ -713,7 +865,9 @@ class GglobPayController extends Controller
         $companyId = $request->user()->company_id;
 
         $query = DB::table('gglob_pay_payments')
-            ->where('company_id', $companyId);
+            ->leftJoin('cash_registers', 'cash_registers.id', '=', 'gglob_pay_payments.cash_register_id')
+            ->leftJoin('sales_points', 'sales_points.id', '=', 'gglob_pay_payments.sales_point_id')
+            ->where('gglob_pay_payments.company_id', $companyId);
 
         if ($request->filled('from')) {
             $query->whereDate('verified_at', '>=', $request->input('from'));
@@ -724,10 +878,21 @@ class GglobPayController extends Controller
         }
 
         if ($request->filled('cashier') && $request->input('cashier') !== 'Todos') {
-            $query->where('cashier', $request->input('cashier'));
+            $query->where('gglob_pay_payments.cashier', $request->input('cashier'));
         }
 
-        $payments = $query->orderByDesc('verified_at')->get();
+        if ($request->filled('sales_point_id')) {
+            $query->where('gglob_pay_payments.sales_point_id', (int) $request->input('sales_point_id'));
+        }
+
+        $payments = $query
+            ->select(
+                'gglob_pay_payments.*',
+                'cash_registers.name as cash_register_name',
+                'sales_points.name as sales_point_name'
+            )
+            ->orderByDesc('gglob_pay_payments.verified_at')
+            ->get();
 
         return response()->json(['data' => $payments]);
     }
@@ -762,7 +927,8 @@ class GglobPayController extends Controller
             ->where('id', $validated['cash_register_id'])
             ->where('company_id', $companyId)
             ->where('status', 'active')
-            ->exists();
+            ->select('id', 'sales_point_id')
+            ->first();
         if (!$validRegister) {
             return response()->json(['message' => 'La caja no pertenece a la empresa o no está activa.'], 422);
         }
@@ -792,6 +958,7 @@ class GglobPayController extends Controller
             'company_id' => $companyId,
             'user_id' => $request->user()->id,
             'cash_register_id' => $validated['cash_register_id'],
+            'sales_point_id' => $validRegister->sales_point_id,
             'cashier_user_id' => $validated['cashier_user_id'],
             'reference_code' => $validated['reference_code'],
             'source_channel' => $validated['source_channel'] ?? 'ahorros',
@@ -822,6 +989,7 @@ class GglobPayController extends Controller
                 'bank' => $payment->bank,
                 'verified_at' => $payment->verified_at,
                 'cash_register_id' => $payment->cash_register_id,
+                'sales_point_id' => $payment->sales_point_id,
                 'cashier_user_id' => $payment->cashier_user_id,
                 'destination_account_id' => $payment->destination_account_id,
                 'source_channel' => $payment->source_channel
