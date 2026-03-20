@@ -1,0 +1,6 @@
+D:\DATOS\Downloads\Gglob.exe
+D:\DATOS\Downloads\Gglob.dll
+D:\DATOS\Downloads\Gglob.deps.json
+D:\DATOS\Downloads\Gglob.runtimeconfig.json
+D:\DATOS\Downloads\Gglob.pdb
+D:\DATOS\Downloads\QRCoder.dll

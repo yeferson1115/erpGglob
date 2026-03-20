@@ -37,3 +37,6 @@ D:\develoment\cursos\UniServerZ\www\erpGglob\app_desk\Gglob\obj\Debug\net8.0-win
 D:\develoment\cursos\UniServerZ\www\erpGglob\app_desk\Gglob\obj\Debug\net8.0-windows\Gglob.pdb
 D:\develoment\cursos\UniServerZ\www\erpGglob\app_desk\Gglob\obj\Debug\net8.0-windows\Gglob.genruntimeconfig.cache
 D:\develoment\cursos\UniServerZ\www\erpGglob\app_desk\Gglob\obj\Debug\net8.0-windows\ref\Gglob.dll
+D:\develoment\cursos\UniServerZ\www\erpGglob\app_desk\Gglob\bin\Debug\net8.0-windows\QRCoder.dll
+D:\develoment\cursos\UniServerZ\www\erpGglob\app_desk\Gglob\obj\Debug\net8.0-windows\Gglob.csproj.AssemblyReference.cache
+D:\develoment\cursos\UniServerZ\www\erpGglob\app_desk\Gglob\obj\Debug\net8.0-windows\Gglob.csproj.Up2Date

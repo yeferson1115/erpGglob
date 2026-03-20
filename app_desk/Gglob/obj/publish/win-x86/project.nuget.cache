@@ -1,0 +1,13 @@
+{
+  "version": 2,
+  "dgSpecHash": "SddCa6+olUM=",
+  "success": true,
+  "projectFilePath": "D:\\develoment\\cursos\\UniServerZ\\www\\erpGglob\\app_desk\\Gglob\\Gglob.csproj",
+  "expectedPackageFiles": [
+    "C:\\Users\\ysossa\\.nuget\\packages\\microsoft.net.illink.tasks\\8.0.13\\microsoft.net.illink.tasks.8.0.13.nupkg.sha512",
+    "C:\\Users\\ysossa\\.nuget\\packages\\microsoft.win32.systemevents\\6.0.0\\microsoft.win32.systemevents.6.0.0.nupkg.sha512",
+    "C:\\Users\\ysossa\\.nuget\\packages\\qrcoder\\1.6.0\\qrcoder.1.6.0.nupkg.sha512",
+    "C:\\Users\\ysossa\\.nuget\\packages\\system.drawing.common\\6.0.0\\system.drawing.common.6.0.0.nupkg.sha512"
+  ],
+  "logs": []
+}
