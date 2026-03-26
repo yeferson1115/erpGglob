@@ -21,3 +21,7 @@ D:\develoment\cursos\UniServerZ\www\erpGglob\app_desk\Gglob\obj\Release\net8.0-w
 D:\develoment\cursos\UniServerZ\www\erpGglob\app_desk\Gglob\obj\Release\net8.0-windows\Gglob.pdb
 D:\develoment\cursos\UniServerZ\www\erpGglob\app_desk\Gglob\obj\Release\net8.0-windows\Gglob.genruntimeconfig.cache
 D:\develoment\cursos\UniServerZ\www\erpGglob\app_desk\Gglob\obj\Release\net8.0-windows\ref\Gglob.dll
+D:\develoment\cursos\UniServerZ\www\erpGglob\app_desk\Gglob\obj\Release\net8.0-windows\Views\LoginView.baml
+D:\develoment\cursos\UniServerZ\www\erpGglob\app_desk\Gglob\obj\Release\net8.0-windows\Views\LoginView.g.cs
+D:\develoment\cursos\UniServerZ\www\erpGglob\app_desk\Gglob\obj\Release\net8.0-windows\GeneratedInternalTypeHelper.g.cs
+D:\develoment\cursos\UniServerZ\www\erpGglob\app_desk\Gglob\obj\Release\net8.0-windows\Gglob_MarkupCompile.lref

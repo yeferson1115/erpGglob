@@ -1,0 +1,94 @@
+{
+  "format": 1,
+  "restore": {
+    "D:\\develoment\\cursos\\UniServerZ\\www\\erpGglob\\app_desk\\Gglob\\Gglob.csproj": {}
+  },
+  "projects": {
+    "D:\\develoment\\cursos\\UniServerZ\\www\\erpGglob\\app_desk\\Gglob\\Gglob.csproj": {
+      "version": "1.0.0",
+      "restore": {
+        "projectUniqueName": "D:\\develoment\\cursos\\UniServerZ\\www\\erpGglob\\app_desk\\Gglob\\Gglob.csproj",
+        "projectName": "Gglob",
+        "projectPath": "D:\\develoment\\cursos\\UniServerZ\\www\\erpGglob\\app_desk\\Gglob\\Gglob.csproj",
+        "packagesPath": "C:\\Users\\ysossa\\.nuget\\packages\\",
+        "outputPath": "D:\\develoment\\cursos\\UniServerZ\\www\\erpGglob\\app_desk\\Gglob\\obj\\publish\\win-x64\\",
+        "projectStyle": "PackageReference",
+        "fallbackFolders": [
+          "C:\\Program Files (x86)\\Microsoft Visual Studio\\Shared\\NuGetPackages"
+        ],
+        "configFilePaths": [
+          "C:\\Users\\ysossa\\AppData\\Roaming\\NuGet\\NuGet.Config",
+          "C:\\Program Files (x86)\\NuGet\\Config\\Microsoft.VisualStudio.FallbackLocation.config",
+          "C:\\Program Files (x86)\\NuGet\\Config\\Microsoft.VisualStudio.Offline.config"
+        ],
+        "originalTargetFrameworks": [
+          "net8.0-windows"
+        ],
+        "sources": {
+          "C:\\Program Files (x86)\\Microsoft SDKs\\NuGetPackages\\": {},
+          "I:\\Sfttrns\\Sftdllo\\Componentes\\SecurityService\\Nuget V0": {},
+          "https://api.nuget.org/v3/index.json": {}
+        },
+        "frameworks": {
+          "net8.0-windows7.0": {
+            "targetAlias": "net8.0-windows",
+            "projectReferences": {}
+          }
+        },
+        "warningProperties": {
+          "warnAsError": [
+            "NU1605"
+          ]
+        },
+        "restoreAuditProperties": {
+          "enableAudit": "true",
+          "auditLevel": "low",
+          "auditMode": "direct"
+        },
+        "SdkAnalysisLevel": "9.0.200"
+      },
+      "frameworks": {
+        "net8.0-windows7.0": {
+          "targetAlias": "net8.0-windows",
+          "dependencies": {
+            "Microsoft.NET.ILLink.Tasks": {
+              "suppressParent": "All",
+              "target": "Package",
+              "version": "[8.0.13, )",
+              "autoReferenced": true
+            },
+            "QRCoder": {
+              "target": "Package",
+              "version": "[1.6.0, )"
+            }
+          },
+          "imports": [
+            "net461",
+            "net462",
+            "net47",
+            "net471",
+            "net472",
+            "net48",
+            "net481"
+          ],
+          "assetTargetFallback": true,
+          "warn": true,
+          "frameworkReferences": {
+            "Microsoft.NETCore.App": {
+              "privateAssets": "all"
+            },
+            "Microsoft.WindowsDesktop.App.WPF": {
+              "privateAssets": "none"
+            }
+          },
+          "runtimeIdentifierGraphPath": "C:\\Program Files\\dotnet\\sdk\\9.0.200/PortableRuntimeIdentifierGraph.json"
+        }
+      },
+      "runtimes": {
+        "win-x64": {
+          "#import": []
+        }
+      }
+    }
+  }
+}
