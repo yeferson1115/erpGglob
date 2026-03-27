@@ -1,63 +1,64 @@
 <?php
 
-namespace App\Http\Controllers;
+namespace App\Http\Controllers\API;
 
+use App\Http\Controllers\Controller;
 use App\Models\InventoryProduct;
-use App\Models\ProductCategory;
-use Illuminate\Http\RedirectResponse;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Auth;
 use Illuminate\Validation\Rule;
-use Illuminate\View\View;
 
-class InventoryController extends Controller
+class InventoryProductController extends Controller
 {
-    public function index(): View
+    public function index(): JsonResponse
     {
-        $this->ensureAdmin();
+        $products = InventoryProduct::with('category')
+            ->orderBy('name')
+            ->get()
+            ->map(fn (InventoryProduct $product) => [
+                'id' => $product->id,
+                'code' => $product->code,
+                'name' => $product->name,
+                'product_category_id' => $product->product_category_id,
+                'category_name' => $product->category?->name,
+                'price' => $product->price,
+                'tracks_inventory' => $product->tracks_inventory,
+                'stock_quantity' => $product->stock_quantity,
+                'minimum_stock' => $product->minimum_stock,
+                'is_combo' => $product->is_combo,
+                'combo_product_codes' => $product->combo_product_codes ?? [],
+            ]);
 
-        $products = InventoryProduct::with('category')->orderBy('name')->get();
-        $categories = ProductCategory::where('is_active', true)->orderBy('name')->get();
-
-        return view('admin.inventories.index', [
-            'products' => $products,
-            'categories' => $categories,
-            'editingProduct' => null,
-        ]);
+        return response()->json(['data' => $products]);
     }
 
-    public function edit(InventoryProduct $inventory): View
+    public function store(Request $request): JsonResponse
     {
-        $this->ensureAdmin();
-
-        $products = InventoryProduct::with('category')->orderBy('name')->get();
-        $categories = ProductCategory::where('is_active', true)->orderBy('name')->get();
-
-        return view('admin.inventories.index', [
-            'products' => $products,
-            'categories' => $categories,
-            'editingProduct' => $inventory,
-        ]);
-    }
-
-    public function store(Request $request): RedirectResponse
-    {
-        $this->ensureAdmin();
-
         $data = $this->validatedData($request);
-        InventoryProduct::create($data);
+        $product = InventoryProduct::create($data);
 
-        return back()->with('success', 'Producto de inventario creado correctamente.');
+        return response()->json([
+            'message' => 'Producto creado correctamente.',
+            'data' => $product->fresh('category'),
+        ], 201);
     }
 
-    public function update(Request $request, InventoryProduct $inventory): RedirectResponse
+    public function update(Request $request, InventoryProduct $inventoryProduct): JsonResponse
     {
-        $this->ensureAdmin();
+        $data = $this->validatedData($request, $inventoryProduct->id);
+        $inventoryProduct->update($data);
 
-        $data = $this->validatedData($request, $inventory->id);
-        $inventory->update($data);
+        return response()->json([
+            'message' => 'Producto actualizado correctamente.',
+            'data' => $inventoryProduct->fresh('category'),
+        ]);
+    }
 
-        return redirect()->route('inventories.index')->with('success', 'Producto actualizado correctamente.');
+    public function destroy(InventoryProduct $inventoryProduct): JsonResponse
+    {
+        $inventoryProduct->delete();
+
+        return response()->json(['message' => 'Producto eliminado correctamente.']);
     }
 
     private function validatedData(Request $request, ?int $ignoreId = null): array
@@ -94,7 +95,6 @@ class InventoryController extends Controller
                 ->all();
 
             $comboCodes = collect([...$comboCodes, ...$selectedCodes])
-                ->filter()
                 ->unique()
                 ->values()
                 ->all();
@@ -111,10 +111,5 @@ class InventoryController extends Controller
             'is_combo' => $isCombo,
             'combo_product_codes' => $isCombo ? $comboCodes : null,
         ];
-    }
-
-    private function ensureAdmin(): void
-    {
-        abort_unless(Auth::user()?->hasRole('admin'), 403);
     }
 }

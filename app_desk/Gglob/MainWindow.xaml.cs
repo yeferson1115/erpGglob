@@ -34,8 +34,11 @@ namespace Gglob
         private readonly ObservableCollection<CashierOption> cashierOptions = [];
         private readonly ObservableCollection<BusinessCashierItem> businessCashiers = [];
         private readonly ObservableCollection<ProductCategoryItem> productCategories = [];
+        private readonly ObservableCollection<InventoryProductItem> inventoryProducts = [];
+        private readonly ObservableCollection<InventoryProductItem> inventoryProductsForCombo = [];
         private int? editingCashierId;
         private int? editingCategoryId;
+        private int? editingInventoryProductId;
         private ApiUser? currentUser;
         private bool isGglobPayEnabled;
 
@@ -43,6 +46,29 @@ namespace Gglob
         {
             InitializeComponent();
             InitializeGglobPayModule();
+            DeskTracksInventoryCheck_Changed(this, new RoutedEventArgs());
+            DeskIsComboCheck_Changed(this, new RoutedEventArgs());
+        }
+
+        private void DeskTracksInventoryCheck_Changed(object sender, RoutedEventArgs e)
+        {
+            if (DeskInventoryStockPanel is null || DeskTracksInventoryCheck is null)
+            {
+                return;
+            }
+
+            DeskInventoryStockPanel.IsEnabled = DeskTracksInventoryCheck.IsChecked == true;
+            DeskInventoryStockPanel.Opacity = DeskTracksInventoryCheck.IsChecked == true ? 1 : 0.55;
+        }
+
+        private void DeskIsComboCheck_Changed(object sender, RoutedEventArgs e)
+        {
+            if (DeskComboPanel is null || DeskIsComboCheck is null)
+            {
+                return;
+            }
+
+            DeskComboPanel.Visibility = DeskIsComboCheck.IsChecked == true ? Visibility.Visible : Visibility.Collapsed;
         }
 
         private void InitializeGglobPayModule()
@@ -70,6 +96,11 @@ namespace Gglob
             SalesPointsDataGrid.ItemsSource = salesPointOptions;
             CashiersManagementDataGrid.ItemsSource = businessCashiers;
             ProductCategoriesDataGrid.ItemsSource = productCategories;
+            DeskInventoryProductsDataGrid.ItemsSource = inventoryProducts;
+            DeskProductCategoryComboBox.ItemsSource = productCategories;
+            DeskComboCategoryFilterComboBox.ItemsSource = productCategories;
+            DeskComboProductsListBox.ItemsSource = inventoryProductsForCombo;
+            DeskComboProductsListBox.DisplayMemberPath = "CodeAndName";
             ResetCashierForm();
             ResetCategoryForm();
 

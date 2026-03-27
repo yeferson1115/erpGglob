@@ -18,6 +18,7 @@ use App\Http\Controllers\API\InspeccionController;
 use App\Http\Controllers\API\GglobPayController;
 use App\Http\Controllers\API\ProductCategoryController;
 use App\Http\Controllers\API\PosBlueprintController;
+use App\Http\Controllers\API\InventoryProductController;
 
 
 Route::post('/register', [AuthController::class, 'register']);
@@ -87,6 +88,10 @@ Route::middleware(['auth:api'])->group(function () {
     Route::post('product-categories', [ProductCategoryController::class, 'store']);
     Route::put('product-categories/{productCategory}', [ProductCategoryController::class, 'update']);
     Route::delete('product-categories/{productCategory}', [ProductCategoryController::class, 'destroy']);
+    Route::get('inventory-products', [InventoryProductController::class, 'index']);
+    Route::post('inventory-products', [InventoryProductController::class, 'store']);
+    Route::put('inventory-products/{inventoryProduct}', [InventoryProductController::class, 'update']);
+    Route::delete('inventory-products/{inventoryProduct}', [InventoryProductController::class, 'destroy']);
 
     Route::get('gglob-pay/cash-registers', [GglobPayController::class, 'cashRegisters']);
     Route::delete('gglob-pay/cash-registers/{cashRegister}', [GglobPayController::class, 'destroyCashRegister']);
