@@ -425,7 +425,11 @@
 
                                                             <StackPanel x:Name="DeskComboPanel" Visibility="Collapsed">
                                                                 <TextBlock Text="Códigos de productos incluidos en el KIT/COMBO" FontWeight="SemiBold" />
-                                                                <TextBox x:Name="DeskComboCodesTextBox" Style="{StaticResource InputText}" Height="66" TextWrapping="Wrap" AcceptsReturn="True" VerticalScrollBarVisibility="Auto" />
+                                                                <TextBox x:Name="DeskComboCodesTextBox" Style="{StaticResource InputText}" Height="66" TextWrapping="Wrap" AcceptsReturn="True" VerticalScrollBarVisibility="Auto" TextChanged="DeskComboCodesTextBox_TextChanged" />
+                                                                <TextBlock Text="Tip: puedes escribir códigos separados por coma o seleccionarlos de la lista."
+                                                                           Foreground="#64748b"
+                                                                           FontSize="12"
+                                                                           Margin="0,-4,0,8" />
 
                                                                 <Grid Margin="0,8,0,0">
                                                                     <Grid.ColumnDefinitions>
@@ -438,7 +442,17 @@
                                                                     </StackPanel>
                                                                     <StackPanel Grid.Column="1">
                                                                         <TextBlock Text="Seleccionar productos" FontWeight="SemiBold" />
+                                                                        <TextBox x:Name="DeskComboProductSearchTextBox"
+                                                                                 Style="{StaticResource InputText}"
+                                                                                 Margin="0,6,0,6"
+                                                                                 Height="32"
+                                                                                 TextChanged="DeskComboProductSearchTextBox_TextChanged"
+                                                                                 ToolTip="Buscar por código o nombre" />
                                                                         <ListBox x:Name="DeskComboProductsListBox" Height="90" SelectionMode="Extended" />
+                                                                        <WrapPanel Margin="0,8,0,0">
+                                                                            <Button Content="➕ Agregar seleccionados" Margin="0,0,8,0" Click="AddSelectedComboProductsButton_Click" />
+                                                                            <Button Content="🧹 Limpiar" Click="ClearComboSelectionButton_Click" />
+                                                                        </WrapPanel>
                                                                     </StackPanel>
                                                                 </Grid>
                                                             </StackPanel>

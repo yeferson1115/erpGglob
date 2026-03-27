@@ -18,6 +18,8 @@ namespace Gglob
 {
     public partial class MainWindow
     {
+        private bool isSyncingComboSelection;
+
         private void OpenCategoriesButton_Click(object sender, RoutedEventArgs e)
         {
             SetSelectedModule("product_categories");
@@ -181,13 +183,19 @@ namespace Gglob
 
             DeskTracksInventoryCheck_Changed(this, new RoutedEventArgs());
             DeskIsComboCheck_Changed(this, new RoutedEventArgs());
+            ApplyComboFilter();
+            SyncComboSelectionFromCodes();
+        }
 
-            var selectedCodes = new HashSet<string>(selected.ComboProductCodes, StringComparer.OrdinalIgnoreCase);
-            DeskComboProductsListBox.SelectedItems.Clear();
-            foreach (var comboProduct in inventoryProductsForCombo.Where(p => selectedCodes.Contains(p.Code)))
+        private void DeskInventoryProductsDataGrid_SelectionChanged(object sender, SelectionChangedEventArgs e)
+        {
+            if (DeskInventoryProductsDataGrid.SelectedItem is not InventoryProductItem selected)
             {
-                DeskComboProductsListBox.SelectedItems.Add(comboProduct);
+                return;
             }
+
+            PopulateInventoryForm(selected);
+            ShowInventoryForm(true);
         }
 
         private void DeskInventoryProductsDataGrid_SelectionChanged(object sender, SelectionChangedEventArgs e)
@@ -204,6 +212,52 @@ namespace Gglob
         private void DeskComboCategoryFilterComboBox_SelectionChanged(object sender, SelectionChangedEventArgs e)
         {
             ApplyComboFilter();
+        }
+
+        private void DeskComboProductSearchTextBox_TextChanged(object sender, TextChangedEventArgs e)
+        {
+            ApplyComboFilter();
+        }
+
+        private void DeskComboCodesTextBox_TextChanged(object sender, TextChangedEventArgs e)
+        {
+            if (isSyncingComboSelection)
+            {
+                return;
+            }
+
+            SyncComboSelectionFromCodes();
+        }
+
+        private void AddSelectedComboProductsButton_Click(object sender, RoutedEventArgs e)
+        {
+            var selectedCodes = DeskComboProductsListBox.SelectedItems
+                .OfType<InventoryProductItem>()
+                .Select(product => product.Code.Trim())
+                .Where(code => !string.IsNullOrWhiteSpace(code))
+                .ToList();
+
+            if (selectedCodes.Count == 0)
+            {
+                return;
+            }
+
+            var mergedCodes = ParseComboCodesFromText()
+                .Concat(selectedCodes)
+                .Distinct(StringComparer.OrdinalIgnoreCase);
+
+            isSyncingComboSelection = true;
+            DeskComboCodesTextBox.Text = string.Join(", ", mergedCodes);
+            isSyncingComboSelection = false;
+            SyncComboSelectionFromCodes();
+        }
+
+        private void ClearComboSelectionButton_Click(object sender, RoutedEventArgs e)
+        {
+            isSyncingComboSelection = true;
+            DeskComboCodesTextBox.Text = string.Empty;
+            isSyncingComboSelection = false;
+            DeskComboProductsListBox.SelectedItems.Clear();
         }
 
         private async void SaveCategoryButton_Click(object sender, RoutedEventArgs e)
@@ -422,6 +476,7 @@ namespace Gglob
                 .OfType<InventoryProductItem>()
                 .Select(p => p.Id)
                 .ToList();
+            var normalizedComboCodes = string.Join(", ", ParseComboCodesFromText());
 
             var payload = JsonSerializer.Serialize(new
             {
@@ -433,7 +488,7 @@ namespace Gglob
                 stock_quantity = tracksInventory ? (int?)(ParseNullableInt(DeskStockQuantityTextBox.Text) ?? 0) : null,
                 minimum_stock = tracksInventory ? (int?)(ParseNullableInt(DeskMinimumStockTextBox.Text) ?? 0) : null,
                 is_combo = isCombo,
-                combo_product_codes = isCombo ? DeskComboCodesTextBox.Text.Trim() : string.Empty,
+                combo_product_codes = isCombo ? normalizedComboCodes : string.Empty,
                 combo_product_ids = isCombo ? selectedComboIds : new List<int>(),
             });
 
@@ -485,6 +540,7 @@ namespace Gglob
             DeskIsComboCheck.IsChecked = false;
             DeskComboCodesTextBox.Text = string.Empty;
             DeskComboCategoryFilterComboBox.SelectedItem = null;
+            DeskComboProductSearchTextBox.Text = string.Empty;
             DeskComboProductsListBox.SelectedItems.Clear();
             DeskInventoryProductsDataGrid.SelectedItem = null;
             DeskTracksInventoryCheck_Changed(this, new RoutedEventArgs());
@@ -493,8 +549,14 @@ namespace Gglob
 
         private void ApplyComboFilter()
         {
+            if (DeskComboProductsListBox is null || DeskComboCategoryFilterComboBox is null || DeskComboProductSearchTextBox is null)
+            {
+                return;
+            }
+
             inventoryProductsForCombo.Clear();
             var selectedCategory = DeskComboCategoryFilterComboBox.SelectedValue as int?;
+            var search = DeskComboProductSearchTextBox.Text.Trim();
             foreach (var product in inventoryProducts)
             {
                 if (editingInventoryProductId.HasValue && product.Id == editingInventoryProductId.Value)
@@ -507,7 +569,45 @@ namespace Gglob
                     continue;
                 }
 
+                if (!string.IsNullOrWhiteSpace(search)
+                    && !product.Code.Contains(search, StringComparison.OrdinalIgnoreCase)
+                    && !product.Name.Contains(search, StringComparison.OrdinalIgnoreCase))
+                {
+                    continue;
+                }
+
                 inventoryProductsForCombo.Add(product);
+            }
+
+            SyncComboSelectionFromCodes();
+        }
+
+        private List<string> ParseComboCodesFromText()
+        {
+            if (DeskComboCodesTextBox is null)
+            {
+                return [];
+            }
+
+            return DeskComboCodesTextBox.Text
+                .Split([',', ';', '\n', '\r'], StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+                .Where(code => !string.IsNullOrWhiteSpace(code))
+                .Distinct(StringComparer.OrdinalIgnoreCase)
+                .ToList();
+        }
+
+        private void SyncComboSelectionFromCodes()
+        {
+            if (DeskComboProductsListBox is null)
+            {
+                return;
+            }
+
+            var selectedCodes = new HashSet<string>(ParseComboCodesFromText(), StringComparer.OrdinalIgnoreCase);
+            DeskComboProductsListBox.SelectedItems.Clear();
+            foreach (var comboProduct in inventoryProductsForCombo.Where(p => selectedCodes.Contains(p.Code)))
+            {
+                DeskComboProductsListBox.SelectedItems.Add(comboProduct);
             }
         }
 
