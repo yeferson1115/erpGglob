@@ -198,6 +198,17 @@ namespace Gglob
             ShowInventoryForm(true);
         }
 
+        private void DeskInventoryProductsDataGrid_SelectionChanged(object sender, SelectionChangedEventArgs e)
+        {
+            if (DeskInventoryProductsDataGrid.SelectedItem is not InventoryProductItem selected)
+            {
+                return;
+            }
+
+            PopulateInventoryForm(selected);
+            ShowInventoryForm(true);
+        }
+
         private void DeskComboCategoryFilterComboBox_SelectionChanged(object sender, SelectionChangedEventArgs e)
         {
             ApplyComboFilter();
