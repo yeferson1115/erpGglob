@@ -28,6 +28,21 @@ namespace Gglob
             SetSelectedModule("gglob_pos");
         }
 
+        private void OpenPosBlueprintButton_Click(object sender, RoutedEventArgs e)
+        {
+            SetSelectedModule("gglob_pos_blueprint");
+        }
+
+        private async void LoadPosBlueprintButton_Click(object sender, RoutedEventArgs e)
+        {
+            await LoadPosBlueprintFromApi();
+        }
+
+        private async void SavePosBlueprintButton_Click(object sender, RoutedEventArgs e)
+        {
+            await SavePosBlueprintToApi();
+        }
+
         private async void ReloadCategoriesButton_Click(object sender, RoutedEventArgs e)
         {
             await LoadProductCategoriesFromApi();
@@ -183,6 +198,93 @@ namespace Gglob
             {
                 QrStatusTextBlock.Text = $"Error cargando categorías: {ex.Message}";
                 QrStatusTextBlock.Foreground = Brushes.DarkOrange;
+            }
+        }
+
+        private async Task LoadPosBlueprintFromApi()
+        {
+            try
+            {
+                using var response = await HttpClient.GetAsync($"{ApiBaseUrl}/pos-blueprint");
+                if (!response.IsSuccessStatusCode)
+                {
+                    QrStatusTextBlock.Text = "No existe configuración POS guardada todavía para este negocio.";
+                    QrStatusTextBlock.Foreground = Brushes.DarkOrange;
+                    return;
+                }
+
+                var body = await response.Content.ReadAsStringAsync();
+                var result = JsonSerializer.Deserialize<ApiSingleResponse<ApiPosBlueprint>>(body, JsonOptions());
+                var payloadRaw = result?.Data?.Payload;
+                if (!string.IsNullOrWhiteSpace(result?.Data?.AnalysisText))
+                {
+                    PosAnalysisTextBox.Text = result.Data.AnalysisText;
+                }
+
+                if (string.IsNullOrWhiteSpace(payloadRaw))
+                {
+                    QrStatusTextBlock.Text = "Se cargó análisis POS sin payload visual.";
+                    QrStatusTextBlock.Foreground = Brushes.DarkOrange;
+                    return;
+                }
+
+                var payload = JsonSerializer.Deserialize<Dictionary<string, string>>(payloadRaw, JsonOptions()) ?? [];
+                PosStatsPanelTextBox.Text = payload.GetValueOrDefault("stats", PosStatsPanelTextBox.Text);
+                PosInventoryTextBox.Text = payload.GetValueOrDefault("inventory", PosInventoryTextBox.Text);
+                PosSystemConfigTextBox.Text = payload.GetValueOrDefault("config", PosSystemConfigTextBox.Text);
+                PosOpsTextBox.Text = payload.GetValueOrDefault("ops", PosOpsTextBox.Text);
+                PosChecklistTextBox.Text = payload.GetValueOrDefault("checklist", PosChecklistTextBox.Text);
+
+                QrStatusTextBlock.Text = "Diseño POS cargado desde app_web.";
+                QrStatusTextBlock.Foreground = Brushes.DarkGreen;
+            }
+            catch (Exception ex)
+            {
+                QrStatusTextBlock.Text = $"Error cargando diseño POS: {ex.Message}";
+                QrStatusTextBlock.Foreground = Brushes.DarkOrange;
+            }
+        }
+
+        private async Task SavePosBlueprintToApi()
+        {
+            var payload = new Dictionary<string, string>
+            {
+                ["stats"] = PosStatsPanelTextBox.Text.Trim(),
+                ["inventory"] = PosInventoryTextBox.Text.Trim(),
+                ["config"] = PosSystemConfigTextBox.Text.Trim(),
+                ["ops"] = PosOpsTextBox.Text.Trim(),
+                ["checklist"] = PosChecklistTextBox.Text.Trim(),
+            };
+
+            var body = JsonSerializer.Serialize(new
+            {
+                analysis_text = PosAnalysisTextBox.Text.Trim(),
+                payload = JsonSerializer.Serialize(payload),
+            });
+
+            try
+            {
+                SetLoading(true);
+                using var content = new StringContent(body, Encoding.UTF8, "application/json");
+                using var response = await HttpClient.PostAsync($"{ApiBaseUrl}/pos-blueprint", content);
+                if (!response.IsSuccessStatusCode)
+                {
+                    QrStatusTextBlock.Text = "No fue posible guardar el diseño POS en app_web.";
+                    QrStatusTextBlock.Foreground = Brushes.DarkRed;
+                    return;
+                }
+
+                QrStatusTextBlock.Text = "Diseño POS guardado correctamente en app_web.";
+                QrStatusTextBlock.Foreground = Brushes.DarkGreen;
+            }
+            catch (Exception ex)
+            {
+                QrStatusTextBlock.Text = $"Error guardando diseño POS: {ex.Message}";
+                QrStatusTextBlock.Foreground = Brushes.DarkRed;
+            }
+            finally
+            {
+                SetLoading(false);
             }
         }
 

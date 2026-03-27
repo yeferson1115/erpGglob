@@ -492,5 +492,14 @@ namespace Gglob
         public string? ClientSecret { get; set; }
     }
 
+    public class ApiPosBlueprint
+    {
+        [JsonPropertyName("analysis_text")]
+        public string? AnalysisText { get; set; }
+
+        [JsonPropertyName("payload")]
+        public string? Payload { get; set; }
+    }
+
     public record AccessValidation(bool IsValid, string Message);
 }
