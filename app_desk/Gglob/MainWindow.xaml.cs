@@ -34,8 +34,11 @@ namespace Gglob
         private readonly ObservableCollection<CashierOption> cashierOptions = [];
         private readonly ObservableCollection<BusinessCashierItem> businessCashiers = [];
         private readonly ObservableCollection<ProductCategoryItem> productCategories = [];
+        private readonly ObservableCollection<InventoryProductItem> inventoryProducts = [];
+        private readonly ObservableCollection<InventoryProductItem> inventoryProductsForCombo = [];
         private int? editingCashierId;
         private int? editingCategoryId;
+        private int? editingInventoryProductId;
         private ApiUser? currentUser;
         private bool isGglobPayEnabled;
 
@@ -93,6 +96,11 @@ namespace Gglob
             SalesPointsDataGrid.ItemsSource = salesPointOptions;
             CashiersManagementDataGrid.ItemsSource = businessCashiers;
             ProductCategoriesDataGrid.ItemsSource = productCategories;
+            DeskInventoryProductsDataGrid.ItemsSource = inventoryProducts;
+            DeskProductCategoryComboBox.ItemsSource = productCategories;
+            DeskComboCategoryFilterComboBox.ItemsSource = productCategories;
+            DeskComboProductsListBox.ItemsSource = inventoryProductsForCombo;
+            DeskComboProductsListBox.DisplayMemberPath = "CodeAndName";
             ResetCashierForm();
             ResetCategoryForm();
 

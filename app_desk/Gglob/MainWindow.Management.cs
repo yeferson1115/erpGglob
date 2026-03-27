@@ -31,6 +31,8 @@ namespace Gglob
         private void OpenPosBlueprintButton_Click(object sender, RoutedEventArgs e)
         {
             SetSelectedModule("gglob_pos_blueprint");
+            _ = LoadProductCategoriesFromApi();
+            _ = LoadInventoryProductsFromApi();
         }
 
         private async void LoadPosBlueprintButton_Click(object sender, RoutedEventArgs e)
@@ -46,6 +48,104 @@ namespace Gglob
         private async void ReloadCategoriesButton_Click(object sender, RoutedEventArgs e)
         {
             await LoadProductCategoriesFromApi();
+        }
+
+        private async void ReloadInventoryProductsButton_Click(object sender, RoutedEventArgs e)
+        {
+            await LoadInventoryProductsFromApi();
+        }
+
+        private async void SaveInventoryProductButton_Click(object sender, RoutedEventArgs e)
+        {
+            await SaveOrUpdateInventoryProduct(false);
+        }
+
+        private async void UpdateInventoryProductButton_Click(object sender, RoutedEventArgs e)
+        {
+            await SaveOrUpdateInventoryProduct(true);
+        }
+
+        private async void DeleteInventoryProductButton_Click(object sender, RoutedEventArgs e)
+        {
+            if (editingInventoryProductId is null)
+            {
+                ShowAlert("Selecciona un producto de la tabla para eliminar.");
+                return;
+            }
+
+            var confirm = MessageBox.Show(
+                "¿Seguro que deseas eliminar este producto?",
+                "Confirmar eliminación",
+                MessageBoxButton.YesNo,
+                MessageBoxImage.Warning);
+
+            if (confirm != MessageBoxResult.Yes)
+            {
+                return;
+            }
+
+            try
+            {
+                SetLoading(true);
+                using var response = await HttpClient.DeleteAsync($"{ApiBaseUrl}/inventory-products/{editingInventoryProductId.Value}");
+                if (!response.IsSuccessStatusCode)
+                {
+                    var body = await response.Content.ReadAsStringAsync();
+                    ShowAlert($"No se pudo eliminar el producto. {body}");
+                    return;
+                }
+
+                await LoadInventoryProductsFromApi();
+                ResetInventoryForm();
+                QrStatusTextBlock.Text = "Producto eliminado correctamente.";
+                QrStatusTextBlock.Foreground = Brushes.DarkGreen;
+            }
+            catch (Exception ex)
+            {
+                ShowAlert($"Error al eliminar producto: {ex.Message}");
+            }
+            finally
+            {
+                SetLoading(false);
+            }
+        }
+
+        private void DeskInventoryProductsDataGrid_SelectionChanged(object sender, SelectionChangedEventArgs e)
+        {
+            if (DeskInventoryProductsDataGrid.SelectedItem is not InventoryProductItem selected)
+            {
+                return;
+            }
+
+            editingInventoryProductId = selected.Id;
+            DeskProductCodeTextBox.Text = selected.Code;
+            DeskProductNameTextBox.Text = selected.Name;
+            DeskProductPriceTextBox.Text = selected.Price.ToString("0.00", CultureInfo.InvariantCulture);
+            DeskTracksInventoryCheck.IsChecked = selected.TracksInventory;
+            DeskStockQuantityTextBox.Text = selected.StockQuantity?.ToString(CultureInfo.InvariantCulture) ?? string.Empty;
+            DeskMinimumStockTextBox.Text = selected.MinimumStock?.ToString(CultureInfo.InvariantCulture) ?? string.Empty;
+            DeskIsComboCheck.IsChecked = selected.IsCombo;
+            DeskComboCodesTextBox.Text = string.Join(", ", selected.ComboProductCodes);
+
+            if (selected.ProductCategoryId.HasValue)
+            {
+                DeskProductCategoryComboBox.SelectedValue = selected.ProductCategoryId.Value;
+            }
+
+            DeskTracksInventoryCheck_Changed(this, new RoutedEventArgs());
+            DeskIsComboCheck_Changed(this, new RoutedEventArgs());
+
+            var selectedCodes = new HashSet<string>(selected.ComboProductCodes, StringComparer.OrdinalIgnoreCase);
+            DeskComboProductsListBox.SelectedItems.Clear();
+            foreach (var comboProduct in inventoryProductsForCombo.Where(p => selectedCodes.Contains(p.Code)))
+            {
+                DeskComboProductsListBox.SelectedItems.Add(comboProduct);
+            }
+        }
+
+        private void DeskComboCategoryFilterComboBox_SelectionChanged(object sender, SelectionChangedEventArgs e)
+        {
+            ApplyComboFilter();
         }
 
         private async void SaveCategoryButton_Click(object sender, RoutedEventArgs e)
@@ -193,12 +293,168 @@ namespace Gglob
                         item.Description ?? string.Empty,
                         item.IsActive));
                 }
+
+                ApplyComboFilter();
             }
             catch (Exception ex)
             {
                 QrStatusTextBlock.Text = $"Error cargando categorías: {ex.Message}";
                 QrStatusTextBlock.Foreground = Brushes.DarkOrange;
             }
+        }
+
+        private async Task LoadInventoryProductsFromApi()
+        {
+            try
+            {
+                using var response = await HttpClient.GetAsync($"{ApiBaseUrl}/inventory-products");
+                if (!response.IsSuccessStatusCode)
+                {
+                    QrStatusTextBlock.Text = "No se pudieron cargar los productos de inventario.";
+                    QrStatusTextBlock.Foreground = Brushes.DarkOrange;
+                    return;
+                }
+
+                var body = await response.Content.ReadAsStringAsync();
+                var result = JsonSerializer.Deserialize<ApiListResponse<ApiInventoryProduct>>(body, JsonOptions());
+
+                inventoryProducts.Clear();
+                foreach (var item in result?.Data ?? [])
+                {
+                    if (item.Id is null || string.IsNullOrWhiteSpace(item.Code) || string.IsNullOrWhiteSpace(item.Name))
+                    {
+                        continue;
+                    }
+
+                    inventoryProducts.Add(item.ToDesktopRecord());
+                }
+
+                ApplyComboFilter();
+            }
+            catch (Exception ex)
+            {
+                QrStatusTextBlock.Text = $"Error cargando inventario: {ex.Message}";
+                QrStatusTextBlock.Foreground = Brushes.DarkOrange;
+            }
+        }
+
+        private async Task SaveOrUpdateInventoryProduct(bool isUpdate)
+        {
+            if (string.IsNullOrWhiteSpace(DeskProductCodeTextBox.Text) || string.IsNullOrWhiteSpace(DeskProductNameTextBox.Text))
+            {
+                ShowAlert("Código y nombre del producto son obligatorios.");
+                return;
+            }
+
+            if (!decimal.TryParse(DeskProductPriceTextBox.Text.Trim(), NumberStyles.Any, CultureInfo.InvariantCulture, out var price))
+            {
+                ShowAlert("El precio del producto no es válido.");
+                return;
+            }
+
+            if (isUpdate && editingInventoryProductId is null)
+            {
+                ShowAlert("Selecciona un producto en la tabla para editar.");
+                return;
+            }
+
+            var tracksInventory = DeskTracksInventoryCheck.IsChecked == true;
+            var isCombo = DeskIsComboCheck.IsChecked == true;
+            var selectedComboIds = DeskComboProductsListBox.SelectedItems
+                .OfType<InventoryProductItem>()
+                .Select(p => p.Id)
+                .ToList();
+
+            var payload = JsonSerializer.Serialize(new
+            {
+                code = DeskProductCodeTextBox.Text.Trim(),
+                name = DeskProductNameTextBox.Text.Trim(),
+                product_category_id = DeskProductCategoryComboBox.SelectedValue is int categoryId ? categoryId : (int?) null,
+                price,
+                tracks_inventory = tracksInventory,
+                stock_quantity = tracksInventory ? ParseNullableInt(DeskStockQuantityTextBox.Text) ?? 0 : null,
+                minimum_stock = tracksInventory ? ParseNullableInt(DeskMinimumStockTextBox.Text) ?? 0 : null,
+                is_combo = isCombo,
+                combo_product_codes = isCombo ? DeskComboCodesTextBox.Text.Trim() : string.Empty,
+                combo_product_ids = isCombo ? selectedComboIds : new List<int>(),
+            });
+
+            try
+            {
+                SetLoading(true);
+                using var content = new StringContent(payload, Encoding.UTF8, "application/json");
+                using var response = isUpdate
+                    ? await HttpClient.PutAsync($"{ApiBaseUrl}/inventory-products/{editingInventoryProductId!.Value}", content)
+                    : await HttpClient.PostAsync($"{ApiBaseUrl}/inventory-products", content);
+
+                if (!response.IsSuccessStatusCode)
+                {
+                    var body = await response.Content.ReadAsStringAsync();
+                    ShowAlert($"No se pudo guardar el producto. {body}");
+                    return;
+                }
+
+                await LoadInventoryProductsFromApi();
+                ResetInventoryForm();
+                QrStatusTextBlock.Text = isUpdate
+                    ? "Producto actualizado correctamente."
+                    : "Producto guardado correctamente.";
+                QrStatusTextBlock.Foreground = Brushes.DarkGreen;
+            }
+            catch (Exception ex)
+            {
+                ShowAlert($"Error al guardar producto: {ex.Message}");
+            }
+            finally
+            {
+                SetLoading(false);
+            }
+        }
+
+        private void ResetInventoryForm()
+        {
+            editingInventoryProductId = null;
+            DeskProductCodeTextBox.Text = string.Empty;
+            DeskProductNameTextBox.Text = string.Empty;
+            DeskProductPriceTextBox.Text = "0.00";
+            DeskProductCategoryComboBox.SelectedItem = null;
+            DeskTracksInventoryCheck.IsChecked = true;
+            DeskStockQuantityTextBox.Text = string.Empty;
+            DeskMinimumStockTextBox.Text = string.Empty;
+            DeskIsComboCheck.IsChecked = false;
+            DeskComboCodesTextBox.Text = string.Empty;
+            DeskComboCategoryFilterComboBox.SelectedItem = null;
+            DeskComboProductsListBox.SelectedItems.Clear();
+            DeskInventoryProductsDataGrid.SelectedItem = null;
+            DeskTracksInventoryCheck_Changed(this, new RoutedEventArgs());
+            DeskIsComboCheck_Changed(this, new RoutedEventArgs());
+        }
+
+        private void ApplyComboFilter()
+        {
+            inventoryProductsForCombo.Clear();
+            var selectedCategory = DeskComboCategoryFilterComboBox.SelectedValue as int?;
+            foreach (var product in inventoryProducts)
+            {
+                if (editingInventoryProductId.HasValue && product.Id == editingInventoryProductId.Value)
+                {
+                    continue;
+                }
+
+                if (selectedCategory.HasValue && product.ProductCategoryId != selectedCategory)
+                {
+                    continue;
+                }
+
+                inventoryProductsForCombo.Add(product);
+            }
+        }
+
+        private static int? ParseNullableInt(string value)
+        {
+            return int.TryParse(value?.Trim(), NumberStyles.Integer, CultureInfo.InvariantCulture, out var parsed)
+                ? parsed
+                : null;
         }
 
         private async Task LoadPosBlueprintFromApi()

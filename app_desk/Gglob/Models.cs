@@ -321,6 +321,87 @@ namespace Gglob
         public string StatusLabel => IsActive ? "Activa" : "Inactiva";
     }
 
+    public class ApiInventoryProduct
+    {
+        [JsonPropertyName("id")]
+        public int? Id { get; set; }
+
+        [JsonPropertyName("code")]
+        public string? Code { get; set; }
+
+        [JsonPropertyName("name")]
+        public string? Name { get; set; }
+
+        [JsonPropertyName("product_category_id")]
+        public int? ProductCategoryId { get; set; }
+
+        [JsonPropertyName("category_name")]
+        public string? CategoryName { get; set; }
+
+        [JsonPropertyName("price")]
+        public decimal Price { get; set; }
+
+        [JsonPropertyName("tracks_inventory")]
+        public bool TracksInventory { get; set; }
+
+        [JsonPropertyName("stock_quantity")]
+        public int? StockQuantity { get; set; }
+
+        [JsonPropertyName("minimum_stock")]
+        public int? MinimumStock { get; set; }
+
+        [JsonPropertyName("is_combo")]
+        public bool IsCombo { get; set; }
+
+        [JsonPropertyName("combo_product_codes")]
+        public List<string>? ComboProductCodes { get; set; }
+
+        public InventoryProductItem ToDesktopRecord()
+        {
+            return new InventoryProductItem(
+                Id ?? 0,
+                Code ?? string.Empty,
+                Name ?? string.Empty,
+                ProductCategoryId,
+                CategoryName ?? "Sin categoría",
+                Price,
+                TracksInventory,
+                StockQuantity,
+                MinimumStock,
+                IsCombo,
+                ComboProductCodes ?? []);
+        }
+    }
+
+    public class InventoryProductItem(
+        int id,
+        string code,
+        string name,
+        int? productCategoryId,
+        string categoryName,
+        decimal price,
+        bool tracksInventory,
+        int? stockQuantity,
+        int? minimumStock,
+        bool isCombo,
+        List<string> comboProductCodes)
+    {
+        public int Id { get; } = id;
+        public string Code { get; } = code;
+        public string Name { get; } = name;
+        public int? ProductCategoryId { get; } = productCategoryId;
+        public string CategoryName { get; } = categoryName;
+        public decimal Price { get; } = price;
+        public bool TracksInventory { get; } = tracksInventory;
+        public int? StockQuantity { get; } = stockQuantity;
+        public int? MinimumStock { get; } = minimumStock;
+        public bool IsCombo { get; } = isCombo;
+        public List<string> ComboProductCodes { get; } = comboProductCodes;
+        public string PriceLabel => Price.ToString("C2", CultureInfo.GetCultureInfo("es-CO"));
+        public string TypeLabel => IsCombo ? "KIT / COMBO" : "Normal";
+        public string CodeAndName => $"[{Code}] {Name}";
+    }
+
     public class ApiVerifiedPayment
     {
         [JsonPropertyName("reference_code")]

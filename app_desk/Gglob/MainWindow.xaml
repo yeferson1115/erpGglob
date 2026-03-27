@@ -334,23 +334,19 @@
                                                                 <UniformGrid Columns="2" Margin="0,0,0,8">
                                                                     <StackPanel Margin="0,0,8,8">
                                                                         <TextBlock Text="Código del producto" FontWeight="SemiBold" />
-                                                                        <TextBox Style="{StaticResource InputText}" />
+                                                                        <TextBox x:Name="DeskProductCodeTextBox" Style="{StaticResource InputText}" />
                                                                     </StackPanel>
                                                                     <StackPanel Margin="0,0,0,8">
                                                                         <TextBlock Text="Nombre del producto" FontWeight="SemiBold" />
-                                                                        <TextBox Style="{StaticResource InputText}" />
+                                                                        <TextBox x:Name="DeskProductNameTextBox" Style="{StaticResource InputText}" />
                                                                     </StackPanel>
                                                                     <StackPanel Margin="0,0,8,8">
                                                                         <TextBlock Text="Categoría del producto" FontWeight="SemiBold" />
-                                                                        <ComboBox Height="38">
-                                                                            <ComboBoxItem Content="Bebidas" />
-                                                                            <ComboBoxItem Content="Comidas" />
-                                                                            <ComboBoxItem Content="Postres" />
-                                                                        </ComboBox>
+                                                                        <ComboBox x:Name="DeskProductCategoryComboBox" DisplayMemberPath="Name" SelectedValuePath="Id" Height="38" />
                                                                     </StackPanel>
                                                                     <StackPanel Margin="0,0,0,8">
                                                                         <TextBlock Text="Precio del producto" FontWeight="SemiBold" />
-                                                                        <TextBox Style="{StaticResource InputText}" />
+                                                                        <TextBox x:Name="DeskProductPriceTextBox" Style="{StaticResource InputText}" />
                                                                     </StackPanel>
                                                                 </UniformGrid>
 
@@ -368,11 +364,11 @@
                                                                     </Grid.ColumnDefinitions>
                                                                     <StackPanel Margin="0,0,8,0">
                                                                         <TextBlock Text="Número de existencias en inventario" FontWeight="SemiBold" />
-                                                                        <TextBox Style="{StaticResource InputText}" />
+                                                                        <TextBox x:Name="DeskStockQuantityTextBox" Style="{StaticResource InputText}" />
                                                                     </StackPanel>
                                                                     <StackPanel Grid.Column="1">
                                                                         <TextBlock Text="Existencias mínimas" FontWeight="SemiBold" />
-                                                                        <TextBox Style="{StaticResource InputText}" />
+                                                                        <TextBox x:Name="DeskMinimumStockTextBox" Style="{StaticResource InputText}" />
                                                                         <TextBlock Text="Al llegar al mínimo se deben solicitar nuevas existencias al proveedor."
                                                                                    Foreground="#6b7280"
                                                                                    FontSize="12"
@@ -389,7 +385,7 @@
 
                                                                 <StackPanel x:Name="DeskComboPanel" Visibility="Collapsed">
                                                                     <TextBlock Text="Códigos de productos incluidos en el KIT/COMBO" FontWeight="SemiBold" />
-                                                                    <TextBox Style="{StaticResource InputText}" Height="66" TextWrapping="Wrap" AcceptsReturn="True" VerticalScrollBarVisibility="Auto" />
+                                                                    <TextBox x:Name="DeskComboCodesTextBox" Style="{StaticResource InputText}" Height="66" TextWrapping="Wrap" AcceptsReturn="True" VerticalScrollBarVisibility="Auto" />
 
                                                                     <Grid Margin="0,8,0,0">
                                                                         <Grid.ColumnDefinitions>
@@ -398,22 +394,20 @@
                                                                         </Grid.ColumnDefinitions>
                                                                         <StackPanel Margin="0,0,8,0">
                                                                             <TextBlock Text="Seleccionar por categoría" FontWeight="SemiBold" />
-                                                                            <ComboBox Height="38">
-                                                                                <ComboBoxItem Content="Bebidas" />
-                                                                                <ComboBoxItem Content="Comidas" />
-                                                                                <ComboBoxItem Content="Postres" />
-                                                                            </ComboBox>
+                                                                            <ComboBox x:Name="DeskComboCategoryFilterComboBox" DisplayMemberPath="Name" SelectedValuePath="Id" Height="38" SelectionChanged="DeskComboCategoryFilterComboBox_SelectionChanged" />
                                                                         </StackPanel>
                                                                         <StackPanel Grid.Column="1">
                                                                             <TextBlock Text="Seleccionar productos" FontWeight="SemiBold" />
-                                                                            <ListBox Height="90" SelectionMode="Extended">
-                                                                                <ListBoxItem Content="COD-001 - Coca Cola 350ml" />
-                                                                                <ListBoxItem Content="COD-002 - Empanada de carne" />
-                                                                                <ListBoxItem Content="COD-003 - Agua sin gas" />
-                                                                            </ListBox>
+                                                                            <ListBox x:Name="DeskComboProductsListBox" Height="90" SelectionMode="Extended" />
                                                                         </StackPanel>
                                                                     </Grid>
                                                                 </StackPanel>
+
+                                                                <WrapPanel Margin="0,10,0,0">
+                                                                    <Button Content="💾 Guardar producto" Width="170" Style="{StaticResource PrimaryButton}" Click="SaveInventoryProductButton_Click" />
+                                                                    <Button Content="✏️ Editar producto" Width="160" Margin="8,10,0,0" Click="UpdateInventoryProductButton_Click" />
+                                                                    <Button Content="🗑 Eliminar producto" Width="170" Margin="8,10,0,0" Click="DeleteInventoryProductButton_Click" />
+                                                                </WrapPanel>
                                                             </StackPanel>
                                                         </ScrollViewer>
                                                     </TabItem>
@@ -424,13 +418,14 @@
                                                                        Foreground="#334155"
                                                                        TextWrapping="Wrap"
                                                                        Margin="0,0,0,10" />
-                                                            <DataGrid AutoGenerateColumns="False" IsReadOnly="True" CanUserAddRows="False" HeadersVisibility="Column" RowHeaderWidth="0" Height="170">
+                                                            <Button Content="🔄 Recargar productos" Width="180" Margin="0,0,0,8" Click="ReloadInventoryProductsButton_Click" />
+                                                            <DataGrid x:Name="DeskInventoryProductsDataGrid" AutoGenerateColumns="False" IsReadOnly="True" CanUserAddRows="False" HeadersVisibility="Column" RowHeaderWidth="0" Height="170" SelectionChanged="DeskInventoryProductsDataGrid_SelectionChanged">
                                                                 <DataGrid.Columns>
-                                                                    <DataGridTextColumn Header="Código" Binding="{Binding}" Width="*" />
-                                                                    <DataGridTextColumn Header="Nombre" Binding="{Binding}" Width="2*" />
-                                                                    <DataGridTextColumn Header="Categoría" Binding="{Binding}" Width="*" />
-                                                                    <DataGridTextColumn Header="Precio" Binding="{Binding}" Width="*" />
-                                                                    <DataGridTextColumn Header="Tipo" Binding="{Binding}" Width="*" />
+                                                                    <DataGridTextColumn Header="Código" Binding="{Binding Code}" Width="*" />
+                                                                    <DataGridTextColumn Header="Nombre" Binding="{Binding Name}" Width="2*" />
+                                                                    <DataGridTextColumn Header="Categoría" Binding="{Binding CategoryName}" Width="*" />
+                                                                    <DataGridTextColumn Header="Precio" Binding="{Binding PriceLabel}" Width="*" />
+                                                                    <DataGridTextColumn Header="Tipo" Binding="{Binding TypeLabel}" Width="*" />
                                                                 </DataGrid.Columns>
                                                             </DataGrid>
                                                         </StackPanel>
