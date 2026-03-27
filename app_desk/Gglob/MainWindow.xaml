@@ -315,8 +315,132 @@
                                                      Text="Filtros: sucursal/punto de venta, periodo (hoy/ayer/semana/mes/rango).&#x0a;Widgets: ventas por forma de pago + torta, ganancias, ventas por categoría, ventas por hora, producto, turno.&#x0a;Regla de acceso: solo plan pago con nube activa, vista inicial día actual y filtros dinámicos." />
                                         </TabItem>
                                         <TabItem Header="📦 Inventarios">
-                                            <TextBox x:Name="PosInventoryTextBox" Margin="0,8,0,0" Height="220" TextWrapping="Wrap" AcceptsReturn="True" VerticalScrollBarVisibility="Auto"
-                                                     Text="Nuevo producto, edición, eliminación, ajustes de inventario, KIT/COMBO, categorías, promociones, importación Excel, catálogo, bajo inventario y kardex.&#x0a;Reglas clave: productos sin inventario fijo (ilimitados), mínimos para alertas, combos descuentan componentes." />
+                                            <Grid Margin="0,8,0,0">
+                                                <Grid.RowDefinitions>
+                                                    <RowDefinition Height="Auto" />
+                                                    <RowDefinition Height="*" />
+                                                </Grid.RowDefinitions>
+
+                                                <Border Grid.Row="0" Background="#f8fbff" BorderBrush="#d9e4ff" BorderThickness="1" CornerRadius="8" Padding="10" Margin="0,0,0,10">
+                                                    <TextBlock Text="Pestaña visual POS &gt; Inventarios (app_desk): creación/modificación de productos, control de existencias y KIT/COMBO."
+                                                               Foreground="#334155"
+                                                               TextWrapping="Wrap" />
+                                                </Border>
+
+                                                <TabControl Grid.Row="1">
+                                                    <TabItem Header="Creación de producto">
+                                                        <ScrollViewer VerticalScrollBarVisibility="Auto">
+                                                            <StackPanel Margin="8">
+                                                                <UniformGrid Columns="2" Margin="0,0,0,8">
+                                                                    <StackPanel Margin="0,0,8,8">
+                                                                        <TextBlock Text="Código del producto" FontWeight="SemiBold" />
+                                                                        <TextBox Style="{StaticResource InputText}" />
+                                                                    </StackPanel>
+                                                                    <StackPanel Margin="0,0,0,8">
+                                                                        <TextBlock Text="Nombre del producto" FontWeight="SemiBold" />
+                                                                        <TextBox Style="{StaticResource InputText}" />
+                                                                    </StackPanel>
+                                                                    <StackPanel Margin="0,0,8,8">
+                                                                        <TextBlock Text="Categoría del producto" FontWeight="SemiBold" />
+                                                                        <ComboBox Height="38">
+                                                                            <ComboBoxItem Content="Bebidas" />
+                                                                            <ComboBoxItem Content="Comidas" />
+                                                                            <ComboBoxItem Content="Postres" />
+                                                                        </ComboBox>
+                                                                    </StackPanel>
+                                                                    <StackPanel Margin="0,0,0,8">
+                                                                        <TextBlock Text="Precio del producto" FontWeight="SemiBold" />
+                                                                        <TextBox Style="{StaticResource InputText}" />
+                                                                    </StackPanel>
+                                                                </UniformGrid>
+
+                                                                <CheckBox x:Name="DeskTracksInventoryCheck"
+                                                                          Content="El producto tiene inventario de existencias"
+                                                                          Margin="0,6,0,8"
+                                                                          IsChecked="True"
+                                                                          Checked="DeskTracksInventoryCheck_Changed"
+                                                                          Unchecked="DeskTracksInventoryCheck_Changed" />
+
+                                                                <Grid x:Name="DeskInventoryStockPanel" Margin="0,0,0,10">
+                                                                    <Grid.ColumnDefinitions>
+                                                                        <ColumnDefinition Width="*" />
+                                                                        <ColumnDefinition Width="*" />
+                                                                    </Grid.ColumnDefinitions>
+                                                                    <StackPanel Margin="0,0,8,0">
+                                                                        <TextBlock Text="Número de existencias en inventario" FontWeight="SemiBold" />
+                                                                        <TextBox Style="{StaticResource InputText}" />
+                                                                    </StackPanel>
+                                                                    <StackPanel Grid.Column="1">
+                                                                        <TextBlock Text="Existencias mínimas" FontWeight="SemiBold" />
+                                                                        <TextBox Style="{StaticResource InputText}" />
+                                                                        <TextBlock Text="Al llegar al mínimo se deben solicitar nuevas existencias al proveedor."
+                                                                                   Foreground="#6b7280"
+                                                                                   FontSize="12"
+                                                                                   TextWrapping="Wrap"
+                                                                                   Margin="0,4,0,0" />
+                                                                    </StackPanel>
+                                                                </Grid>
+
+                                                                <CheckBox x:Name="DeskIsComboCheck"
+                                                                          Content="Producto tipo KIT o COMBO"
+                                                                          Margin="0,0,0,8"
+                                                                          Checked="DeskIsComboCheck_Changed"
+                                                                          Unchecked="DeskIsComboCheck_Changed" />
+
+                                                                <StackPanel x:Name="DeskComboPanel" Visibility="Collapsed">
+                                                                    <TextBlock Text="Códigos de productos incluidos en el KIT/COMBO" FontWeight="SemiBold" />
+                                                                    <TextBox Style="{StaticResource InputText}" Height="66" TextWrapping="Wrap" AcceptsReturn="True" VerticalScrollBarVisibility="Auto" />
+
+                                                                    <Grid Margin="0,8,0,0">
+                                                                        <Grid.ColumnDefinitions>
+                                                                            <ColumnDefinition Width="*" />
+                                                                            <ColumnDefinition Width="*" />
+                                                                        </Grid.ColumnDefinitions>
+                                                                        <StackPanel Margin="0,0,8,0">
+                                                                            <TextBlock Text="Seleccionar por categoría" FontWeight="SemiBold" />
+                                                                            <ComboBox Height="38">
+                                                                                <ComboBoxItem Content="Bebidas" />
+                                                                                <ComboBoxItem Content="Comidas" />
+                                                                                <ComboBoxItem Content="Postres" />
+                                                                            </ComboBox>
+                                                                        </StackPanel>
+                                                                        <StackPanel Grid.Column="1">
+                                                                            <TextBlock Text="Seleccionar productos" FontWeight="SemiBold" />
+                                                                            <ListBox Height="90" SelectionMode="Extended">
+                                                                                <ListBoxItem Content="COD-001 - Coca Cola 350ml" />
+                                                                                <ListBoxItem Content="COD-002 - Empanada de carne" />
+                                                                                <ListBoxItem Content="COD-003 - Agua sin gas" />
+                                                                            </ListBox>
+                                                                        </StackPanel>
+                                                                    </Grid>
+                                                                </StackPanel>
+                                                            </StackPanel>
+                                                        </ScrollViewer>
+                                                    </TabItem>
+
+                                                    <TabItem Header="Modificación de productos">
+                                                        <StackPanel Margin="8">
+                                                            <TextBlock Text="Aquí el dueño puede modificar: nombre, código, categoría, precio, si es KIT/COMBO y si maneja existencias."
+                                                                       Foreground="#334155"
+                                                                       TextWrapping="Wrap"
+                                                                       Margin="0,0,0,10" />
+                                                            <DataGrid AutoGenerateColumns="False" IsReadOnly="True" CanUserAddRows="False" HeadersVisibility="Column" RowHeaderWidth="0" Height="170">
+                                                                <DataGrid.Columns>
+                                                                    <DataGridTextColumn Header="Código" Binding="{Binding}" Width="*" />
+                                                                    <DataGridTextColumn Header="Nombre" Binding="{Binding}" Width="2*" />
+                                                                    <DataGridTextColumn Header="Categoría" Binding="{Binding}" Width="*" />
+                                                                    <DataGridTextColumn Header="Precio" Binding="{Binding}" Width="*" />
+                                                                    <DataGridTextColumn Header="Tipo" Binding="{Binding}" Width="*" />
+                                                                </DataGrid.Columns>
+                                                            </DataGrid>
+                                                        </StackPanel>
+                                                    </TabItem>
+                                                </TabControl>
+
+                                                <TextBox x:Name="PosInventoryTextBox"
+                                                         Visibility="Collapsed"
+                                                         Text="Nuevo producto, edición, eliminación, ajustes de inventario, KIT/COMBO, categorías, promociones, importación Excel, catálogo, bajo inventario y kardex.&#x0a;Reglas clave: productos sin inventario fijo (ilimitados), mínimos para alertas, combos descuentan componentes." />
+                                            </Grid>
                                         </TabItem>
                                         <TabItem Header="⚙️ Configuración">
                                             <TextBox x:Name="PosSystemConfigTextBox" Margin="0,8,0,0" Height="230" TextWrapping="Wrap" AcceptsReturn="True" VerticalScrollBarVisibility="Auto"
