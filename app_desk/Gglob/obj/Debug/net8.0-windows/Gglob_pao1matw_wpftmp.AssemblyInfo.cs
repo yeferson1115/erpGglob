@@ -14,7 +14,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyCompanyAttribute("Gglob")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+9a7e4d0a3c46faad6c12443d2da4532c52c440d6")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+9ea2ce0cfe8fc0582cf369c83c05dc9233a90598")]
 [assembly: System.Reflection.AssemblyProductAttribute("Gglob")]
 [assembly: System.Reflection.AssemblyTitleAttribute("Gglob")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]
