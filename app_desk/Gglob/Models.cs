@@ -1,4 +1,5 @@
 using System.Globalization;
+using System.Text.Json;
 using System.Text.Json.Serialization;
 using System.Windows.Media;
 
@@ -354,10 +355,38 @@ namespace Gglob
         public bool IsCombo { get; set; }
 
         [JsonPropertyName("combo_product_codes")]
-        public List<string>? ComboProductCodes { get; set; }
+        public JsonElement ComboProductCodesRaw { get; set; }
+
+        private List<string> ParseComboProductCodes()
+        {
+            if (ComboProductCodesRaw.ValueKind == JsonValueKind.Array)
+            {
+                return ComboProductCodesRaw
+                    .EnumerateArray()
+                    .Select(code => code.GetString()?.Trim())
+                    .Where(code => !string.IsNullOrWhiteSpace(code))
+                    .Cast<string>()
+                    .Distinct(StringComparer.OrdinalIgnoreCase)
+                    .ToList();
+            }
+
+            if (ComboProductCodesRaw.ValueKind == JsonValueKind.String)
+            {
+                var raw = ComboProductCodesRaw.GetString() ?? string.Empty;
+                return raw
+                    .Split([',', ';', '\n', '\r'], StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+                    .Where(code => !string.IsNullOrWhiteSpace(code))
+                    .Distinct(StringComparer.OrdinalIgnoreCase)
+                    .ToList();
+            }
+
+            return [];
+        }
 
         public InventoryProductItem ToDesktopRecord()
         {
+            var comboCodes = ParseComboProductCodes();
+            var isComboResolved = IsCombo || comboCodes.Count > 0;
             return new InventoryProductItem(
                 Id ?? 0,
                 Code ?? string.Empty,
@@ -368,8 +397,8 @@ namespace Gglob
                 TracksInventory,
                 StockQuantity,
                 MinimumStock,
-                IsCombo,
-                ComboProductCodes ?? []);
+                isComboResolved,
+                comboCodes);
         }
     }
 

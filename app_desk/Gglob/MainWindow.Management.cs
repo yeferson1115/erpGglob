@@ -18,6 +18,8 @@ namespace Gglob
 {
     public partial class MainWindow
     {
+        private bool isSyncingComboSelection;
+
         private void OpenCategoriesButton_Click(object sender, RoutedEventArgs e)
         {
             SetSelectedModule("product_categories");
@@ -55,14 +57,15 @@ namespace Gglob
             await LoadInventoryProductsFromApi();
         }
 
-        private async void SaveInventoryProductButton_Click(object sender, RoutedEventArgs e)
+        private async void SubmitInventoryProductButton_Click(object sender, RoutedEventArgs e)
         {
-            await SaveOrUpdateInventoryProduct(false);
+            await SaveOrUpdateInventoryProduct(editingInventoryProductId.HasValue);
         }
 
-        private async void UpdateInventoryProductButton_Click(object sender, RoutedEventArgs e)
+        private void OpenCreateInventoryFormButton_Click(object sender, RoutedEventArgs e)
         {
-            await SaveOrUpdateInventoryProduct(true);
+            ResetInventoryForm();
+            ShowInventoryForm(true);
         }
 
         private async void DeleteInventoryProductButton_Click(object sender, RoutedEventArgs e)
@@ -73,8 +76,47 @@ namespace Gglob
                 return;
             }
 
+            var selected = inventoryProducts.FirstOrDefault(p => p.Id == editingInventoryProductId.Value);
+            if (selected is null)
+            {
+                ShowAlert("No se encontró el producto seleccionado.");
+                return;
+            }
+
+            await DeleteInventoryProductAsync(selected);
+        }
+
+        private void CancelInventoryEditButton_Click(object sender, RoutedEventArgs e)
+        {
+            ResetInventoryForm();
+            ShowInventoryForm(false);
+        }
+
+        private void EditInventoryRowButton_Click(object sender, RoutedEventArgs e)
+        {
+            if (sender is not Button { Tag: InventoryProductItem selected })
+            {
+                return;
+            }
+
+            PopulateInventoryForm(selected);
+            ShowInventoryForm(true);
+        }
+
+        private async void DeleteInventoryRowButton_Click(object sender, RoutedEventArgs e)
+        {
+            if (sender is not Button { Tag: InventoryProductItem selected })
+            {
+                return;
+            }
+
+            await DeleteInventoryProductAsync(selected);
+        }
+
+        private async Task DeleteInventoryProductAsync(InventoryProductItem selected)
+        {
             var confirm = MessageBox.Show(
-                "¿Seguro que deseas eliminar este producto?",
+                $"¿Seguro que deseas eliminar el producto '{selected.Name}'?",
                 "Confirmar eliminación",
                 MessageBoxButton.YesNo,
                 MessageBoxImage.Warning);
@@ -87,7 +129,7 @@ namespace Gglob
             try
             {
                 SetLoading(true);
-                using var response = await HttpClient.DeleteAsync($"{ApiBaseUrl}/inventory-products/{editingInventoryProductId.Value}");
+                using var response = await HttpClient.DeleteAsync($"{ApiBaseUrl}/inventory-products/{selected.Id}");
                 if (!response.IsSuccessStatusCode)
                 {
                     var body = await response.Content.ReadAsStringAsync();
@@ -96,7 +138,12 @@ namespace Gglob
                 }
 
                 await LoadInventoryProductsFromApi();
-                ResetInventoryForm();
+                if (editingInventoryProductId == selected.Id)
+                {
+                    ResetInventoryForm();
+                    ShowInventoryForm(false);
+                }
+
                 QrStatusTextBlock.Text = "Producto eliminado correctamente.";
                 QrStatusTextBlock.Foreground = Brushes.DarkGreen;
             }
@@ -110,14 +157,16 @@ namespace Gglob
             }
         }
 
-        private void DeskInventoryProductsDataGrid_SelectionChanged(object sender, SelectionChangedEventArgs e)
+        private void ShowInventoryForm(bool visible)
         {
-            if (DeskInventoryProductsDataGrid.SelectedItem is not InventoryProductItem selected)
-            {
-                return;
-            }
+            DeskInventoryFormCard.Visibility = visible ? Visibility.Visible : Visibility.Collapsed;
+        }
 
+        private void PopulateInventoryForm(InventoryProductItem selected)
+        {
             editingInventoryProductId = selected.Id;
+            DeskInventoryFormTitleTextBlock.Text = "Editar producto";
+            SaveInventoryProductButton.Content = "💾 Actualizar producto";
             DeskProductCodeTextBox.Text = selected.Code;
             DeskProductNameTextBox.Text = selected.Name;
             DeskProductPriceTextBox.Text = selected.Price.ToString("0.00", CultureInfo.InvariantCulture);
@@ -134,18 +183,70 @@ namespace Gglob
 
             DeskTracksInventoryCheck_Changed(this, new RoutedEventArgs());
             DeskIsComboCheck_Changed(this, new RoutedEventArgs());
+            ApplyComboFilter();
+            SyncComboSelectionFromCodes();
+        }
 
-            var selectedCodes = new HashSet<string>(selected.ComboProductCodes, StringComparer.OrdinalIgnoreCase);
-            DeskComboProductsListBox.SelectedItems.Clear();
-            foreach (var comboProduct in inventoryProductsForCombo.Where(p => selectedCodes.Contains(p.Code)))
+        private void DeskInventoryProductsDataGrid_SelectionChanged(object sender, SelectionChangedEventArgs e)
+        {
+            if (DeskInventoryProductsDataGrid.SelectedItem is not InventoryProductItem selected)
             {
-                DeskComboProductsListBox.SelectedItems.Add(comboProduct);
+                return;
             }
+
+            PopulateInventoryForm(selected);
+            ShowInventoryForm(true);
         }
 
         private void DeskComboCategoryFilterComboBox_SelectionChanged(object sender, SelectionChangedEventArgs e)
         {
             ApplyComboFilter();
+        }
+
+        private void DeskComboProductSearchTextBox_TextChanged(object sender, TextChangedEventArgs e)
+        {
+            ApplyComboFilter();
+        }
+
+        private void DeskComboCodesTextBox_TextChanged(object sender, TextChangedEventArgs e)
+        {
+            if (isSyncingComboSelection)
+            {
+                return;
+            }
+
+            SyncComboSelectionFromCodes();
+        }
+
+        private void AddSelectedComboProductsButton_Click(object sender, RoutedEventArgs e)
+        {
+            var selectedCodes = DeskComboProductsListBox.SelectedItems
+                .OfType<InventoryProductItem>()
+                .Select(product => product.Code.Trim())
+                .Where(code => !string.IsNullOrWhiteSpace(code))
+                .ToList();
+
+            if (selectedCodes.Count == 0)
+            {
+                return;
+            }
+
+            var mergedCodes = ParseComboCodesFromText()
+                .Concat(selectedCodes)
+                .Distinct(StringComparer.OrdinalIgnoreCase);
+
+            isSyncingComboSelection = true;
+            DeskComboCodesTextBox.Text = string.Join(", ", mergedCodes);
+            isSyncingComboSelection = false;
+            SyncComboSelectionFromCodes();
+        }
+
+        private void ClearComboSelectionButton_Click(object sender, RoutedEventArgs e)
+        {
+            isSyncingComboSelection = true;
+            DeskComboCodesTextBox.Text = string.Empty;
+            isSyncingComboSelection = false;
+            DeskComboProductsListBox.SelectedItems.Clear();
         }
 
         private async void SaveCategoryButton_Click(object sender, RoutedEventArgs e)
@@ -364,6 +465,7 @@ namespace Gglob
                 .OfType<InventoryProductItem>()
                 .Select(p => p.Id)
                 .ToList();
+            var normalizedComboCodes = string.Join(", ", ParseComboCodesFromText());
 
             var payload = JsonSerializer.Serialize(new
             {
@@ -375,7 +477,7 @@ namespace Gglob
                 stock_quantity = tracksInventory ? (int?)(ParseNullableInt(DeskStockQuantityTextBox.Text) ?? 0) : null,
                 minimum_stock = tracksInventory ? (int?)(ParseNullableInt(DeskMinimumStockTextBox.Text) ?? 0) : null,
                 is_combo = isCombo,
-                combo_product_codes = isCombo ? DeskComboCodesTextBox.Text.Trim() : string.Empty,
+                combo_product_codes = isCombo ? normalizedComboCodes : string.Empty,
                 combo_product_ids = isCombo ? selectedComboIds : new List<int>(),
             });
 
@@ -396,6 +498,7 @@ namespace Gglob
 
                 await LoadInventoryProductsFromApi();
                 ResetInventoryForm();
+                ShowInventoryForm(false);
                 QrStatusTextBlock.Text = isUpdate
                     ? "Producto actualizado correctamente."
                     : "Producto guardado correctamente.";
@@ -414,6 +517,8 @@ namespace Gglob
         private void ResetInventoryForm()
         {
             editingInventoryProductId = null;
+            DeskInventoryFormTitleTextBlock.Text = "Crear producto";
+            SaveInventoryProductButton.Content = "💾 Guardar producto";
             DeskProductCodeTextBox.Text = string.Empty;
             DeskProductNameTextBox.Text = string.Empty;
             DeskProductPriceTextBox.Text = "0.00";
@@ -424,6 +529,7 @@ namespace Gglob
             DeskIsComboCheck.IsChecked = false;
             DeskComboCodesTextBox.Text = string.Empty;
             DeskComboCategoryFilterComboBox.SelectedItem = null;
+            DeskComboProductSearchTextBox.Text = string.Empty;
             DeskComboProductsListBox.SelectedItems.Clear();
             DeskInventoryProductsDataGrid.SelectedItem = null;
             DeskTracksInventoryCheck_Changed(this, new RoutedEventArgs());
@@ -432,8 +538,14 @@ namespace Gglob
 
         private void ApplyComboFilter()
         {
+            if (DeskComboProductsListBox is null || DeskComboCategoryFilterComboBox is null || DeskComboProductSearchTextBox is null)
+            {
+                return;
+            }
+
             inventoryProductsForCombo.Clear();
             var selectedCategory = DeskComboCategoryFilterComboBox.SelectedValue as int?;
+            var search = DeskComboProductSearchTextBox.Text.Trim();
             foreach (var product in inventoryProducts)
             {
                 if (editingInventoryProductId.HasValue && product.Id == editingInventoryProductId.Value)
@@ -446,7 +558,45 @@ namespace Gglob
                     continue;
                 }
 
+                if (!string.IsNullOrWhiteSpace(search)
+                    && !product.Code.Contains(search, StringComparison.OrdinalIgnoreCase)
+                    && !product.Name.Contains(search, StringComparison.OrdinalIgnoreCase))
+                {
+                    continue;
+                }
+
                 inventoryProductsForCombo.Add(product);
+            }
+
+            SyncComboSelectionFromCodes();
+        }
+
+        private List<string> ParseComboCodesFromText()
+        {
+            if (DeskComboCodesTextBox is null)
+            {
+                return [];
+            }
+
+            return DeskComboCodesTextBox.Text
+                .Split([',', ';', '\n', '\r'], StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+                .Where(code => !string.IsNullOrWhiteSpace(code))
+                .Distinct(StringComparer.OrdinalIgnoreCase)
+                .ToList();
+        }
+
+        private void SyncComboSelectionFromCodes()
+        {
+            if (DeskComboProductsListBox is null)
+            {
+                return;
+            }
+
+            var selectedCodes = new HashSet<string>(ParseComboCodesFromText(), StringComparer.OrdinalIgnoreCase);
+            DeskComboProductsListBox.SelectedItems.Clear();
+            foreach (var comboProduct in inventoryProductsForCombo.Where(p => selectedCodes.Contains(p.Code)))
+            {
+                DeskComboProductsListBox.SelectedItems.Add(comboProduct);
             }
         }
 
