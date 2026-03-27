@@ -381,6 +381,7 @@ namespace Gglob
             CashRegistersPanel.Visibility = Visibility.Collapsed;
             CashiersManagementPanel.Visibility = Visibility.Collapsed;
             SalesPointsPanel.Visibility = Visibility.Collapsed;
+            PosBlueprintPanel.Visibility = Visibility.Collapsed;
 
             if (moduleKey == "gglob_pos")
             {
@@ -394,6 +395,14 @@ namespace Gglob
                 DefaultPanel.Visibility = Visibility.Collapsed;
                 ProductCategoriesPanel.Visibility = Visibility.Visible;
                 _ = LoadProductCategoriesFromApi();
+                return;
+            }
+
+            if (moduleKey == "gglob_pos_blueprint")
+            {
+                DefaultPanel.Visibility = Visibility.Collapsed;
+                PosBlueprintPanel.Visibility = Visibility.Visible;
+                _ = LoadPosBlueprintFromApi();
                 return;
             }
 
@@ -466,7 +475,7 @@ namespace Gglob
 
             var role = currentUser.BusinessRole?.Trim().ToLowerInvariant();
             var hideByRole = role is "cashier";
-            var hideByModule = moduleKey is "gglob_pay" or "gglob_pos" or "product_categories" or "cash_register_management" or "cashier_management" or "sales_point_management";
+            var hideByModule = moduleKey is "gglob_pay" or "gglob_pos" or "gglob_pos_blueprint" or "product_categories" or "cash_register_management" or "cashier_management" or "sales_point_management";
             AvailableModulesPanel.Visibility = (hideByRole || hideByModule) ? Visibility.Collapsed : Visibility.Visible;
         }
 

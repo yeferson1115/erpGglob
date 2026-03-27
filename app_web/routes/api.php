@@ -17,6 +17,7 @@ use App\Http\Controllers\API\AvaluoController;
 use App\Http\Controllers\API\InspeccionController;
 use App\Http\Controllers\API\GglobPayController;
 use App\Http\Controllers\API\ProductCategoryController;
+use App\Http\Controllers\API\PosBlueprintController;
 
 
 Route::post('/register', [AuthController::class, 'register']);
@@ -110,6 +111,8 @@ Route::middleware(['auth:api'])->group(function () {
     Route::post('gglob-pay/payments', [GglobPayController::class, 'storePayment']);
     Route::post('gglob-pay/payments/verify-pending-wompi', [GglobPayController::class, 'verifyPendingWompiPayments']);
     Route::get('gglob-pay/report', [GglobPayController::class, 'report']);
+    Route::get('pos-blueprint', [PosBlueprintController::class, 'show']);
+    Route::post('pos-blueprint', [PosBlueprintController::class, 'save']);
   
 });
 

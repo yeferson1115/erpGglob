@@ -279,10 +279,61 @@
                             <TextBlock Text="Accesos rápidos del punto de venta. Aquí podrán convivir más botones de operación." Foreground="#6b7280" Margin="0,4,0,14" TextWrapping="Wrap" />
                             <WrapPanel>
                                 <Button x:Name="OpenCategoriesButton" Content="🗂️ Categorías" Width="220" Height="56" Margin="0,0,12,12" Background="#f97316" Foreground="White" FontSize="16" FontWeight="Bold" BorderThickness="0" Click="OpenCategoriesButton_Click" />
+                                <Button x:Name="OpenPosBlueprintButton" Content="🧠 POS completo (visual)" Width="220" Height="56" Margin="0,0,12,12" Background="#0f766e" Foreground="White" FontSize="16" FontWeight="Bold" BorderThickness="0" Click="OpenPosBlueprintButton_Click" />
                                 <Button Content="🧺 Productos (próximamente)" Width="220" Height="56" Margin="0,0,12,12" IsEnabled="False" />
                                 <Button Content="🧾 Pedidos (próximamente)" Width="220" Height="56" Margin="0,0,12,12" IsEnabled="False" />
                             </WrapPanel>
                         </StackPanel>
+                    </Border>
+
+                    <Border x:Name="PosBlueprintPanel" Visibility="Collapsed" Background="White" CornerRadius="12" Padding="14" BorderBrush="#e2e8f3" BorderThickness="1">
+                        <Grid>
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto" />
+                                <RowDefinition Height="*" />
+                            </Grid.RowDefinitions>
+                            <DockPanel Margin="0,0,0,12">
+                                <StackPanel DockPanel.Dock="Left">
+                                    <TextBlock Text="🧠 Diseño visual POS (punto a punto)" FontSize="20" FontWeight="SemiBold" Foreground="#1f2937" />
+                                    <TextBlock Text="Aquí defines y guardas en app_web toda la estructura visual y funcional solicitada." Foreground="#6b7280" Margin="0,3,0,0" />
+                                </StackPanel>
+                                <WrapPanel DockPanel.Dock="Right" HorizontalAlignment="Right" VerticalAlignment="Center">
+                                    <Button Content="↩ Volver a POS" Margin="0,0,8,0" Click="BackToPosButton_Click" />
+                                    <Button Content="📥 Cargar" Margin="0,0,8,0" Click="LoadPosBlueprintButton_Click" />
+                                    <Button Content="💾 Guardar en app_web" Click="SavePosBlueprintButton_Click" />
+                                </WrapPanel>
+                            </DockPanel>
+
+                            <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto">
+                                <StackPanel>
+                                    <TextBlock Text="Análisis punto a punto (resumen ejecutivo)" FontWeight="SemiBold" />
+                                    <TextBox x:Name="PosAnalysisTextBox" Style="{StaticResource InputText}" Height="180" TextWrapping="Wrap" AcceptsReturn="True" VerticalScrollBarVisibility="Auto" />
+
+                                    <TabControl>
+                                        <TabItem Header="📊 Panel estadístico">
+                                            <TextBox x:Name="PosStatsPanelTextBox" Margin="0,8,0,0" Height="190" TextWrapping="Wrap" AcceptsReturn="True" VerticalScrollBarVisibility="Auto"
+                                                     Text="Filtros: sucursal/punto de venta, periodo (hoy/ayer/semana/mes/rango).&#x0a;Widgets: ventas por forma de pago + torta, ganancias, ventas por categoría, ventas por hora, producto, turno.&#x0a;Regla de acceso: solo plan pago con nube activa, vista inicial día actual y filtros dinámicos." />
+                                        </TabItem>
+                                        <TabItem Header="📦 Inventarios">
+                                            <TextBox x:Name="PosInventoryTextBox" Margin="0,8,0,0" Height="220" TextWrapping="Wrap" AcceptsReturn="True" VerticalScrollBarVisibility="Auto"
+                                                     Text="Nuevo producto, edición, eliminación, ajustes de inventario, KIT/COMBO, categorías, promociones, importación Excel, catálogo, bajo inventario y kardex.&#x0a;Reglas clave: productos sin inventario fijo (ilimitados), mínimos para alertas, combos descuentan componentes." />
+                                        </TabItem>
+                                        <TabItem Header="⚙️ Configuración">
+                                            <TextBox x:Name="PosSystemConfigTextBox" Margin="0,8,0,0" Height="230" TextWrapping="Wrap" AcceptsReturn="True" VerticalScrollBarVisibility="Auto"
+                                                     Text="Parámetros base, permisos por cajero, dispositivos, impresora, lector código barras, cajón, pagos, impuestos, corte, moneda, logo, básculas, compras/proveedores, nube, notificaciones, respaldos, actualizaciones y facturación electrónica." />
+                                        </TabItem>
+                                        <TabItem Header="🚚 Proveedores / Turnos / Alertas">
+                                            <TextBox x:Name="PosOpsTextBox" Margin="0,8,0,0" Height="210" TextWrapping="Wrap" AcceptsReturn="True" VerticalScrollBarVisibility="Auto"
+                                                     Text="Proveedores: recepción/pagos con lote-vencimiento y check de cambios en inventario.&#x0a;Turnos: biometría entrada/salida y consulta histórica por empleado.&#x0a;Alertas: SMS/correo por mínimos de inventario con frecuencia diaria/semanal/mensual." />
+                                        </TabItem>
+                                        <TabItem Header="✅ Checklist visual">
+                                            <TextBox x:Name="PosChecklistTextBox" Margin="0,8,0,0" Height="170" TextWrapping="Wrap" AcceptsReturn="True" VerticalScrollBarVisibility="Auto"
+                                                     Text="- Tabs principales creados&#x0a;- Formularios por módulo&#x0a;- Reglas de negocio documentadas&#x0a;- Persistencia app_web&#x0a;- Listo para siguientes iteraciones (gráficos, CRUD reales, biometría, SMS)." />
+                                        </TabItem>
+                                    </TabControl>
+                                </StackPanel>
+                            </ScrollViewer>
+                        </Grid>
                     </Border>
 
                     <Border x:Name="ProductCategoriesPanel" Visibility="Collapsed" Background="White" CornerRadius="12" Padding="14" BorderBrush="#e2e8f3" BorderThickness="1">
