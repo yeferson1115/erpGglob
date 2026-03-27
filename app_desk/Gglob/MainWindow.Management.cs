@@ -55,14 +55,15 @@ namespace Gglob
             await LoadInventoryProductsFromApi();
         }
 
-        private async void SaveInventoryProductButton_Click(object sender, RoutedEventArgs e)
+        private async void SubmitInventoryProductButton_Click(object sender, RoutedEventArgs e)
         {
-            await SaveOrUpdateInventoryProduct(false);
+            await SaveOrUpdateInventoryProduct(editingInventoryProductId.HasValue);
         }
 
-        private async void UpdateInventoryProductButton_Click(object sender, RoutedEventArgs e)
+        private void OpenCreateInventoryFormButton_Click(object sender, RoutedEventArgs e)
         {
-            await SaveOrUpdateInventoryProduct(true);
+            ResetInventoryForm();
+            ShowInventoryForm(true);
         }
 
         private async void DeleteInventoryProductButton_Click(object sender, RoutedEventArgs e)
@@ -73,8 +74,47 @@ namespace Gglob
                 return;
             }
 
+            var selected = inventoryProducts.FirstOrDefault(p => p.Id == editingInventoryProductId.Value);
+            if (selected is null)
+            {
+                ShowAlert("No se encontró el producto seleccionado.");
+                return;
+            }
+
+            await DeleteInventoryProductAsync(selected);
+        }
+
+        private void CancelInventoryEditButton_Click(object sender, RoutedEventArgs e)
+        {
+            ResetInventoryForm();
+            ShowInventoryForm(false);
+        }
+
+        private void EditInventoryRowButton_Click(object sender, RoutedEventArgs e)
+        {
+            if (sender is not Button { Tag: InventoryProductItem selected })
+            {
+                return;
+            }
+
+            PopulateInventoryForm(selected);
+            ShowInventoryForm(true);
+        }
+
+        private async void DeleteInventoryRowButton_Click(object sender, RoutedEventArgs e)
+        {
+            if (sender is not Button { Tag: InventoryProductItem selected })
+            {
+                return;
+            }
+
+            await DeleteInventoryProductAsync(selected);
+        }
+
+        private async Task DeleteInventoryProductAsync(InventoryProductItem selected)
+        {
             var confirm = MessageBox.Show(
-                "¿Seguro que deseas eliminar este producto?",
+                $"¿Seguro que deseas eliminar el producto '{selected.Name}'?",
                 "Confirmar eliminación",
                 MessageBoxButton.YesNo,
                 MessageBoxImage.Warning);
@@ -87,7 +127,7 @@ namespace Gglob
             try
             {
                 SetLoading(true);
-                using var response = await HttpClient.DeleteAsync($"{ApiBaseUrl}/inventory-products/{editingInventoryProductId.Value}");
+                using var response = await HttpClient.DeleteAsync($"{ApiBaseUrl}/inventory-products/{selected.Id}");
                 if (!response.IsSuccessStatusCode)
                 {
                     var body = await response.Content.ReadAsStringAsync();
@@ -96,7 +136,12 @@ namespace Gglob
                 }
 
                 await LoadInventoryProductsFromApi();
-                ResetInventoryForm();
+                if (editingInventoryProductId == selected.Id)
+                {
+                    ResetInventoryForm();
+                    ShowInventoryForm(false);
+                }
+
                 QrStatusTextBlock.Text = "Producto eliminado correctamente.";
                 QrStatusTextBlock.Foreground = Brushes.DarkGreen;
             }
@@ -110,14 +155,16 @@ namespace Gglob
             }
         }
 
-        private void DeskInventoryProductsDataGrid_SelectionChanged(object sender, SelectionChangedEventArgs e)
+        private void ShowInventoryForm(bool visible)
         {
-            if (DeskInventoryProductsDataGrid.SelectedItem is not InventoryProductItem selected)
-            {
-                return;
-            }
+            DeskInventoryFormCard.Visibility = visible ? Visibility.Visible : Visibility.Collapsed;
+        }
 
+        private void PopulateInventoryForm(InventoryProductItem selected)
+        {
             editingInventoryProductId = selected.Id;
+            DeskInventoryFormTitleTextBlock.Text = "Editar producto";
+            SaveInventoryProductButton.Content = "💾 Actualizar producto";
             DeskProductCodeTextBox.Text = selected.Code;
             DeskProductNameTextBox.Text = selected.Name;
             DeskProductPriceTextBox.Text = selected.Price.ToString("0.00", CultureInfo.InvariantCulture);
@@ -141,6 +188,17 @@ namespace Gglob
             {
                 DeskComboProductsListBox.SelectedItems.Add(comboProduct);
             }
+        }
+
+        private void DeskInventoryProductsDataGrid_SelectionChanged(object sender, SelectionChangedEventArgs e)
+        {
+            if (DeskInventoryProductsDataGrid.SelectedItem is not InventoryProductItem selected)
+            {
+                return;
+            }
+
+            PopulateInventoryForm(selected);
+            ShowInventoryForm(true);
         }
 
         private void DeskComboCategoryFilterComboBox_SelectionChanged(object sender, SelectionChangedEventArgs e)
@@ -396,6 +454,7 @@ namespace Gglob
 
                 await LoadInventoryProductsFromApi();
                 ResetInventoryForm();
+                ShowInventoryForm(false);
                 QrStatusTextBlock.Text = isUpdate
                     ? "Producto actualizado correctamente."
                     : "Producto guardado correctamente.";
@@ -414,6 +473,8 @@ namespace Gglob
         private void ResetInventoryForm()
         {
             editingInventoryProductId = null;
+            DeskInventoryFormTitleTextBlock.Text = "Crear producto";
+            SaveInventoryProductButton.Content = "💾 Guardar producto";
             DeskProductCodeTextBox.Text = string.Empty;
             DeskProductNameTextBox.Text = string.Empty;
             DeskProductPriceTextBox.Text = "0.00";
