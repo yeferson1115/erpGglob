@@ -43,6 +43,29 @@ namespace Gglob
         {
             InitializeComponent();
             InitializeGglobPayModule();
+            DeskTracksInventoryCheck_Changed(this, new RoutedEventArgs());
+            DeskIsComboCheck_Changed(this, new RoutedEventArgs());
+        }
+
+        private void DeskTracksInventoryCheck_Changed(object sender, RoutedEventArgs e)
+        {
+            if (DeskInventoryStockPanel is null || DeskTracksInventoryCheck is null)
+            {
+                return;
+            }
+
+            DeskInventoryStockPanel.IsEnabled = DeskTracksInventoryCheck.IsChecked == true;
+            DeskInventoryStockPanel.Opacity = DeskTracksInventoryCheck.IsChecked == true ? 1 : 0.55;
+        }
+
+        private void DeskIsComboCheck_Changed(object sender, RoutedEventArgs e)
+        {
+            if (DeskComboPanel is null || DeskIsComboCheck is null)
+            {
+                return;
+            }
+
+            DeskComboPanel.Visibility = DeskIsComboCheck.IsChecked == true ? Visibility.Visible : Visibility.Collapsed;
         }
 
         private void InitializeGglobPayModule()
