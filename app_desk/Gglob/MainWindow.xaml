@@ -87,6 +87,37 @@
             <Setter Property="Padding" Value="18,12" />
         </Style>
 
+        <Style x:Key="GglobPayPrimaryButton" TargetType="Button" BasedOn="{StaticResource PrimaryButton}">
+            <Setter Property="Padding" Value="22,16" />
+            <Setter Property="FontSize" Value="16" />
+            <Setter Property="FontWeight" Value="Bold" />
+            <Setter Property="MinHeight" Value="50" />
+        </Style>
+
+        <Style x:Key="ServiceMenuButtonStyle" TargetType="Button">
+            <Setter Property="Background" Value="#f3f6fc" />
+            <Setter Property="Foreground" Value="#1f2937" />
+            <Setter Property="FontSize" Value="13" />
+            <Setter Property="Padding" Value="12,8" />
+            <Setter Property="BorderBrush" Value="{StaticResource BorderBrushSoft}" />
+            <Setter Property="BorderThickness" Value="1" />
+            <Setter Property="Cursor" Value="Hand" />
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="ServiceMenuButtonChrome" Background="{TemplateBinding Background}" BorderBrush="{TemplateBinding BorderBrush}" BorderThickness="{TemplateBinding BorderThickness}" CornerRadius="10">
+                            <ContentPresenter HorizontalAlignment="Stretch" VerticalAlignment="Center" />
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="ServiceMenuButtonChrome" Property="Opacity" Value="0.95" />
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
         <Style x:Key="InputText" TargetType="TextBox">
             <Setter Property="Margin" Value="0,6,0,12" />
             <Setter Property="Padding" Value="12,9" />
@@ -184,11 +215,11 @@
 
         <Grid x:Name="DashboardRoot" Visibility="Collapsed">
             <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="290" />
+                <ColumnDefinition Width="235" />
                 <ColumnDefinition Width="*" />
             </Grid.ColumnDefinitions>
 
-            <Border Grid.Column="0" Margin="0,0,14,0" CornerRadius="14" Background="#264f9c" Padding="14">
+            <Border Grid.Column="0" Margin="0,0,14,0" CornerRadius="14" Background="#264f9c" Padding="12">
                 <DockPanel>
                     <Button DockPanel.Dock="Bottom" Style="{StaticResource PrimaryButton}" Content="🚪 Cerrar sesión" Padding="18,12" Click="LogoutButton_Click" />
                     <StackPanel>
@@ -568,7 +599,7 @@
                                     <TextBox x:Name="WompiPrivateKeyTextBox" Style="{StaticResource InputText}" />
                                     <TextBlock Text="Events secret" FontWeight="SemiBold" />
                                     <TextBox x:Name="WompiEventsSecretTextBox" Style="{StaticResource InputText}" />
-                                    <Button x:Name="SaveWompiSettingsButton" Content="Guardar llaves Wompi" Width="220" Style="{StaticResource PrimaryButtonSpacious}" Click="SaveWompiSettingsButton_Click" />
+                                    <Button x:Name="SaveWompiSettingsButton" Content="Guardar llaves Wompi" Width="240" Style="{StaticResource GglobPayPrimaryButton}" Click="SaveWompiSettingsButton_Click" />
                                 </StackPanel>
                                 <Border Grid.Column="1" Background="#f8fbff" CornerRadius="10" BorderThickness="1" BorderBrush="#d9e4ff" Padding="12">
                                     <StackPanel>
@@ -597,7 +628,7 @@
                                         <ComboBoxItem Content="Ahorros" IsSelected="True" />
                                         <ComboBoxItem Content="Corriente" />
                                     </ComboBox>
-                                    <Button x:Name="SaveBancolombiaDestinationButton" Content="Guardar cuenta destino Bancolombia" Width="280" Style="{StaticResource PrimaryButtonSpacious}" Click="SaveDestinationAccountButton_Click" />
+                                    <Button x:Name="SaveBancolombiaDestinationButton" Content="Guardar cuenta destino Bancolombia" Width="320" Style="{StaticResource GglobPayPrimaryButton}" Click="SaveDestinationAccountButton_Click" />
 
                                     <Separator Margin="0,10,0,10"/>
                                     <TextBlock Text="Configuración Bancolombia API (Solo Dueño)" FontWeight="SemiBold" Foreground="#1f2937" />
@@ -607,7 +638,7 @@
                                     <TextBox x:Name="BancolombiaClientIdTextBox" Style="{StaticResource InputText}" />
                                     <TextBlock Text="Client Secret" FontWeight="SemiBold" />
                                     <TextBox x:Name="BancolombiaClientSecretTextBox" Style="{StaticResource InputText}" />
-                                    <Button x:Name="SaveBancolombiaSettingsButton" Content="Guardar parámetros Bancolombia" Width="260" Style="{StaticResource PrimaryButtonSpacious}" Click="SaveBancolombiaSettingsButton_Click" />
+                                    <Button x:Name="SaveBancolombiaSettingsButton" Content="Guardar parámetros Bancolombia" Width="300" Style="{StaticResource GglobPayPrimaryButton}" Click="SaveBancolombiaSettingsButton_Click" />
                                 </StackPanel>
                                 <Border Grid.Column="1" Background="#f8fbff" CornerRadius="10" BorderThickness="1" BorderBrush="#d9e4ff" Padding="12">
                                     <StackPanel>
@@ -623,8 +654,8 @@
                         <TabItem Header="🔳 Generar QR">
                             <Grid Margin="10">
                                 <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="1.3*" />
-                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="0.85*" />
+                                    <ColumnDefinition Width="1.55*" />
                                 </Grid.ColumnDefinitions>
                                 <StackPanel Margin="0,0,12,0">
                                     <TextBlock Text="Cuenta para cobrar" FontWeight="SemiBold" />
@@ -633,19 +664,17 @@
                                     <TextBox x:Name="QrAmountTextBox" Style="{StaticResource InputText}" />
                                     <TextBlock Text="Cajero / Caja" FontWeight="SemiBold" />
                                     <ComboBox x:Name="QrCashierComboBox" Margin="0,6,0,12" Height="34" />
-                                    <Button Content="Generar QR Gglob Pay" Width="230" Style="{StaticResource PrimaryButtonSpacious}" Click="GenerateQrButton_Click" />
+                                    <Button Content="Generar QR Gglob Pay" Width="320" Style="{StaticResource GglobPayPrimaryButton}" Click="GenerateQrButton_Click" />
                                     <TextBlock x:Name="QrStatusTextBlock" Margin="0,12,0,0" Foreground="#065f46" TextWrapping="Wrap" />
                                 </StackPanel>
                                 <Border Grid.Column="1" Background="#f8fbff" CornerRadius="10" BorderThickness="1" BorderBrush="#d9e4ff" Padding="12">
                                     <StackPanel>
                                         <TextBlock Text="Código QR generado" FontWeight="SemiBold" FontSize="16" Foreground="#1f2937" />
-                                        <Border Margin="0,12,0,0" BorderBrush="#d1d5db" BorderThickness="1" CornerRadius="8" Padding="8" Background="White" HorizontalAlignment="Center">
-                                            <Image x:Name="QrImage" Width="190" Height="190" Stretch="Uniform" />
+                                        <Border Margin="0,12,0,0" BorderBrush="#d1d5db" BorderThickness="1" CornerRadius="8" Padding="12" Background="White" HorizontalAlignment="Center">
+                                            <Image x:Name="QrImage" Width="320" Height="320" Stretch="Uniform" />
                                         </Border>
-                                        <TextBlock Text="Checkout URL" Margin="0,10,0,0" FontWeight="SemiBold" Foreground="#1f2937" />
-                                        <TextBox x:Name="QrCheckoutUrlTextBox" Margin="0,6,0,0" Height="58" TextWrapping="Wrap" AcceptsReturn="True" IsReadOnly="True" VerticalScrollBarVisibility="Auto" />
-                                        <TextBox x:Name="QrPayloadTextBox" Margin="0,12,0,0" Height="170" TextWrapping="Wrap" AcceptsReturn="True" IsReadOnly="True" VerticalScrollBarVisibility="Auto" />
-                                        <TextBlock Text="El payload QR contiene referencia, valor y cuenta receptora para verificación inmediata contra el banco receptor." Margin="0,10,0,0" TextWrapping="Wrap" Foreground="#4b5563" />
+                                        <TextBox x:Name="QrCheckoutUrlTextBox" Visibility="Collapsed" Margin="0,6,0,0" Height="58" TextWrapping="Wrap" AcceptsReturn="True" IsReadOnly="True" VerticalScrollBarVisibility="Auto" />
+                                        <TextBox x:Name="QrPayloadTextBox" Visibility="Collapsed" Margin="0,12,0,0" Height="170" TextWrapping="Wrap" AcceptsReturn="True" IsReadOnly="True" VerticalScrollBarVisibility="Auto" />
                                     </StackPanel>
                                 </Border>
                             </Grid>

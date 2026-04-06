@@ -547,6 +547,7 @@ namespace Gglob
                         BorderBrush = Brushes.Transparent,
                         BorderThickness = new Thickness(0),
                         IsExpanded = false,
+                        HorizontalContentAlignment = HorizontalAlignment.Stretch,
                         Content = adminItemsPanel,
                         Header = new TextBlock
                         {
@@ -583,24 +584,31 @@ namespace Gglob
                     : new SolidColorBrush(Color.FromArgb(90, 255, 255, 255)),
                 BorderThickness = new Thickness(0),
                 Tag = service.Key,
-                Cursor = System.Windows.Input.Cursors.Hand
+                Cursor = System.Windows.Input.Cursors.Hand,
+                HorizontalContentAlignment = HorizontalAlignment.Stretch,
+                Style = (Style)FindResource("ServiceMenuButtonStyle")
             };
 
             button.Click += OnServiceMenuClick;
 
-            var panel = new StackPanel();
+            var panel = new StackPanel
+            {
+                HorizontalAlignment = HorizontalAlignment.Stretch
+            };
             panel.Children.Add(new TextBlock
             {
                 Text = service.Name,
                 Foreground = Brushes.White,
-                FontWeight = FontWeights.SemiBold
+                FontWeight = FontWeights.SemiBold,
+                TextAlignment = TextAlignment.Left
             });
             panel.Children.Add(new TextBlock
             {
                 Text = service.IsActive ? "Activo" : "Inactivo",
                 Foreground = Brushes.White,
                 Opacity = 0.9,
-                FontSize = 12
+                FontSize = 12,
+                TextAlignment = TextAlignment.Left
             });
 
             button.Content = panel;
