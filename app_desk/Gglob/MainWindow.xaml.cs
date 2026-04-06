@@ -554,7 +554,8 @@ namespace Gglob
                             Text = "Administración",
                             Foreground = Brushes.White,
                             FontWeight = FontWeights.SemiBold,
-                            Margin = new Thickness(10, 8, 10, 8)
+                            Margin = new Thickness(10, 8, 10, 8),
+                            TextAlignment = TextAlignment.Right
                         }
                     };
 
