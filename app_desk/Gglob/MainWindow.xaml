@@ -29,7 +29,7 @@
             <Setter Property="Foreground" Value="White" />
             <Setter Property="FontSize" Value="14" />
             <Setter Property="FontWeight" Value="SemiBold" />
-            <Setter Property="Padding" Value="14,10" />
+            <Setter Property="Padding" Value="16,12" />
             <Setter Property="Margin" Value="0,10,0,0" />
             <Setter Property="BorderThickness" Value="0" />
             <Setter Property="Cursor" Value="Hand" />
@@ -40,7 +40,10 @@
                             <Border.Effect>
                                 <DropShadowEffect BlurRadius="8" ShadowDepth="1" Opacity="0.2" Color="#1e3a8a" />
                             </Border.Effect>
-                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center" Margin="2,0" />
+                            <ContentPresenter
+                                Margin="{TemplateBinding Padding}"
+                                HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}"
+                                VerticalAlignment="{TemplateBinding VerticalContentAlignment}" />
                         </Border>
                         <ControlTemplate.Triggers>
                             <Trigger Property="IsMouseOver" Value="True">
@@ -63,6 +66,8 @@
             <Setter Property="Foreground" Value="#1f2937" />
             <Setter Property="FontSize" Value="13" />
             <Setter Property="Padding" Value="12,8" />
+            <Setter Property="HorizontalContentAlignment" Value="Center" />
+            <Setter Property="VerticalContentAlignment" Value="Center" />
             <Setter Property="BorderBrush" Value="{StaticResource BorderBrushSoft}" />
             <Setter Property="BorderThickness" Value="1" />
             <Setter Property="Cursor" Value="Hand" />
@@ -70,7 +75,10 @@
                 <Setter.Value>
                     <ControlTemplate TargetType="Button">
                         <Border x:Name="SecondaryButtonChrome" Background="{TemplateBinding Background}" BorderBrush="{TemplateBinding BorderBrush}" BorderThickness="{TemplateBinding BorderThickness}" CornerRadius="10">
-                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center" />
+                            <ContentPresenter
+                                Margin="{TemplateBinding Padding}"
+                                HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}"
+                                VerticalAlignment="{TemplateBinding VerticalContentAlignment}" />
                         </Border>
                         <ControlTemplate.Triggers>
                             <Trigger Property="IsMouseOver" Value="True">
@@ -85,6 +93,11 @@
 
         <Style x:Key="PrimaryButtonSpacious" TargetType="Button" BasedOn="{StaticResource PrimaryButton}">
             <Setter Property="Padding" Value="18,12" />
+        </Style>
+        
+        <Style x:Key="GglobPayPrimaryButton" TargetType="Button" BasedOn="{StaticResource PrimaryButtonSpacious}">
+            <Setter Property="FontSize" Value="16" />
+            <Setter Property="Padding" Value="22,16" />
         </Style>
 
         <Style x:Key="InputText" TargetType="TextBox">
@@ -568,7 +581,7 @@
                                     <TextBox x:Name="WompiPrivateKeyTextBox" Style="{StaticResource InputText}" />
                                     <TextBlock Text="Events secret" FontWeight="SemiBold" />
                                     <TextBox x:Name="WompiEventsSecretTextBox" Style="{StaticResource InputText}" />
-                                    <Button x:Name="SaveWompiSettingsButton" Content="Guardar llaves Wompi" Width="220" Padding="18,14" Style="{StaticResource PrimaryButtonSpacious}" Click="SaveWompiSettingsButton_Click" />
+                                    <Button x:Name="SaveWompiSettingsButton" Content="Guardar llaves Wompi" Width="220" Style="{StaticResource GglobPayPrimaryButton}" Click="SaveWompiSettingsButton_Click" />
                                 </StackPanel>
                                 <Border Grid.Column="1" Background="#f8fbff" CornerRadius="10" BorderThickness="1" BorderBrush="#d9e4ff" Padding="12">
                                     <StackPanel>
@@ -597,7 +610,7 @@
                                         <ComboBoxItem Content="Ahorros" IsSelected="True" />
                                         <ComboBoxItem Content="Corriente" />
                                     </ComboBox>
-                                    <Button x:Name="SaveBancolombiaDestinationButton" Content="Guardar cuenta destino Bancolombia" Width="280" Padding="18,14" Style="{StaticResource PrimaryButtonSpacious}" Click="SaveDestinationAccountButton_Click" />
+                                    <Button x:Name="SaveBancolombiaDestinationButton" Content="Guardar cuenta destino Bancolombia" Width="280" Style="{StaticResource GglobPayPrimaryButton}" Click="SaveDestinationAccountButton_Click" />
 
                                     <Separator Margin="0,10,0,10"/>
                                     <TextBlock Text="Configuración Bancolombia API (Solo Dueño)" FontWeight="SemiBold" Foreground="#1f2937" />
@@ -607,7 +620,7 @@
                                     <TextBox x:Name="BancolombiaClientIdTextBox" Style="{StaticResource InputText}" />
                                     <TextBlock Text="Client Secret" FontWeight="SemiBold" />
                                     <TextBox x:Name="BancolombiaClientSecretTextBox" Style="{StaticResource InputText}" />
-                                    <Button x:Name="SaveBancolombiaSettingsButton" Content="Guardar parámetros Bancolombia" Width="260" Padding="18,14" Style="{StaticResource PrimaryButtonSpacious}" Click="SaveBancolombiaSettingsButton_Click" />
+                                    <Button x:Name="SaveBancolombiaSettingsButton" Content="Guardar parámetros Bancolombia" Width="260" Style="{StaticResource GglobPayPrimaryButton}" Click="SaveBancolombiaSettingsButton_Click" />
                                 </StackPanel>
                                 <Border Grid.Column="1" Background="#f8fbff" CornerRadius="10" BorderThickness="1" BorderBrush="#d9e4ff" Padding="12">
                                     <StackPanel>
@@ -633,7 +646,7 @@
                                     <TextBox x:Name="QrAmountTextBox" Style="{StaticResource InputText}" />
                                     <TextBlock Text="Cajero / Caja" FontWeight="SemiBold" />
                                     <ComboBox x:Name="QrCashierComboBox" Margin="0,6,0,12" Height="34" />
-                                    <Button Content="Generar QR Gglob Pay" Width="230" Padding="18,14" Style="{StaticResource PrimaryButtonSpacious}" Click="GenerateQrButton_Click" />
+                                    <Button Content="Generar QR Gglob Pay" Width="230" Style="{StaticResource GglobPayPrimaryButton}" Click="GenerateQrButton_Click" />
                                     <TextBlock x:Name="QrStatusTextBlock" Margin="0,12,0,0" Foreground="#065f46" TextWrapping="Wrap" />
                                 </StackPanel>
                                 <Border Grid.Column="1" Background="#f8fbff" CornerRadius="10" BorderThickness="1" BorderBrush="#d9e4ff" Padding="12">

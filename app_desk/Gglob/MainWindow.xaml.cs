@@ -536,7 +536,7 @@ namespace Gglob
                     foreach (var service in adminServices)
                     {
                         var childButton = CreateServiceMenuButton(service);
-                        childButton.Margin = new Thickness(12, 0, 0, 8);
+                        childButton.Margin = new Thickness(0, 0, 0, 8);
                         adminItemsPanel.Children.Add(childButton);
                     }
 
@@ -555,7 +555,7 @@ namespace Gglob
                             Foreground = Brushes.White,
                             FontWeight = FontWeights.SemiBold,
                             Margin = new Thickness(10, 8, 10, 8),
-                            TextAlignment = TextAlignment.Right
+                            TextAlignment = TextAlignment.Left
                         }
                     };
 
@@ -578,7 +578,7 @@ namespace Gglob
         {
             var button = new Button
             {
-                Padding = new Thickness(10, 8, 10, 8),
+                Padding = new Thickness(14, 8, 10, 8),
                 Margin = new Thickness(0, 0, 0, 8),
                 Background = service.IsActive
                     ? new SolidColorBrush(Color.FromRgb(76, 116, 196))
@@ -586,7 +586,8 @@ namespace Gglob
                 BorderThickness = new Thickness(0),
                 Tag = service.Key,
                 Cursor = System.Windows.Input.Cursors.Hand,
-                HorizontalContentAlignment = HorizontalAlignment.Stretch
+                HorizontalContentAlignment = HorizontalAlignment.Left,
+                VerticalContentAlignment = VerticalAlignment.Center
             };
 
             button.Click += OnServiceMenuClick;
@@ -600,7 +601,7 @@ namespace Gglob
                 Text = service.Name,
                 Foreground = Brushes.White,
                 FontWeight = FontWeights.SemiBold,
-                TextAlignment = TextAlignment.Right
+                TextAlignment = TextAlignment.Left
             });
             panel.Children.Add(new TextBlock
             {
@@ -608,7 +609,7 @@ namespace Gglob
                 Foreground = Brushes.White,
                 Opacity = 0.9,
                 FontSize = 12,
-                TextAlignment = TextAlignment.Right
+                TextAlignment = TextAlignment.Left
             });
 
             button.Content = panel;
