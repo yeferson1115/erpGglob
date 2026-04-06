@@ -578,7 +578,7 @@ namespace Gglob
         {
             var button = new Button
             {
-                Padding = new Thickness(10, 8, 10, 8),
+                Padding = new Thickness(14, 8, 10, 8),
                 Margin = new Thickness(0, 0, 0, 8),
                 Background = service.IsActive
                     ? new SolidColorBrush(Color.FromRgb(76, 116, 196))
@@ -586,7 +586,8 @@ namespace Gglob
                 BorderThickness = new Thickness(0),
                 Tag = service.Key,
                 Cursor = System.Windows.Input.Cursors.Hand,
-                HorizontalContentAlignment = HorizontalAlignment.Stretch
+                HorizontalContentAlignment = HorizontalAlignment.Left,
+                VerticalContentAlignment = VerticalAlignment.Center
             };
 
             button.Click += OnServiceMenuClick;

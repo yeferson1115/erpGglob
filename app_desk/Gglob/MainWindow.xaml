@@ -29,7 +29,7 @@
             <Setter Property="Foreground" Value="White" />
             <Setter Property="FontSize" Value="14" />
             <Setter Property="FontWeight" Value="SemiBold" />
-            <Setter Property="Padding" Value="14,10" />
+            <Setter Property="Padding" Value="16,12" />
             <Setter Property="Margin" Value="0,10,0,0" />
             <Setter Property="BorderThickness" Value="0" />
             <Setter Property="Cursor" Value="Hand" />
@@ -40,7 +40,10 @@
                             <Border.Effect>
                                 <DropShadowEffect BlurRadius="8" ShadowDepth="1" Opacity="0.2" Color="#1e3a8a" />
                             </Border.Effect>
-                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center" Margin="2,0" />
+                            <ContentPresenter
+                                Margin="{TemplateBinding Padding}"
+                                HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}"
+                                VerticalAlignment="{TemplateBinding VerticalContentAlignment}" />
                         </Border>
                         <ControlTemplate.Triggers>
                             <Trigger Property="IsMouseOver" Value="True">
@@ -63,6 +66,8 @@
             <Setter Property="Foreground" Value="#1f2937" />
             <Setter Property="FontSize" Value="13" />
             <Setter Property="Padding" Value="12,8" />
+            <Setter Property="HorizontalContentAlignment" Value="Center" />
+            <Setter Property="VerticalContentAlignment" Value="Center" />
             <Setter Property="BorderBrush" Value="{StaticResource BorderBrushSoft}" />
             <Setter Property="BorderThickness" Value="1" />
             <Setter Property="Cursor" Value="Hand" />
@@ -70,7 +75,10 @@
                 <Setter.Value>
                     <ControlTemplate TargetType="Button">
                         <Border x:Name="SecondaryButtonChrome" Background="{TemplateBinding Background}" BorderBrush="{TemplateBinding BorderBrush}" BorderThickness="{TemplateBinding BorderThickness}" CornerRadius="10">
-                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center" />
+                            <ContentPresenter
+                                Margin="{TemplateBinding Padding}"
+                                HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}"
+                                VerticalAlignment="{TemplateBinding VerticalContentAlignment}" />
                         </Border>
                         <ControlTemplate.Triggers>
                             <Trigger Property="IsMouseOver" Value="True">
@@ -89,7 +97,7 @@
         
         <Style x:Key="GglobPayPrimaryButton" TargetType="Button" BasedOn="{StaticResource PrimaryButtonSpacious}">
             <Setter Property="FontSize" Value="16" />
-            <Setter Property="Padding" Value="20,14" />
+            <Setter Property="Padding" Value="22,16" />
         </Style>
 
         <Style x:Key="InputText" TargetType="TextBox">
