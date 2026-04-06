@@ -536,7 +536,7 @@ namespace Gglob
                     foreach (var service in adminServices)
                     {
                         var childButton = CreateServiceMenuButton(service);
-                        childButton.Margin = new Thickness(12, 0, 0, 8);
+                        childButton.Margin = new Thickness(0, 0, 0, 8);
                         adminItemsPanel.Children.Add(childButton);
                     }
 
@@ -555,7 +555,7 @@ namespace Gglob
                             Foreground = Brushes.White,
                             FontWeight = FontWeights.SemiBold,
                             Margin = new Thickness(10, 8, 10, 8),
-                            TextAlignment = TextAlignment.Right
+                            TextAlignment = TextAlignment.Left
                         }
                     };
 
@@ -600,7 +600,7 @@ namespace Gglob
                 Text = service.Name,
                 Foreground = Brushes.White,
                 FontWeight = FontWeights.SemiBold,
-                TextAlignment = TextAlignment.Right
+                TextAlignment = TextAlignment.Left
             });
             panel.Children.Add(new TextBlock
             {
@@ -608,7 +608,7 @@ namespace Gglob
                 Foreground = Brushes.White,
                 Opacity = 0.9,
                 FontSize = 12,
-                TextAlignment = TextAlignment.Right
+                TextAlignment = TextAlignment.Left
             });
 
             button.Content = panel;
