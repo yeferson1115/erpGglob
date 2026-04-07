@@ -98,10 +98,13 @@ namespace Gglob
 
             var query = PosProductSearchTextBox.Text.Trim();
             var selectedPointId = (PosSalesPointComboBox.SelectedItem as SalesPointOption)?.Id;
-            var selectedCategoryId = PosProductCategoryFilterComboBox.SelectedValue as int?;
+            var selectedCategoryIdRaw = PosProductCategoryFilterComboBox.SelectedValue as int?;
+            var selectedCategoryId = selectedCategoryIdRaw.HasValue && selectedCategoryIdRaw.Value > 0
+                ? selectedCategoryIdRaw
+                : null;
             var matches = inventoryProducts
                 .Where(product =>
-                    (!selectedPointId.HasValue || product.SalesPointIds.Count == 0 || product.SalesPointIds.Contains(selectedPointId.Value)) &&
+                    (!selectedPointId.HasValue || product.SalesPointIds.Contains(selectedPointId.Value)) &&
                     (!selectedCategoryId.HasValue || product.ProductCategoryId == selectedCategoryId.Value) &&
                     (string.IsNullOrWhiteSpace(query)
                         || product.Name.Contains(query, StringComparison.OrdinalIgnoreCase)
@@ -126,7 +129,6 @@ namespace Gglob
 
             var allowedCategories = productCategories
                 .Where(category => selectedPointId is null
-                    || category.SalesPointIds.Count == 0
                     || category.SalesPointIds.Contains(selectedPointId.Value))
                 .OrderBy(category => category.Name, StringComparer.OrdinalIgnoreCase)
                 .ToList();
