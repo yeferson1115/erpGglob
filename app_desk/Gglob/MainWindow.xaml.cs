@@ -209,7 +209,7 @@ namespace Gglob
             }
             catch (Exception ex)
             {
-                ShowStatus($"Sin conexión con app_web. Se intentará acceso offline. Detalle: {ex.Message}", isError: false, isWarning: true);
+                ShowStatus($"Sin conexión con. Se intentará acceso offline. Detalle: {ex.Message}", isError: false, isWarning: true);
                 return false;
             }
         }

@@ -308,12 +308,12 @@
                             <DockPanel Margin="0,0,0,12">
                                 <StackPanel DockPanel.Dock="Left">
                                     <TextBlock Text="🧠 Diseño visual POS (punto a punto)" FontSize="20" FontWeight="SemiBold" Foreground="#1f2937" />
-                                    <TextBlock Text="Aquí defines y guardas en app_web toda la estructura visual y funcional solicitada." Foreground="#6b7280" Margin="0,3,0,0" />
+                                    <TextBlock Text="Aquí defines y guardas toda la estructura visual y funcional solicitada." Foreground="#6b7280" Margin="0,3,0,0" />
                                 </StackPanel>
                                 <WrapPanel DockPanel.Dock="Right" HorizontalAlignment="Right" VerticalAlignment="Center">
                                     <Button Content="↩ Volver a POS" Margin="0,0,8,0" Click="BackToPosButton_Click" />
                                     <Button Content="📥 Cargar" Margin="0,0,8,0" Click="LoadPosBlueprintButton_Click" />
-                                    <Button Content="💾 Guardar en app_web" Click="SavePosBlueprintButton_Click" />
+                                    <Button Content="💾 Guardar" Click="SavePosBlueprintButton_Click" />
                                 </WrapPanel>
                             </DockPanel>
 

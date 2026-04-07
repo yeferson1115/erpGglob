@@ -348,7 +348,7 @@ namespace Gglob
                 using var response = await HttpClient.DeleteAsync($"{ApiBaseUrl}/product-categories/{selected.Id}");
                 if (!response.IsSuccessStatusCode)
                 {
-                    ShowAlert("No se pudo eliminar la categoría en app_web.");
+                    ShowAlert("No se pudo eliminar la categoría.");
                     return;
                 }
 
@@ -643,7 +643,7 @@ namespace Gglob
                 PosOpsTextBox.Text = payload.GetValueOrDefault("ops", PosOpsTextBox.Text);
                 PosChecklistTextBox.Text = payload.GetValueOrDefault("checklist", PosChecklistTextBox.Text);
 
-                QrStatusTextBlock.Text = "Diseño POS cargado desde app_web.";
+                QrStatusTextBlock.Text = "Diseño POS cargado desde.";
                 QrStatusTextBlock.Foreground = Brushes.DarkGreen;
             }
             catch (Exception ex)
@@ -677,12 +677,12 @@ namespace Gglob
                 using var response = await HttpClient.PostAsync($"{ApiBaseUrl}/pos-blueprint", content);
                 if (!response.IsSuccessStatusCode)
                 {
-                    QrStatusTextBlock.Text = "No fue posible guardar el diseño POS en app_web.";
+                    QrStatusTextBlock.Text = "No fue posible guardar el diseño POS.";
                     QrStatusTextBlock.Foreground = Brushes.DarkRed;
                     return;
                 }
 
-                QrStatusTextBlock.Text = "Diseño POS guardado correctamente en app_web.";
+                QrStatusTextBlock.Text = "Diseño POS guardado correctamente.";
                 QrStatusTextBlock.Foreground = Brushes.DarkGreen;
             }
             catch (Exception ex)
@@ -746,7 +746,7 @@ namespace Gglob
             SetLoading(false);
             if (account is null)
             {
-                QrStatusTextBlock.Text = "No se pudo guardar la cuenta en app_web.";
+                QrStatusTextBlock.Text = "No se pudo guardar la cuenta.";
                 QrStatusTextBlock.Foreground = Brushes.DarkRed;
                 ShowAlert(QrStatusTextBlock.Text);
                 return;
@@ -1856,7 +1856,7 @@ namespace Gglob
             if (stored is null)
             {
                 QrStatusTextBlock.Foreground = Brushes.DarkOrange;
-                QrStatusTextBlock.Text += " No se pudo guardar en app_web, revisa la conexión.";
+                QrStatusTextBlock.Text += " No se pudo guardar, revisa la conexión.";
                 ShowAlert(QrStatusTextBlock.Text);
                 return;
             }
@@ -1864,7 +1864,7 @@ namespace Gglob
             verifiedPayments.Insert(0, stored);
             ApplyVerifiedFilterLocal();
             GenerateReportLocal();
-            ShowAlert("QR generado y pago guardado en app_web correctamente.");
+            ShowAlert("QR generado y pago guardado correctamente.");
         }
 
         private static string? ExtractCheckoutUrl(object? qrPayload)
