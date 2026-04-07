@@ -14,7 +14,6 @@ using System.Windows.Media;
 using System.Windows.Media.Imaging;
 using ClosedXML.Excel;
 using Microsoft.Win32;
-using QRCoder;
 
 namespace Gglob
 {
