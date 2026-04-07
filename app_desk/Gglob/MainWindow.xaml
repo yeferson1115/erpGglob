@@ -325,11 +325,11 @@
                                                     <ComboBoxItem Content="Huella dactilar" />
                                                 </ComboBox>
 
-                                                <TextBlock Text="Evidencia (ID / referencia local)" FontWeight="SemiBold" />
+                                                <TextBlock Text="Evidencia (se completa automáticamente)" FontWeight="SemiBold" />
                                                 <TextBox x:Name="ShiftBiometricEvidenceTextBox" Style="{StaticResource InputText}" />
-                                                <TextBlock Text="Foto biométrica (ruta o nombre del archivo capturado)" FontWeight="SemiBold" />
+                                                <TextBlock Text="Archivo biométrico (auto generado al abrir/cerrar turno)" FontWeight="SemiBold" />
                                                 <TextBox x:Name="ShiftBiometricPhotoPathTextBox" Style="{StaticResource InputText}" />
-                                                <Button Content="📷 Activar cámara del dispositivo" Margin="0,0,0,8" Click="LaunchBiometricCameraButton_Click" />
+                                                <Button Content="📷 Probar cámara automática" Margin="0,0,0,8" Click="LaunchBiometricCameraButton_Click" />
 
                                                 <TextBlock Text="Fondo de caja apertura (opcional)" FontWeight="SemiBold" />
                                                 <TextBox x:Name="ShiftOpeningFundTextBox" Style="{StaticResource InputText}" />
