@@ -374,9 +374,9 @@
                                     <WrapPanel DockPanel.Dock="Right" HorizontalAlignment="Right" VerticalAlignment="Center">
                                         <Button Content="↩ Volver a POS" Margin="0,0,8,0" Click="BackToPosButton_Click" />
                                         <Button Content="🔄 Recargar" Margin="0,0,8,0" Click="ReloadInventoryProductsButton_Click" />
-                                        <Button Content="📥 Carga masiva Excel" Margin="0,0,8,0" Click="BulkImportInventoryProductsButton_Click" />
+                                        <Button x:Name="BulkImportInventoryProductsButton" Content="📥 Carga masiva Excel" Margin="0,0,8,0" Click="BulkImportInventoryProductsButton_Click" />
                                         <Button Content="🗂️ Categorías" Margin="0,0,8,0" Click="OpenCategoriesButton_Click" />
-                                        <Button Content="➕ Crear producto" Style="{StaticResource PrimaryButton}" Width="180" Margin="0" Click="OpenCreateInventoryFormButton_Click" />
+                                        <Button x:Name="CreateInventoryProductButton" Content="➕ Crear producto" Style="{StaticResource PrimaryButton}" Width="180" Margin="0" Click="OpenCreateInventoryFormButton_Click" />
                                     </WrapPanel>
                                 </DockPanel>
 
@@ -388,7 +388,7 @@
                                             <DataGridTextColumn Header="Categoría" Binding="{Binding CategoryName}" Width="*" />
                                             <DataGridTextColumn Header="Precio" Binding="{Binding PriceLabel}" Width="*" />
                                             <DataGridTextColumn Header="Tipo" Binding="{Binding TypeLabel}" Width="*" />
-                                            <DataGridTemplateColumn Header="Acciones" Width="190">
+                                            <DataGridTemplateColumn x:Name="InventoryActionsColumn" Header="Acciones" Width="190">
                                                 <DataGridTemplateColumn.CellTemplate>
                                                     <DataTemplate>
                                                         <WrapPanel>
@@ -494,7 +494,7 @@
 
                                     <WrapPanel Margin="0,12,0,0">
                                         <Button x:Name="SaveInventoryProductButton" Content="💾 Guardar producto" Width="170" Style="{StaticResource PrimaryButton}" Margin="0" Click="SubmitInventoryProductButton_Click" />
-                                        <Button Content="Cancelar" Width="120" Margin="8,0,0,0" Click="CancelInventoryEditButton_Click" />
+                                        <Button x:Name="CancelInventoryEditButton" Content="Cancelar" Width="120" Margin="8,0,0,0" Click="CancelInventoryEditButton_Click" />
                                     </WrapPanel>
                                     </StackPanel>
                                 </Border>
@@ -549,7 +549,7 @@
                                         <DataGridTextColumn Header="Nombre" Binding="{Binding Name}" Width="2*" />
                                         <DataGridTextColumn Header="Descripción" Binding="{Binding Description}" Width="3*" />
                                         <DataGridTextColumn Header="Estado" Binding="{Binding StatusLabel}" Width="*" />
-                                        <DataGridTemplateColumn Header="Acciones" Width="2*">
+                                        <DataGridTemplateColumn x:Name="CategoryActionsColumn" Header="Acciones" Width="2*">
                                             <DataGridTemplateColumn.CellTemplate>
                                                 <DataTemplate>
                                                     <StackPanel Orientation="Horizontal">
