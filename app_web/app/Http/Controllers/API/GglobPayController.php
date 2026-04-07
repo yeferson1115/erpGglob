@@ -748,12 +748,10 @@ class GglobPayController extends Controller
             $amountInCents = (int) round(((float) $validated['amount']) * 100);
             $signature = hash('sha256', $referenceCode . $amountInCents . 'COP' . $setting['integrity_key']);
 
-            $checkoutQuery = http_build_query([
-                'currency' => 'COP',
-                'reference' => $referenceCode,
-                'amount-in-cents' => $amountInCents,
-                'signature:integrity' => $signature,
-            ], '', '&', PHP_QUERY_RFC3986);
+            $checkoutQuery = 'currency=COP'
+                . '&reference=' . rawurlencode($referenceCode)
+                . '&amount-in-cents=' . $amountInCents
+                . '&signature:integrity=' . $signature;
 
             $checkoutUrl = "https://checkout.wompi.co/l/{$setting['public_key']}?{$checkoutQuery}";
 
