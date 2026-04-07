@@ -581,6 +581,8 @@
                                     <TextBox x:Name="WompiPrivateKeyTextBox" Style="{StaticResource InputText}" />
                                     <TextBlock Text="Events secret" FontWeight="SemiBold" />
                                     <TextBox x:Name="WompiEventsSecretTextBox" Style="{StaticResource InputText}" />
+                                    <TextBlock Text="Integrity key" FontWeight="SemiBold" />
+                                    <TextBox x:Name="WompiIntegrityKeyTextBox" Style="{StaticResource InputText}" />
                                     <Button x:Name="SaveWompiSettingsButton" Content="Guardar" Width="220" Style="{StaticResource GglobPayPrimaryButton}" Click="SaveWompiSettingsButton_Click" />
                                 </StackPanel>
                                 <Border Grid.Column="1" Background="#f8fbff" CornerRadius="10" BorderThickness="1" BorderBrush="#d9e4ff" Padding="12">
