@@ -37,6 +37,7 @@ class PosSyncController extends Controller
         $this->ensurePosContextAccess($user->id, $user->company_id, (int) $validated['sales_point_id'], (int) $validated['cash_register_id']);
         $this->ensureCashRegisterShiftConsistency(
             $validated['event_type'],
+            (int) $validated['sales_point_id'],
             (int) $validated['cash_register_id'],
             $user->id
         );
@@ -209,10 +210,11 @@ class PosSyncController extends Controller
         abort_unless($assignedToSalesPoint || $assignedToRegister, 403, 'El cajero no está asignado al punto de venta.');
     }
 
-    private function ensureCashRegisterShiftConsistency(string $eventType, int $cashRegisterId, int $userId): void
+    private function ensureCashRegisterShiftConsistency(string $eventType, int $salesPointId, int $cashRegisterId, int $userId): void
     {
         $latestOpen = PosShift::query()
             ->where('event_type', 'open')
+            ->where('sales_point_id', $salesPointId)
             ->where('cash_register_id', $cashRegisterId)
             ->orderByDesc('occurred_at')
             ->first();
@@ -220,6 +222,7 @@ class PosSyncController extends Controller
         if ($eventType === 'open' && $latestOpen !== null) {
             $latestClose = PosShift::query()
                 ->where('event_type', 'close')
+                ->where('sales_point_id', $salesPointId)
                 ->where('cash_register_id', $cashRegisterId)
                 ->where('occurred_at', '>=', $latestOpen->occurred_at)
                 ->exists();
