@@ -558,6 +558,7 @@
                                             <DataGridTextColumn Header="Código" Binding="{Binding Code}" Width="*" />
                                             <DataGridTextColumn Header="Nombre" Binding="{Binding Name}" Width="2*" />
                                             <DataGridTextColumn Header="Categoría" Binding="{Binding CategoryName}" Width="*" />
+                                            <DataGridTextColumn Header="Puntos" Binding="{Binding SalesPointsLabel}" Width="1.6*" />
                                             <DataGridTextColumn Header="Precio" Binding="{Binding PriceLabel}" Width="*" />
                                             <DataGridTextColumn Header="Tipo" Binding="{Binding TypeLabel}" Width="*" />
                                             <DataGridTemplateColumn x:Name="InventoryActionsColumn" Header="Acciones" Width="190">
@@ -594,6 +595,10 @@
                                         <StackPanel Margin="0,0,0,8">
                                             <TextBlock Text="Precio del producto" FontWeight="SemiBold" />
                                             <TextBox x:Name="DeskProductPriceTextBox" Style="{StaticResource InputText}" />
+                                        </StackPanel>
+                                        <StackPanel Margin="0,0,8,8">
+                                            <TextBlock Text="Punto de venta" FontWeight="SemiBold" />
+                                            <ComboBox x:Name="DeskInventorySalesPointComboBox" DisplayMemberPath="Name" SelectedValuePath="Id" Height="38" />
                                         </StackPanel>
                                     </UniformGrid>
 
@@ -706,6 +711,8 @@
 
                                         <TextBlock Text="Descripción" FontWeight="SemiBold" />
                                         <TextBox x:Name="CategoryDescriptionTextBox" Style="{StaticResource InputText}" MaxLength="500" Height="80" TextWrapping="Wrap" AcceptsReturn="True" VerticalScrollBarVisibility="Auto" />
+                                        <TextBlock Text="Punto de venta" FontWeight="SemiBold" />
+                                        <ComboBox x:Name="CategorySalesPointComboBox" DisplayMemberPath="Name" SelectedValuePath="Id" Height="36" />
 
                                         <CheckBox x:Name="CategoryActiveCheckBox" Content="Categoría activa" IsChecked="True" Margin="0,4,0,12" />
 
@@ -720,6 +727,7 @@
                                     <DataGrid.Columns>
                                         <DataGridTextColumn Header="Nombre" Binding="{Binding Name}" Width="2*" />
                                         <DataGridTextColumn Header="Descripción" Binding="{Binding Description}" Width="3*" />
+                                        <DataGridTextColumn Header="Puntos" Binding="{Binding SalesPointsLabel}" Width="2*" />
                                         <DataGridTextColumn Header="Estado" Binding="{Binding StatusLabel}" Width="*" />
                                         <DataGridTemplateColumn x:Name="CategoryActionsColumn" Header="Acciones" Width="2*">
                                             <DataGridTemplateColumn.CellTemplate>
@@ -1073,6 +1081,7 @@
                                                 <StackPanel Orientation="Horizontal">
                                                     <Button Content="✏️ Editar" Tag="{Binding}" Style="{StaticResource CashRegisterEditButtonStyle}" Click="EditCashRegisterRowButton_Click" />
                                                     <Button Content="👤 Asignar" Tag="{Binding}" Style="{StaticResource CashRegisterAssignButtonStyle}" Click="AssignCashRegisterRowButton_Click" />
+                                                    <Button Content="👥 Ver cajeros" Tag="{Binding}" Style="{StaticResource CashRegisterAssignButtonStyle}" Background="#475569" BorderBrush="#475569" Click="ViewCashRegisterCashiersButton_Click" />
                                                     <Button Content="🗑 Eliminar" Tag="{Binding}" Style="{StaticResource CashRegisterDeleteButtonStyle}" Margin="6,0,0,0" Click="DeleteCashRegisterRowButton_Click" />
                                                 </StackPanel>
                                             </DataTemplate>

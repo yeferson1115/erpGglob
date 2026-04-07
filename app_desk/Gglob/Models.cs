@@ -126,9 +126,15 @@ namespace Gglob
 
         [JsonPropertyName("sales_point_name")]
         public string? SalesPointName { get; set; }
+
+        [JsonPropertyName("assigned_cashiers")]
+        public string? AssignedCashiers { get; set; }
+
+        [JsonPropertyName("assigned_cashiers_count")]
+        public int AssignedCashiersCount { get; set; }
     }
 
-    public class CashRegisterOption(int id, string name, string code, string status, bool isPrimary, int? salesPointId, string salesPointName)
+    public class CashRegisterOption(int id, string name, string code, string status, bool isPrimary, int? salesPointId, string salesPointName, string assignedCashiers = "", int assignedCashiersCount = 0)
     {
         public int Id { get; } = id;
         public string Name { get; } = name;
@@ -136,6 +142,8 @@ namespace Gglob
         public string Status { get; } = status;
         public int? SalesPointId { get; } = salesPointId;
         public string SalesPointName { get; } = salesPointName;
+        public string AssignedCashiers { get; } = assignedCashiers;
+        public int AssignedCashiersCount { get; } = assignedCashiersCount;
         public string StatusLabel => string.Equals(Status, "active", StringComparison.OrdinalIgnoreCase) ? "Activa" : "Inactiva";
         public bool IsPrimary { get; } = isPrimary;
 
@@ -314,14 +322,23 @@ namespace Gglob
 
         [JsonPropertyName("is_active")]
         public bool IsActive { get; set; }
+
+        [JsonPropertyName("sales_point_ids")]
+        public List<int>? SalesPointIds { get; set; }
+
+        [JsonPropertyName("sales_point_names")]
+        public List<string>? SalesPointNames { get; set; }
     }
 
-    public class ProductCategoryItem(int id, string name, string description, bool isActive)
+    public class ProductCategoryItem(int id, string name, string description, bool isActive, List<int>? salesPointIds = null, List<string>? salesPointNames = null)
     {
         public int Id { get; } = id;
         public string Name { get; } = name;
         public string Description { get; } = description;
         public bool IsActive { get; } = isActive;
+        public List<int> SalesPointIds { get; } = salesPointIds ?? [];
+        public List<string> SalesPointNames { get; } = salesPointNames ?? [];
+        public string SalesPointsLabel => SalesPointNames.Count == 0 ? "Sin puntos" : string.Join(", ", SalesPointNames);
         public string StatusLabel => IsActive ? "Activa" : "Inactiva";
     }
 
@@ -359,6 +376,12 @@ namespace Gglob
 
         [JsonPropertyName("combo_product_codes")]
         public JsonElement ComboProductCodesRaw { get; set; }
+
+        [JsonPropertyName("sales_point_ids")]
+        public List<int>? SalesPointIds { get; set; }
+
+        [JsonPropertyName("sales_point_names")]
+        public List<string>? SalesPointNames { get; set; }
 
         private List<string> ParseComboProductCodes()
         {
@@ -401,7 +424,9 @@ namespace Gglob
                 StockQuantity,
                 MinimumStock,
                 isComboResolved,
-                comboCodes);
+                comboCodes,
+                SalesPointIds ?? [],
+                SalesPointNames ?? []);
         }
     }
 
@@ -416,7 +441,9 @@ namespace Gglob
         int? stockQuantity,
         int? minimumStock,
         bool isCombo,
-        List<string> comboProductCodes)
+        List<string> comboProductCodes,
+        List<int>? salesPointIds = null,
+        List<string>? salesPointNames = null)
     {
         public int Id { get; } = id;
         public string Code { get; } = code;
@@ -429,6 +456,9 @@ namespace Gglob
         public int? MinimumStock { get; } = minimumStock;
         public bool IsCombo { get; } = isCombo;
         public List<string> ComboProductCodes { get; } = comboProductCodes;
+        public List<int> SalesPointIds { get; } = salesPointIds ?? [];
+        public List<string> SalesPointNames { get; } = salesPointNames ?? [];
+        public string SalesPointsLabel => SalesPointNames.Count == 0 ? "Sin puntos" : string.Join(", ", SalesPointNames);
         public string PriceLabel => Price.ToString("C2", CultureInfo.GetCultureInfo("es-CO"));
         public string TypeLabel => IsCombo ? "KIT / COMBO" : "Normal";
         public string CodeAndName => $"[{Code}] {Name}";

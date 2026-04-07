@@ -8,6 +8,7 @@ use App\Models\PosSale;
 use App\Models\PosShift;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\DB;
 
 class PosSyncController extends Controller
 {
@@ -19,8 +20,8 @@ class PosSyncController extends Controller
             'event_type' => ['required', 'string', 'in:open,close'],
             'cashier' => ['nullable', 'string', 'max:120'],
             'cash_register_name' => ['required', 'string', 'max:120'],
-            'sales_point_id' => ['nullable', 'integer', 'exists:sales_points,id'],
-            'cash_register_id' => ['nullable', 'integer', 'exists:cash_registers,id'],
+            'sales_point_id' => ['required', 'integer', 'exists:sales_points,id'],
+            'cash_register_id' => ['required', 'integer', 'exists:cash_registers,id'],
             'cash_register_shift_id' => ['nullable', 'integer', 'exists:cash_register_shifts,id'],
             'at' => ['required', 'date'],
             'opening_fund' => ['nullable', 'numeric'],
@@ -33,6 +34,12 @@ class PosSyncController extends Controller
         ]);
 
         $occurredAt = Carbon::parse($validated['at']);
+        $this->ensurePosContextAccess($user->id, $user->company_id, (int) $validated['sales_point_id'], (int) $validated['cash_register_id']);
+        $this->ensureCashRegisterShiftConsistency(
+            $validated['event_type'],
+            (int) $validated['cash_register_id'],
+            $user->id
+        );
         $syncHash = hash('sha256', implode('|', [
             $user->company_id,
             $user->id,
@@ -83,12 +90,13 @@ class PosSyncController extends Controller
             'sold_at' => ['required', 'date'],
             'payment_type' => ['required', 'string', 'max:60'],
             'total' => ['required', 'numeric', 'min:0.01'],
-            'sales_point_id' => ['nullable', 'integer', 'exists:sales_points,id'],
-            'cash_register_id' => ['nullable', 'integer', 'exists:cash_registers,id'],
+            'sales_point_id' => ['required', 'integer', 'exists:sales_points,id'],
+            'cash_register_id' => ['required', 'integer', 'exists:cash_registers,id'],
             'cash_register_shift_id' => ['nullable', 'integer', 'exists:cash_register_shifts,id'],
         ]);
 
         $soldAt = Carbon::parse($validated['sold_at']);
+        $this->ensurePosContextAccess($user->id, $user->company_id, (int) $validated['sales_point_id'], (int) $validated['cash_register_id']);
         $syncHash = hash('sha256', implode('|', [
             $user->company_id,
             $user->id,
@@ -132,12 +140,13 @@ class PosSyncController extends Controller
             'amount' => ['required', 'numeric'],
             'cashier' => ['nullable', 'string', 'max:120'],
             'at' => ['required', 'date'],
-            'sales_point_id' => ['nullable', 'integer', 'exists:sales_points,id'],
-            'cash_register_id' => ['nullable', 'integer', 'exists:cash_registers,id'],
+            'sales_point_id' => ['required', 'integer', 'exists:sales_points,id'],
+            'cash_register_id' => ['required', 'integer', 'exists:cash_registers,id'],
             'cash_register_shift_id' => ['nullable', 'integer', 'exists:cash_register_shifts,id'],
         ]);
 
         $occurredAt = Carbon::parse($validated['at']);
+        $this->ensurePosContextAccess($user->id, $user->company_id, (int) $validated['sales_point_id'], (int) $validated['cash_register_id']);
         $syncHash = hash('sha256', implode('|', [
             $user->company_id,
             $user->id,
@@ -171,5 +180,53 @@ class PosSyncController extends Controller
             'message' => 'Movimiento de caja sincronizado correctamente.',
             'data' => $movement,
         ]);
+    }
+
+    private function ensurePosContextAccess(int $userId, int $companyId, int $salesPointId, int $cashRegisterId): void
+    {
+        $register = DB::table('cash_registers')
+            ->where('id', $cashRegisterId)
+            ->where('company_id', $companyId)
+            ->where('sales_point_id', $salesPointId)
+            ->first();
+
+        abort_unless($register !== null, 422, 'La caja no pertenece al punto de venta seleccionado.');
+
+        $assignedToRegister = DB::table('cash_register_user')
+            ->where('cash_register_id', $cashRegisterId)
+            ->where('user_id', $userId)
+            ->exists();
+
+        abort_unless($assignedToRegister, 403, 'El cajero no está asignado a esta caja.');
+
+        $assignedToSalesPoint = DB::table('sales_point_user')
+            ->where('company_id', $companyId)
+            ->where('sales_point_id', $salesPointId)
+            ->where('user_id', $userId)
+            ->where('is_active', true)
+            ->exists();
+
+        abort_unless($assignedToSalesPoint || $assignedToRegister, 403, 'El cajero no está asignado al punto de venta.');
+    }
+
+    private function ensureCashRegisterShiftConsistency(string $eventType, int $cashRegisterId, int $userId): void
+    {
+        $latestOpen = PosShift::query()
+            ->where('event_type', 'open')
+            ->where('cash_register_id', $cashRegisterId)
+            ->orderByDesc('occurred_at')
+            ->first();
+
+        if ($eventType === 'open' && $latestOpen !== null) {
+            $latestClose = PosShift::query()
+                ->where('event_type', 'close')
+                ->where('cash_register_id', $cashRegisterId)
+                ->where('occurred_at', '>=', $latestOpen->occurred_at)
+                ->exists();
+
+            if (!$latestClose && (int) $latestOpen->cashier_user_id !== $userId) {
+                abort(422, 'La caja ya tiene un turno activo por otro cajero.');
+            }
+        }
     }
 }

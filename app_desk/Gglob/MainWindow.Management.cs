@@ -443,7 +443,10 @@ namespace Gglob
             {
                 name,
                 description,
-                is_active = isActive
+                is_active = isActive,
+                sales_point_ids = CategorySalesPointComboBox.SelectedValue is int categorySalesPointId
+                    ? new[] { categorySalesPointId }
+                    : Array.Empty<int>()
             });
 
             try
@@ -501,6 +504,10 @@ namespace Gglob
             CategoryNameTextBox.Text = selected.Name;
             CategoryDescriptionTextBox.Text = selected.Description;
             CategoryActiveCheckBox.IsChecked = selected.IsActive;
+            if (selected.SalesPointIds.Count > 0)
+            {
+                CategorySalesPointComboBox.SelectedValue = selected.SalesPointIds[0];
+            }
             SaveCategoryButton.Content = "💾 Actualizar categoría";
             CancelCategoryEditButton.Visibility = Visibility.Visible;
         }
@@ -557,7 +564,11 @@ namespace Gglob
         {
             try
             {
-                using var response = await HttpClient.GetAsync($"{ApiBaseUrl}/product-categories");
+                var salesPointId = ResolveCatalogSalesPointId();
+                var endpoint = salesPointId.HasValue
+                    ? $"{ApiBaseUrl}/product-categories?sales_point_id={salesPointId.Value}"
+                    : $"{ApiBaseUrl}/product-categories";
+                using var response = await HttpClient.GetAsync(endpoint);
                 if (!response.IsSuccessStatusCode)
                 {
                     QrStatusTextBlock.Text = "No se pudieron cargar las categorías del negocio.";
@@ -580,7 +591,9 @@ namespace Gglob
                         item.Id.Value,
                         item.Name,
                         item.Description ?? string.Empty,
-                        item.IsActive));
+                        item.IsActive,
+                        item.SalesPointIds,
+                        item.SalesPointNames));
                 }
 
                 ApplyComboFilter();
@@ -596,7 +609,11 @@ namespace Gglob
         {
             try
             {
-                using var response = await HttpClient.GetAsync($"{ApiBaseUrl}/inventory-products");
+                var salesPointId = ResolveCatalogSalesPointId();
+                var endpoint = salesPointId.HasValue
+                    ? $"{ApiBaseUrl}/inventory-products?sales_point_id={salesPointId.Value}"
+                    : $"{ApiBaseUrl}/inventory-products";
+                using var response = await HttpClient.GetAsync(endpoint);
                 if (!response.IsSuccessStatusCode)
                 {
                     QrStatusTextBlock.Text = "No se pudieron cargar los productos de inventario.";
@@ -660,6 +677,7 @@ namespace Gglob
                 code = DeskProductCodeTextBox.Text.Trim(),
                 name = DeskProductNameTextBox.Text.Trim(),
                 product_category_id = DeskProductCategoryComboBox.SelectedValue is int categoryId ? categoryId : (int?) null,
+                sales_point_ids = DeskInventorySalesPointComboBox.SelectedValue is int inventorySalesPointId ? new[] { inventorySalesPointId } : Array.Empty<int>(),
                 price,
                 tracks_inventory = tracksInventory,
                 stock_quantity = tracksInventory ? (int?)(ParseNullableInt(DeskStockQuantityTextBox.Text) ?? 0) : null,
@@ -711,6 +729,7 @@ namespace Gglob
             DeskProductNameTextBox.Text = string.Empty;
             DeskProductPriceTextBox.Text = "0.00";
             DeskProductCategoryComboBox.SelectedItem = null;
+            DeskInventorySalesPointComboBox.SelectedItem = salesPointOptions.FirstOrDefault();
             DeskTracksInventoryCheck.IsChecked = true;
             DeskStockQuantityTextBox.Text = string.Empty;
             DeskMinimumStockTextBox.Text = string.Empty;
@@ -888,6 +907,7 @@ namespace Gglob
             CategoryFormTitleTextBlock.Text = "Nueva categoría";
             CategoryNameTextBox.Text = string.Empty;
             CategoryDescriptionTextBox.Text = string.Empty;
+            CategorySalesPointComboBox.SelectedItem = salesPointOptions.FirstOrDefault();
             CategoryActiveCheckBox.IsChecked = true;
             SaveCategoryButton.Content = "💾 Guardar categoría";
             CancelCategoryEditButton.Visibility = Visibility.Collapsed;
@@ -898,6 +918,34 @@ namespace Gglob
             PropertyNameCaseInsensitive = true,
             NumberHandling = JsonNumberHandling.AllowReadingFromString
         };
+
+        private int? ResolveCatalogSalesPointId()
+        {
+            if (currentUser is null)
+            {
+                return null;
+            }
+
+            if (IsOwner(currentUser))
+            {
+                if (DeskInventorySalesPointComboBox?.SelectedValue is int ownerProductPointId)
+                {
+                    return ownerProductPointId;
+                }
+
+                if (CategorySalesPointComboBox?.SelectedValue is int ownerCategoryPointId)
+                {
+                    return ownerCategoryPointId;
+                }
+            }
+
+            if (PosSalesPointComboBox?.SelectedValue is int cashierPointId)
+            {
+                return cashierPointId;
+            }
+
+            return salesPointOptions.FirstOrDefault()?.Id;
+        }
 
         private async void SaveDestinationAccountButton_Click(object sender, RoutedEventArgs e)
         {
@@ -967,7 +1015,9 @@ namespace Gglob
             CategoryActionsColumn.Visibility = canManageCatalog ? Visibility.Visible : Visibility.Collapsed;
             CategoryNameTextBox.IsEnabled = canManageCatalog;
             CategoryDescriptionTextBox.IsEnabled = canManageCatalog;
+            CategorySalesPointComboBox.IsEnabled = canManageCatalog;
             CategoryActiveCheckBox.IsEnabled = canManageCatalog;
+            DeskInventorySalesPointComboBox.IsEnabled = canManageCatalog;
 
             if (!canManageCatalog)
             {
@@ -1338,6 +1388,20 @@ namespace Gglob
             QrStatusTextBlock.Text = $"Caja asignada correctamente a {cashier.Name}.";
             QrStatusTextBlock.Foreground = Brushes.DarkGreen;
             ShowAlert(QrStatusTextBlock.Text);
+        }
+
+        private void ViewCashRegisterCashiersButton_Click(object sender, RoutedEventArgs e)
+        {
+            if (sender is not Button { Tag: CashRegisterOption selected })
+            {
+                return;
+            }
+
+            var detail = string.IsNullOrWhiteSpace(selected.AssignedCashiers)
+                ? "No hay cajeros asignados a esta caja."
+                : selected.AssignedCashiers;
+
+            ShowAlert($"Caja: {selected.Name}\nPunto de venta: {selected.SalesPointName}\nAsignados ({selected.AssignedCashiersCount}): {detail}", "Detalle de cajeros");
         }
 
         private async Task<bool> SaveSalesPointApi(string name, string code, string status)
