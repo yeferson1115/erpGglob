@@ -38,8 +38,7 @@ class PosSyncController extends Controller
         $this->ensureCashRegisterShiftConsistency(
             $validated['event_type'],
             (int) $validated['sales_point_id'],
-            (int) $validated['cash_register_id'],
-            $user->id
+            (int) $validated['cash_register_id']
         );
         $syncHash = hash('sha256', implode('|', [
             $user->company_id,
@@ -98,6 +97,11 @@ class PosSyncController extends Controller
 
         $soldAt = Carbon::parse($validated['sold_at']);
         $this->ensurePosContextAccess($user->id, $user->company_id, (int) $validated['sales_point_id'], (int) $validated['cash_register_id']);
+        $this->ensureCashRegisterHasActiveShiftForCashier(
+            (int) $validated['sales_point_id'],
+            (int) $validated['cash_register_id'],
+            $user->id
+        );
         $syncHash = hash('sha256', implode('|', [
             $user->company_id,
             $user->id,
@@ -148,6 +152,11 @@ class PosSyncController extends Controller
 
         $occurredAt = Carbon::parse($validated['at']);
         $this->ensurePosContextAccess($user->id, $user->company_id, (int) $validated['sales_point_id'], (int) $validated['cash_register_id']);
+        $this->ensureCashRegisterHasActiveShiftForCashier(
+            (int) $validated['sales_point_id'],
+            (int) $validated['cash_register_id'],
+            $user->id
+        );
         $syncHash = hash('sha256', implode('|', [
             $user->company_id,
             $user->id,
@@ -210,7 +219,7 @@ class PosSyncController extends Controller
         abort_unless($assignedToSalesPoint || $assignedToRegister, 403, 'El cajero no está asignado al punto de venta.');
     }
 
-    private function ensureCashRegisterShiftConsistency(string $eventType, int $salesPointId, int $cashRegisterId, int $userId): void
+    private function ensureCashRegisterShiftConsistency(string $eventType, int $salesPointId, int $cashRegisterId): void
     {
         $latestOpen = PosShift::query()
             ->where('event_type', 'open')
@@ -227,9 +236,31 @@ class PosSyncController extends Controller
                 ->where('occurred_at', '>=', $latestOpen->occurred_at)
                 ->exists();
 
-            if (!$latestClose && (int) $latestOpen->cashier_user_id !== $userId) {
-                abort(422, 'La caja ya tiene un turno activo por otro cajero.');
+            if (!$latestClose) {
+                abort(422, 'La caja seleccionada ya tiene un turno activo.');
             }
         }
+    }
+
+    private function ensureCashRegisterHasActiveShiftForCashier(int $salesPointId, int $cashRegisterId, int $userId): void
+    {
+        $latestOpen = PosShift::query()
+            ->where('event_type', 'open')
+            ->where('sales_point_id', $salesPointId)
+            ->where('cash_register_id', $cashRegisterId)
+            ->orderByDesc('occurred_at')
+            ->first();
+
+        abort_unless($latestOpen !== null, 422, 'Debes abrir turno en la caja seleccionada para registrar ventas o movimientos.');
+
+        $latestClose = PosShift::query()
+            ->where('event_type', 'close')
+            ->where('sales_point_id', $salesPointId)
+            ->where('cash_register_id', $cashRegisterId)
+            ->where('occurred_at', '>=', $latestOpen->occurred_at)
+            ->exists();
+
+        abort_if($latestClose, 422, 'Debes abrir turno en la caja seleccionada para registrar ventas o movimientos.');
+        abort_if((int) $latestOpen->cashier_user_id !== $userId, 422, 'La caja seleccionada tiene un turno activo de otro cajero.');
     }
 }
