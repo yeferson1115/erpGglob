@@ -76,13 +76,17 @@ namespace Gglob
 
         private async void DeskInventorySalesPointComboBox_SelectionChanged(object sender, SelectionChangedEventArgs e)
         {
-            if (DeskInventorySalesPointComboBox?.SelectedValue is not int salesPointId)
+            var salesPointId = ResolveSelectedSalesPointId(DeskInventorySalesPointComboBox);
+            if (!salesPointId.HasValue)
             {
+                DeskProductCategoryComboBox.SelectedItem = null;
+                DeskProductCategoryComboBox.IsEnabled = false;
                 return;
             }
 
-            await LoadProductCategoriesFromApi(salesPointId);
-            EnsureInventoryCategoryIsValidForSelectedSalesPoint(salesPointId);
+            DeskProductCategoryComboBox.IsEnabled = true;
+            await LoadProductCategoriesFromApi(salesPointId.Value);
+            EnsureInventoryCategoryIsValidForSelectedSalesPoint(salesPointId.Value);
         }
 
         private async void BulkImportInventoryProductsButton_Click(object sender, RoutedEventArgs e)
@@ -367,6 +371,7 @@ namespace Gglob
             DeskMinimumStockTextBox.Text = selected.MinimumStock?.ToString(CultureInfo.InvariantCulture) ?? string.Empty;
             DeskIsComboCheck.IsChecked = selected.IsCombo;
             DeskComboCodesTextBox.Text = string.Join(", ", selected.ComboProductCodes);
+            DeskInventorySalesPointComboBox.SelectedValue = selected.SalesPointIds.FirstOrDefault();
 
             if (selected.ProductCategoryId.HasValue)
             {
@@ -687,6 +692,13 @@ namespace Gglob
 
             var tracksInventory = DeskTracksInventoryCheck.IsChecked == true;
             var isCombo = DeskIsComboCheck.IsChecked == true;
+            var selectedSalesPointId = ResolveSelectedSalesPointId(DeskInventorySalesPointComboBox);
+            if (!selectedSalesPointId.HasValue)
+            {
+                ShowAlert("Debes seleccionar un punto de venta antes de elegir la categoría y guardar el producto.");
+                return;
+            }
+
             var selectedComboIds = DeskComboProductsListBox.SelectedItems
                 .OfType<InventoryProductItem>()
                 .Select(p => p.Id)
@@ -698,7 +710,7 @@ namespace Gglob
                 code = DeskProductCodeTextBox.Text.Trim(),
                 name = DeskProductNameTextBox.Text.Trim(),
                 product_category_id = DeskProductCategoryComboBox.SelectedValue is int categoryId ? categoryId : (int?) null,
-                sales_point_ids = DeskInventorySalesPointComboBox.SelectedValue is int inventorySalesPointId ? new[] { inventorySalesPointId } : Array.Empty<int>(),
+                sales_point_ids = new[] { selectedSalesPointId.Value },
                 price,
                 tracks_inventory = tracksInventory,
                 stock_quantity = tracksInventory ? (int?)(ParseNullableInt(DeskStockQuantityTextBox.Text) ?? 0) : null,
@@ -750,7 +762,8 @@ namespace Gglob
             DeskProductNameTextBox.Text = string.Empty;
             DeskProductPriceTextBox.Text = "0.00";
             DeskProductCategoryComboBox.SelectedItem = null;
-            DeskInventorySalesPointComboBox.SelectedItem = salesPointOptions.FirstOrDefault();
+            DeskInventorySalesPointComboBox.SelectedItem = null;
+            DeskProductCategoryComboBox.IsEnabled = false;
             DeskTracksInventoryCheck.IsChecked = true;
             DeskStockQuantityTextBox.Text = string.Empty;
             DeskMinimumStockTextBox.Text = string.Empty;
@@ -963,23 +976,38 @@ namespace Gglob
 
             if (IsOwner(currentUser))
             {
-                if (context == "products" && DeskInventoryFilterSalesPointComboBox?.SelectedValue is int ownerProductPointId)
+                if (context == "products")
                 {
-                    return ownerProductPointId;
+                    return ResolveSelectedSalesPointId(DeskInventoryFilterSalesPointComboBox);
                 }
 
-                if (context == "categories" && CategoryFilterSalesPointComboBox?.SelectedValue is int ownerCategoryPointId)
+                if (context == "categories")
                 {
-                    return ownerCategoryPointId;
+                    return ResolveSelectedSalesPointId(CategoryFilterSalesPointComboBox);
                 }
             }
 
-            if (PosSalesPointComboBox?.SelectedValue is int cashierPointId)
+            if (ResolveSelectedSalesPointId(PosSalesPointComboBox) is int cashierPointId)
             {
                 return cashierPointId;
             }
 
             return salesPointOptions.FirstOrDefault()?.Id;
+        }
+
+        private static int? ResolveSelectedSalesPointId(ComboBox? comboBox)
+        {
+            if (comboBox is null)
+            {
+                return null;
+            }
+
+            if (comboBox.SelectedValue is int selectedId)
+            {
+                return selectedId;
+            }
+
+            return (comboBox.SelectedItem as SalesPointOption)?.Id;
         }
 
         private async void SaveDestinationAccountButton_Click(object sender, RoutedEventArgs e)
