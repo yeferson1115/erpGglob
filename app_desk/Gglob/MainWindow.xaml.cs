@@ -100,6 +100,8 @@ namespace Gglob
             DeskInventoryProductsDataGrid.ItemsSource = inventoryProducts;
             DeskProductCategoryComboBox.ItemsSource = productCategories;
             DeskComboCategoryFilterComboBox.ItemsSource = productCategories;
+            CategorySalesPointComboBox.ItemsSource = salesPointOptions;
+            DeskInventorySalesPointComboBox.ItemsSource = salesPointOptions;
             DeskComboProductsListBox.ItemsSource = inventoryProductsForCombo;
             DeskComboProductsListBox.DisplayMemberPath = "CodeAndName";
             ResetCashierForm();
@@ -764,7 +766,9 @@ namespace Gglob
                         register.Status ?? "active",
                         register.IsPrimary == 1,
                         register.SalesPointId,
-                        register.SalesPointName ?? "Sin punto de venta"));
+                        register.SalesPointName ?? "Sin punto de venta",
+                        register.AssignedCashiers ?? string.Empty,
+                        register.AssignedCashiersCount));
                 }
 
                 if (scope != "all")
@@ -780,6 +784,8 @@ namespace Gglob
                         var primaryIndex = cashRegisterOptions.ToList().FindIndex(x => x.IsPrimary);
                         QrCashierComboBox.SelectedIndex = primaryIndex >= 0 ? primaryIndex : 0;
                     }
+
+                    RefreshPosContextSelectors();
                 }
 
                 CashRegistersDataGrid.ItemsSource = null;
@@ -869,8 +875,19 @@ namespace Gglob
                 ReportSalesPointComboBox.ItemsSource = salesPointOptions;
                 ReportSalesPointComboBox.SelectedIndex = -1;
 
+                if (CategorySalesPointComboBox.SelectedItem is null)
+                {
+                    CategorySalesPointComboBox.SelectedItem = salesPointOptions.FirstOrDefault();
+                }
+
+                if (DeskInventorySalesPointComboBox.SelectedItem is null)
+                {
+                    DeskInventorySalesPointComboBox.SelectedItem = salesPointOptions.FirstOrDefault();
+                }
+
                 SalesPointsDataGrid.ItemsSource = null;
                 SalesPointsDataGrid.ItemsSource = salesPointOptions;
+                RefreshPosContextSelectors();
                 return true;
             }
             catch
@@ -1100,7 +1117,9 @@ namespace Gglob
                     register.Status ?? "active",
                     register.IsPrimary == 1,
                     register.SalesPointId,
-                    register.SalesPointName ?? "Sin punto de venta"));
+                    register.SalesPointName ?? "Sin punto de venta",
+                        register.AssignedCashiers ?? string.Empty,
+                        register.AssignedCashiersCount));
             }
 
             if (cashRegisterOptions.Count == 0)
@@ -1114,6 +1133,8 @@ namespace Gglob
                 var primaryIndex = cashRegisterOptions.ToList().FindIndex(x => x.IsPrimary);
                 QrCashierComboBox.SelectedIndex = primaryIndex >= 0 ? primaryIndex : 0;
             }
+
+            RefreshPosContextSelectors();
 
             CashRegistersDataGrid.ItemsSource = cashRegisterManagementOptions;
 

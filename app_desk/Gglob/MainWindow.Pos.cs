@@ -22,6 +22,7 @@ namespace Gglob
         private readonly ObservableCollection<CashMovementRecord> cashMovements = [];
         private readonly ObservableCollection<PosSaleAuditRecord> posSalesAudit = [];
         private readonly ObservableCollection<InventoryProductItem> filteredInventoryProducts = [];
+        private readonly ObservableCollection<CashRegisterOption> posShiftRegisterOptions = [];
         private readonly List<ShiftSyncEvent> pendingShiftEvents = [];
         private readonly List<SaleSnapshot> pendingSales = [];
         private readonly List<MovementSnapshot> pendingMovements = [];
@@ -36,6 +37,9 @@ namespace Gglob
             CashMovementsDataGrid.ItemsSource = cashMovements;
             PosSalesAuditDataGrid.ItemsSource = posSalesAudit;
             PosProductResultsListBox.ItemsSource = filteredInventoryProducts;
+            PosSalesPointComboBox.ItemsSource = salesPointOptions;
+            PosCashRegisterComboBox.ItemsSource = posShiftRegisterOptions;
+            PosCashRegisterComboBox.DisplayMemberPath = "Name";
             ShiftBiometricMethodComboBox.SelectedIndex = 0;
             PosPaymentTypeComboBox.SelectedIndex = 0;
 
@@ -46,6 +50,7 @@ namespace Gglob
             EnsureActiveTicket();
             RefreshShiftSummary();
             RefreshPosBindings();
+            RefreshPosContextSelectors();
             _ = SyncPendingDataAsync();
         }
 
@@ -101,6 +106,63 @@ namespace Gglob
             PosTicketsListBox.SelectedItem = ticket;
         }
 
+        private void RefreshPosContextSelectors()
+        {
+            if (PosSalesPointComboBox is null || PosCashRegisterComboBox is null)
+            {
+                return;
+            }
+
+            PosSalesPointComboBox.ItemsSource = null;
+            PosSalesPointComboBox.ItemsSource = salesPointOptions;
+
+            if (PosSalesPointComboBox.SelectedItem is not SalesPointOption currentPoint)
+            {
+                PosSalesPointComboBox.SelectedItem = salesPointOptions.FirstOrDefault();
+                currentPoint = PosSalesPointComboBox.SelectedItem as SalesPointOption;
+            }
+
+            LoadRegistersForSalesPoint(currentPoint?.Id);
+        }
+
+        private void LoadRegistersForSalesPoint(int? salesPointId)
+        {
+            posShiftRegisterOptions.Clear();
+            var source = cashRegisterOptions
+                .Where(register => !salesPointId.HasValue || register.SalesPointId == salesPointId)
+                .ToList();
+
+            foreach (var register in source)
+            {
+                posShiftRegisterOptions.Add(register);
+            }
+
+            if (posShiftRegisterOptions.Count > 0)
+            {
+                var primary = posShiftRegisterOptions.FirstOrDefault(x => x.IsPrimary);
+                PosCashRegisterComboBox.SelectedItem = primary ?? posShiftRegisterOptions.First();
+            }
+            else
+            {
+                PosCashRegisterComboBox.SelectedIndex = -1;
+            }
+        }
+
+        private void PosSalesPointComboBox_SelectionChanged(object sender, SelectionChangedEventArgs e)
+        {
+            var selectedPoint = PosSalesPointComboBox.SelectedItem as SalesPointOption;
+            LoadRegistersForSalesPoint(selectedPoint?.Id);
+        }
+
+        private async void RefreshPosContextButton_Click(object sender, RoutedEventArgs e)
+        {
+            await LoadSalesPointsFromApi();
+            await LoadCashRegistersFromApi("assigned");
+            RefreshPosContextSelectors();
+            ShiftStatusTextBlock.Text = "Asignaciones actualizadas desde servidor.";
+            ShiftStatusTextBlock.Foreground = System.Windows.Media.Brushes.DarkGreen;
+        }
+
         private PosTicket? GetSelectedTicket() => PosTicketsListBox.SelectedItem as PosTicket;
 
         private void RefreshPosBindings()
@@ -122,7 +184,7 @@ namespace Gglob
             }
 
             CurrentShiftSummaryTextBlock.Text =
-                $"Cajero: {activeShift.Cashier}\nCaja: {activeShift.CashRegisterName}\nInicio: {activeShift.OpenedAt:yyyy-MM-dd HH:mm}\nFondo: {activeShift.OpeningFund.ToString("C0", CultureInfo.GetCultureInfo("es-CO"))}";
+                $"Cajero: {activeShift.Cashier}\nPunto: {activeShift.SalesPointName}\nCaja: {activeShift.CashRegisterName}\nInicio: {activeShift.OpenedAt:yyyy-MM-dd HH:mm}\nFondo: {activeShift.OpeningFund.ToString("C0", CultureInfo.GetCultureInfo("es-CO"))}";
         }
 
         private decimal ParseMoney(string? raw)
@@ -175,12 +237,20 @@ namespace Gglob
                 return;
             }
 
-            var cashRegister = cashRegisterOptions.FirstOrDefault();
+            var selectedPoint = PosSalesPointComboBox.SelectedItem as SalesPointOption;
+            var cashRegister = PosCashRegisterComboBox.SelectedItem as CashRegisterOption;
+            if (cashRegister is null)
+            {
+                ShiftStatusTextBlock.Text = "Debes seleccionar una caja asignada para abrir turno.";
+                ShiftStatusTextBlock.Foreground = System.Windows.Media.Brushes.DarkRed;
+                return;
+            }
+
             var cashierName = currentUser?.Name ?? "Cajero";
             var openingFund = ParseMoney(ShiftOpeningFundTextBox.Text);
             activeShift = new ShiftAuditRecord(
                 cashierName,
-                cashRegister?.Name ?? "Caja sin asignar",
+                cashRegister.Name,
                 DateTime.Now,
                 null,
                 method,
@@ -193,14 +263,20 @@ namespace Gglob
                 0m,
                 0m,
                 0m,
-                0m);
+                0m,
+                selectedPoint?.Id ?? cashRegister.SalesPointId,
+                selectedPoint?.Name ?? cashRegister.SalesPointName,
+                cashRegister.Id,
+                null);
 
             RegisterCashMovement(new CashMovementRecord("APERTURA", "Fondo inicial de caja", openingFund, cashierName, DateTime.Now));
             pendingShiftEvents.Add(new ShiftSyncEvent
             {
                 EventType = "open",
                 Cashier = cashierName,
-                CashRegisterName = cashRegister?.Name ?? "Caja sin asignar",
+                SalesPointId = selectedPoint?.Id ?? cashRegister.SalesPointId,
+                CashRegisterId = cashRegister.Id,
+                CashRegisterName = cashRegister.Name,
                 At = DateTime.Now,
                 OpeningFund = openingFund,
                 BiometricMethod = method,
@@ -249,6 +325,9 @@ namespace Gglob
             {
                 EventType = "close",
                 Cashier = closedShift.Cashier,
+                SalesPointId = closedShift.SalesPointId,
+                CashRegisterId = closedShift.CashRegisterId,
+                CashRegisterShiftId = closedShift.CashRegisterShiftId,
                 CashRegisterName = closedShift.CashRegisterName,
                 At = DateTime.Now,
                 CountedCash = counted,
@@ -454,7 +533,10 @@ namespace Gglob
                 TicketCode = ticket.Code,
                 SoldAt = DateTime.Now,
                 PaymentType = paymentType,
-                Total = total
+                Total = total,
+                SalesPointId = activeShift.SalesPointId,
+                CashRegisterId = activeShift.CashRegisterId,
+                CashRegisterShiftId = activeShift.CashRegisterShiftId
             });
 
             if (cash > 0)
@@ -500,7 +582,10 @@ namespace Gglob
                 Detail = movement.Detail,
                 Amount = movement.Amount,
                 Cashier = movement.Cashier,
-                At = movement.At
+                At = movement.At,
+                SalesPointId = activeShift?.SalesPointId,
+                CashRegisterId = activeShift?.CashRegisterId,
+                CashRegisterShiftId = activeShift?.CashRegisterShiftId
             });
         }
 
@@ -611,6 +696,9 @@ namespace Gglob
                 {
                     EventType = "open",
                     Cashier = shift.Cashier,
+                    SalesPointId = shift.SalesPointId,
+                    CashRegisterId = shift.CashRegisterId,
+                    CashRegisterShiftId = shift.CashRegisterShiftId,
                     CashRegisterName = shift.CashRegisterName,
                     At = shift.OpenedAt,
                     OpeningFund = shift.OpeningFund,
@@ -625,6 +713,9 @@ namespace Gglob
                     {
                         EventType = "close",
                         Cashier = shift.Cashier,
+                        SalesPointId = shift.SalesPointId,
+                        CashRegisterId = shift.CashRegisterId,
+                        CashRegisterShiftId = shift.CashRegisterShiftId,
                         CashRegisterName = shift.CashRegisterName,
                         At = shift.ClosedAt.Value,
                         CountedCash = shift.CountedCash ?? 0,
@@ -685,8 +776,8 @@ namespace Gglob
 
         private void EnqueueShiftIfMissing(ShiftSyncEvent item)
         {
-            var key = $"{item.EventType}|{item.CashRegisterName}|{item.At:O}|{item.BiometricPhotoPath}";
-            var exists = pendingShiftEvents.Any(current => $"{current.EventType}|{current.CashRegisterName}|{current.At:O}|{current.BiometricPhotoPath}" == key);
+            var key = $"{item.EventType}|{item.SalesPointId}|{item.CashRegisterId}|{item.CashRegisterName}|{item.At:O}|{item.BiometricPhotoPath}";
+            var exists = pendingShiftEvents.Any(current => $"{current.EventType}|{current.SalesPointId}|{current.CashRegisterId}|{current.CashRegisterName}|{current.At:O}|{current.BiometricPhotoPath}" == key);
             if (!exists)
             {
                 pendingShiftEvents.Add(item);
@@ -695,8 +786,8 @@ namespace Gglob
 
         private void EnqueueSaleIfMissing(SaleSnapshot item)
         {
-            var key = $"{item.TicketCode}|{item.SoldAt:O}|{item.Total}";
-            var exists = pendingSales.Any(current => $"{current.TicketCode}|{current.SoldAt:O}|{current.Total}" == key);
+            var key = $"{item.TicketCode}|{item.SalesPointId}|{item.CashRegisterId}|{item.SoldAt:O}|{item.Total}";
+            var exists = pendingSales.Any(current => $"{current.TicketCode}|{current.SalesPointId}|{current.CashRegisterId}|{current.SoldAt:O}|{current.Total}" == key);
             if (!exists)
             {
                 pendingSales.Add(item);
@@ -705,8 +796,8 @@ namespace Gglob
 
         private void EnqueueMovementIfMissing(MovementSnapshot item)
         {
-            var key = $"{item.Type}|{item.Detail}|{item.Amount}|{item.At:O}";
-            var exists = pendingMovements.Any(current => $"{current.Type}|{current.Detail}|{current.Amount}|{current.At:O}" == key);
+            var key = $"{item.Type}|{item.SalesPointId}|{item.CashRegisterId}|{item.Detail}|{item.Amount}|{item.At:O}";
+            var exists = pendingMovements.Any(current => $"{current.Type}|{current.SalesPointId}|{current.CashRegisterId}|{current.Detail}|{current.Amount}|{current.At:O}" == key);
             if (!exists)
             {
                 pendingMovements.Add(item);
@@ -739,6 +830,9 @@ namespace Gglob
                     sold_at = sale.SoldAt.ToString("yyyy-MM-dd HH:mm:ss"),
                     payment_type = sale.PaymentType,
                     total = sale.Total,
+                    sales_point_id = sale.SalesPointId,
+                    cash_register_id = sale.CashRegisterId,
+                    cash_register_shift_id = sale.CashRegisterShiftId,
                     company_id = currentUser?.CompanyId,
                     cashier_user_id = currentUser?.Id
                 });
@@ -758,6 +852,9 @@ namespace Gglob
                     amount = movement.Amount,
                     cashier = movement.Cashier,
                     at = movement.At.ToString("yyyy-MM-dd HH:mm:ss"),
+                    sales_point_id = movement.SalesPointId,
+                    cash_register_id = movement.CashRegisterId,
+                    cash_register_shift_id = movement.CashRegisterShiftId,
                     company_id = currentUser?.CompanyId,
                     cashier_user_id = currentUser?.Id
                 });
@@ -881,6 +978,10 @@ namespace Gglob
         {
             public string? Cashier { get; set; }
             public string? CashRegisterName { get; set; }
+            public int? SalesPointId { get; set; }
+            public string? SalesPointName { get; set; }
+            public int? CashRegisterId { get; set; }
+            public int? CashRegisterShiftId { get; set; }
             public DateTime OpenedAt { get; set; }
             public DateTime? ClosedAt { get; set; }
             public string? BiometricMethod { get; set; }
@@ -910,7 +1011,11 @@ namespace Gglob
                 TotalCard,
                 TotalCheck,
                 Returns,
-                Difference);
+                Difference,
+                SalesPointId,
+                SalesPointName,
+                CashRegisterId,
+                CashRegisterShiftId);
 
             public static ShiftSnapshot FromModel(ShiftAuditRecord model)
             {
@@ -930,7 +1035,11 @@ namespace Gglob
                     TotalCard = model.TotalCard,
                     TotalCheck = model.TotalCheck,
                     Returns = model.Returns,
-                    Difference = model.Difference
+                    Difference = model.Difference,
+                    SalesPointId = model.SalesPointId,
+                    SalesPointName = model.SalesPointName,
+                    CashRegisterId = model.CashRegisterId,
+                    CashRegisterShiftId = model.CashRegisterShiftId
                 };
             }
         }
@@ -941,6 +1050,9 @@ namespace Gglob
             public DateTime SoldAt { get; set; }
             public string? PaymentType { get; set; }
             public decimal Total { get; set; }
+            public int? SalesPointId { get; set; }
+            public int? CashRegisterId { get; set; }
+            public int? CashRegisterShiftId { get; set; }
         }
 
         private class MovementSnapshot
@@ -950,12 +1062,18 @@ namespace Gglob
             public decimal Amount { get; set; }
             public string? Cashier { get; set; }
             public DateTime At { get; set; }
+            public int? SalesPointId { get; set; }
+            public int? CashRegisterId { get; set; }
+            public int? CashRegisterShiftId { get; set; }
         }
 
         private class ShiftSyncEvent
         {
             public string? EventType { get; set; }
             public string? Cashier { get; set; }
+            public int? SalesPointId { get; set; }
+            public int? CashRegisterId { get; set; }
+            public int? CashRegisterShiftId { get; set; }
             public string? CashRegisterName { get; set; }
             public DateTime At { get; set; }
             public decimal OpeningFund { get; set; }

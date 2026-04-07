@@ -116,7 +116,12 @@ class GglobPayController extends Controller
                 'cr.status',
                 'cr.sales_point_id',
                 'sp.name as sales_point_name',
-                DB::raw('COALESCE(cru.is_primary, 0) as is_primary')
+                DB::raw('COALESCE(cru.is_primary, 0) as is_primary'),
+                DB::raw('(SELECT COUNT(*) FROM cash_register_user cru2 WHERE cru2.cash_register_id = cr.id) as assigned_cashiers_count'),
+                DB::raw("(SELECT GROUP_CONCAT(TRIM(CONCAT(COALESCE(u2.name,''), ' ', COALESCE(u2.last_name,''))) SEPARATOR ', ')
+                    FROM cash_register_user cru3
+                    INNER JOIN users u2 ON u2.id = cru3.user_id
+                    WHERE cru3.cash_register_id = cr.id) as assigned_cashiers")
             )
             ->orderByDesc('is_primary')
             ->orderBy('cr.name')
@@ -620,6 +625,20 @@ class GglobPayController extends Controller
                 'created_at' => now(),
             ]
         );
+
+        if (!empty($register->sales_point_id)) {
+            DB::table('sales_point_user')->updateOrInsert(
+                ['sales_point_id' => $register->sales_point_id, 'user_id' => $validated['user_id']],
+                [
+                    'company_id' => $user->company_id,
+                    'assigned_by' => $user->id,
+                    'assigned_at' => now(),
+                    'is_active' => true,
+                    'updated_at' => now(),
+                    'created_at' => now(),
+                ]
+            );
+        }
 
         return response()->json(['message' => 'Caja asignada al cajero correctamente.']);
     }

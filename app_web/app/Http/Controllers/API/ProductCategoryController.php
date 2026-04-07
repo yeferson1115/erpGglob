@@ -7,6 +7,7 @@ use App\Models\ProductCategory;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\Rule;
 
 class ProductCategoryController extends Controller
@@ -14,11 +15,24 @@ class ProductCategoryController extends Controller
     public function index(): JsonResponse
     {
         $user = $this->ensureBusinessUser();
+        $salesPointId = request()->integer('sales_point_id');
+        $allowedSalesPointIds = $this->resolveAllowedSalesPointIds($user->id, $user->company_id);
 
         $categories = ProductCategory::query()
+            ->with('salesPoints:id,name')
             ->where('company_id', $user->company_id)
+            ->when(!$this->isOwnerUser($user), fn ($query) => $query->whereHas('salesPoints', fn ($sq) => $sq->whereIn('sales_points.id', $allowedSalesPointIds)))
+            ->when($salesPointId, fn ($query) => $query->whereHas('salesPoints', fn ($sq) => $sq->where('sales_points.id', $salesPointId)))
             ->orderBy('name')
-            ->get();
+            ->get()
+            ->map(fn (ProductCategory $category) => [
+                'id' => $category->id,
+                'name' => $category->name,
+                'description' => $category->description,
+                'is_active' => $category->is_active,
+                'sales_point_ids' => $category->salesPoints->pluck('id')->values()->all(),
+                'sales_point_names' => $category->salesPoints->pluck('name')->values()->all(),
+            ]);
 
         return response()->json(['data' => $categories]);
     }
@@ -29,13 +43,16 @@ class ProductCategoryController extends Controller
         $data = $this->validatedData($request, $user->company_id);
 
         $category = ProductCategory::create([
-            ...$data,
+            'name' => $data['name'],
+            'description' => $data['description'] ?? null,
+            'is_active' => $data['is_active'] ?? true,
             'company_id' => $user->company_id,
         ]);
+        $category->salesPoints()->sync($data['sales_point_ids']);
 
         return response()->json([
             'message' => 'Categoría creada correctamente.',
-            'data' => $category,
+            'data' => $category->fresh('salesPoints:id,name'),
         ], 201);
     }
 
@@ -45,11 +62,16 @@ class ProductCategoryController extends Controller
         abort_unless((int) $productCategory->company_id === (int) $user->company_id, 403);
 
         $data = $this->validatedData($request, $user->company_id, $productCategory->id);
-        $productCategory->update($data);
+        $productCategory->update([
+            'name' => $data['name'],
+            'description' => $data['description'] ?? null,
+            'is_active' => $data['is_active'] ?? true,
+        ]);
+        $productCategory->salesPoints()->sync($data['sales_point_ids']);
 
         return response()->json([
             'message' => 'Categoría actualizada correctamente.',
-            'data' => $productCategory->fresh(),
+            'data' => $productCategory->fresh('salesPoints:id,name'),
         ]);
     }
 
@@ -76,6 +98,8 @@ class ProductCategoryController extends Controller
             ],
             'description' => ['nullable', 'string', 'max:500'],
             'is_active' => ['nullable', 'boolean'],
+            'sales_point_ids' => ['required', 'array', 'min:1'],
+            'sales_point_ids.*' => ['integer', Rule::exists('sales_points', 'id')->where(fn ($q) => $q->where('company_id', $companyId))],
         ]);
     }
 
@@ -93,5 +117,36 @@ class ProductCategoryController extends Controller
         abort_unless(strtolower((string) $user->business_role) === 'owner', 403);
 
         return $user;
+    }
+
+    private function resolveAllowedSalesPointIds(int $userId, int $companyId): array
+    {
+        $explicit = DB::table('sales_point_user')
+            ->where('company_id', $companyId)
+            ->where('user_id', $userId)
+            ->where('is_active', true)
+            ->pluck('sales_point_id')
+            ->map(fn ($id) => (int) $id)
+            ->all();
+
+        if (!empty($explicit)) {
+            return $explicit;
+        }
+
+        return DB::table('cash_register_user as cru')
+            ->join('cash_registers as cr', 'cr.id', '=', 'cru.cash_register_id')
+            ->where('cru.user_id', $userId)
+            ->where('cr.company_id', $companyId)
+            ->whereNotNull('cr.sales_point_id')
+            ->pluck('cr.sales_point_id')
+            ->map(fn ($id) => (int) $id)
+            ->unique()
+            ->values()
+            ->all();
+    }
+
+    private function isOwnerUser($user): bool
+    {
+        return strtolower((string) $user->business_role) === 'owner';
     }
 }
