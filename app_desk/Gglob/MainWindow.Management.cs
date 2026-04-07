@@ -12,7 +12,8 @@ using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
-using QRCoder;
+using ClosedXML.Excel;
+using Microsoft.Win32;
 
 namespace Gglob
 {
@@ -37,6 +38,11 @@ namespace Gglob
             _ = LoadInventoryProductsFromApi();
         }
 
+        private void OpenProductsButton_Click(object sender, RoutedEventArgs e)
+        {
+            SetSelectedModule("products_management");
+        }
+
         private async void LoadPosBlueprintButton_Click(object sender, RoutedEventArgs e)
         {
             await LoadPosBlueprintFromApi();
@@ -57,9 +63,143 @@ namespace Gglob
             await LoadInventoryProductsFromApi();
         }
 
+        private async void BulkImportInventoryProductsButton_Click(object sender, RoutedEventArgs e)
+        {
+            var dialog = new OpenFileDialog
+            {
+                Title = "Seleccionar archivo Excel de productos",
+                Filter = "Archivo Excel (*.xlsx)|*.xlsx",
+                Multiselect = false
+            };
+
+            if (dialog.ShowDialog() != true)
+            {
+                return;
+            }
+
+            try
+            {
+                SetLoading(true);
+                await LoadProductCategoriesFromApi();
+
+                using var workbook = new XLWorkbook(dialog.FileName);
+                var worksheet = workbook.Worksheets.First();
+                var usedRows = worksheet.RangeUsed()?.RowsUsed().ToList() ?? [];
+                if (usedRows.Count <= 1)
+                {
+                    ShowAlert("El archivo no contiene filas de productos para importar.");
+                    return;
+                }
+
+                var imported = 0;
+                var skipped = 0;
+                var details = new List<string>();
+
+                foreach (var row in usedRows.Skip(1))
+                {
+                    var code = row.Cell(1).GetString().Trim();
+                    var name = row.Cell(2).GetString().Trim();
+                    var categoryName = row.Cell(3).GetString().Trim();
+                    var priceText = row.Cell(4).GetString().Trim().Replace(',', '.');
+
+                    if (string.IsNullOrWhiteSpace(code) || string.IsNullOrWhiteSpace(name) || !decimal.TryParse(priceText, NumberStyles.Any, CultureInfo.InvariantCulture, out var price))
+                    {
+                        skipped++;
+                        details.Add($"Fila {row.RowNumber()}: datos obligatorios inválidos (código, nombre o precio).");
+                        continue;
+                    }
+
+                    var categoryId = productCategories
+                        .FirstOrDefault(category => string.Equals(category.Name, categoryName, StringComparison.OrdinalIgnoreCase))
+                        ?.Id;
+
+                    var payload = new
+                    {
+                        code,
+                        name,
+                        product_category_id = categoryId,
+                        price,
+                        tracks_inventory = ParseExcelBoolean(row.Cell(5).GetString(), defaultValue: true),
+                        stock_quantity = ParseExcelInt(row.Cell(6).GetString()),
+                        minimum_stock = ParseExcelInt(row.Cell(7).GetString()),
+                        is_combo = ParseExcelBoolean(row.Cell(8).GetString()),
+                        combo_product_ids = ParseComboIdsByCode(row.Cell(9).GetString())
+                    };
+
+                    var created = await CreateInventoryProductFromImport(payload);
+                    if (created)
+                    {
+                        imported++;
+                    }
+                    else
+                    {
+                        skipped++;
+                        details.Add($"Fila {row.RowNumber()}: no se pudo crear el producto {code}.");
+                    }
+                }
+
+                await LoadInventoryProductsFromApi();
+                ShowAlert($"Carga masiva finalizada. Importados: {imported}. Omitidos: {skipped}.{(details.Count > 0 ? Environment.NewLine + string.Join(Environment.NewLine, details.Take(6)) : string.Empty)}");
+            }
+            catch (Exception ex)
+            {
+                ShowAlert($"Error en carga masiva de productos: {ex.Message}");
+            }
+            finally
+            {
+                SetLoading(false);
+            }
+        }
+
         private async void SubmitInventoryProductButton_Click(object sender, RoutedEventArgs e)
         {
             await SaveOrUpdateInventoryProduct(editingInventoryProductId.HasValue);
+        }
+
+        private static bool ParseExcelBoolean(string? value, bool defaultValue = false)
+        {
+            if (string.IsNullOrWhiteSpace(value))
+            {
+                return defaultValue;
+            }
+
+            return value.Trim().ToLowerInvariant() switch
+            {
+                "1" or "si" or "sí" or "true" or "x" => true,
+                "0" or "no" or "false" => false,
+                _ => defaultValue
+            };
+        }
+
+        private static int? ParseExcelInt(string? value)
+        {
+            return int.TryParse(value, NumberStyles.Any, CultureInfo.InvariantCulture, out var parsed) ? parsed : null;
+        }
+
+        private List<int> ParseComboIdsByCode(string? comboCodesRaw)
+        {
+            if (string.IsNullOrWhiteSpace(comboCodesRaw))
+            {
+                return [];
+            }
+
+            var codes = comboCodesRaw
+                .Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+                .ToHashSet(StringComparer.OrdinalIgnoreCase);
+
+            return inventoryProducts
+                .Where(product => codes.Contains(product.Code))
+                .Select(product => product.Id)
+                .Distinct()
+                .ToList();
+        }
+
+        private async Task<bool> CreateInventoryProductFromImport(object payload)
+        {
+            var json = JsonSerializer.Serialize(payload);
+            using var content = new StringContent(json, Encoding.UTF8, "application/json");
+            using var response = await HttpClient.PostAsync($"{ApiBaseUrl}/inventory-products", content);
+            return response.IsSuccessStatusCode;
         }
 
         private void OpenCreateInventoryFormButton_Click(object sender, RoutedEventArgs e)
