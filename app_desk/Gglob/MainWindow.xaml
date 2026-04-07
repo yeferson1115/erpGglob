@@ -544,6 +544,10 @@
                                         <TextBlock Text="Consulta, crea, edita y elimina productos desde este módulo dedicado." Foreground="#64748b" Margin="0,3,0,0" />
                                     </StackPanel>
                                     <WrapPanel DockPanel.Dock="Right" HorizontalAlignment="Right" VerticalAlignment="Center">
+                                        <StackPanel Margin="0,0,8,0" VerticalAlignment="Center">
+                                            <TextBlock Text="Filtrar punto de venta" FontSize="12" FontWeight="SemiBold" />
+                                            <ComboBox x:Name="DeskInventoryFilterSalesPointComboBox" Width="190" Height="34" DisplayMemberPath="Name" SelectedValuePath="Id" SelectionChanged="DeskInventoryFilterSalesPointComboBox_SelectionChanged" />
+                                        </StackPanel>
                                         <Button Content="↩ Volver a POS" Margin="0,0,8,0" Click="BackToPosButton_Click" />
                                         <Button Content="🔄 Recargar" Margin="0,0,8,0" Click="ReloadInventoryProductsButton_Click" />
                                         <Button x:Name="BulkImportInventoryProductsButton" Content="📥 Carga masiva Excel" Margin="0,0,8,0" Click="BulkImportInventoryProductsButton_Click" />
@@ -598,7 +602,7 @@
                                         </StackPanel>
                                         <StackPanel Margin="0,0,8,8">
                                             <TextBlock Text="Punto de venta" FontWeight="SemiBold" />
-                                            <ComboBox x:Name="DeskInventorySalesPointComboBox" DisplayMemberPath="Name" SelectedValuePath="Id" Height="38" />
+                                            <ComboBox x:Name="DeskInventorySalesPointComboBox" DisplayMemberPath="Name" SelectedValuePath="Id" Height="38" SelectionChanged="DeskInventorySalesPointComboBox_SelectionChanged" />
                                         </StackPanel>
                                     </UniformGrid>
 
@@ -692,6 +696,10 @@
                                     <TextBlock Text="Crea, edita y elimina categorías del negocio actual." Foreground="#6b7280" Margin="0,2,0,0" />
                                 </StackPanel>
                                 <WrapPanel DockPanel.Dock="Right" HorizontalAlignment="Right" VerticalAlignment="Center">
+                                    <StackPanel Margin="0,0,8,0" VerticalAlignment="Center">
+                                        <TextBlock Text="Filtrar punto de venta" FontSize="12" FontWeight="SemiBold" />
+                                        <ComboBox x:Name="CategoryFilterSalesPointComboBox" Width="190" Height="34" DisplayMemberPath="Name" SelectedValuePath="Id" SelectionChanged="CategoryFilterSalesPointComboBox_SelectionChanged" />
+                                    </StackPanel>
                                     <Button Content="↩ Volver a POS" Margin="0,0,8,0" Click="BackToPosButton_Click" />
                                     <Button Content="🔄 Recargar" Click="ReloadCategoriesButton_Click" />
                                 </WrapPanel>

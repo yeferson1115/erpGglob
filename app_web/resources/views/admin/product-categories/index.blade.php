@@ -15,6 +15,21 @@
                     @endif
 
                     <div class="col-12">
+                        <label class="form-label">Punto de venta</label>
+                        <select name="sales_point_id" class="form-select" required>
+                            <option value="">-- Seleccionar punto de venta --</option>
+                            @foreach($salesPoints as $salesPoint)
+                                <option
+                                    value="{{ $salesPoint->id }}"
+                                    @selected((string) old('sales_point_id', $editingCategory?->salesPoints->pluck('id')->first()) === (string) $salesPoint->id)
+                                >
+                                    {{ $salesPoint->name }}
+                                </option>
+                            @endforeach
+                        </select>
+                    </div>
+
+                    <div class="col-12">
                         <label class="form-label">Nombre de la categoría</label>
                         <input type="text" name="name" class="form-control" value="{{ old('name', $editingCategory?->name) }}" required maxlength="120">
                     </div>
@@ -44,12 +59,26 @@
 
     <div class="col-12 col-xl-7">
         <div class="card">
-            <div class="card-header">Listado de categorías del negocio</div>
+            <div class="card-header d-flex justify-content-between align-items-center gap-2">
+                <span>Listado de categorías del negocio</span>
+                <form method="GET" action="{{ route('product-categories.index') }}" class="d-flex gap-2">
+                    <select name="sales_point_id" class="form-select form-select-sm">
+                        <option value="">Todos los puntos</option>
+                        @foreach($salesPoints as $salesPoint)
+                            <option value="{{ $salesPoint->id }}" @selected((string) $selectedSalesPointId === (string) $salesPoint->id)>
+                                {{ $salesPoint->name }}
+                            </option>
+                        @endforeach
+                    </select>
+                    <button class="btn btn-sm btn-outline-primary">Filtrar</button>
+                </form>
+            </div>
             <div class="card-body table-responsive">
                 <table class="table table-striped align-middle mb-0">
                     <thead>
                         <tr>
                             <th>Nombre</th>
+                            <th>Punto de venta</th>
                             <th>Descripción</th>
                             <th>Estado</th>
                             <th class="text-end">Acciones</th>
@@ -59,6 +88,7 @@
                         @forelse($categories as $category)
                             <tr>
                                 <td>{{ $category->name }}</td>
+                                <td>{{ $category->salesPoints->pluck('name')->join(', ') ?: '—' }}</td>
                                 <td>{{ $category->description ?: '—' }}</td>
                                 <td>
                                     <span class="badge {{ $category->is_active ? 'bg-label-success' : 'bg-label-secondary' }}">
@@ -76,7 +106,7 @@
                             </tr>
                         @empty
                             <tr>
-                                <td colspan="4">No hay categorías registradas todavía.</td>
+                                <td colspan="5">No hay categorías registradas todavía.</td>
                             </tr>
                         @endforelse
                     </tbody>
