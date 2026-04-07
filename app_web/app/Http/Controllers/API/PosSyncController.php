@@ -19,6 +19,9 @@ class PosSyncController extends Controller
             'event_type' => ['required', 'string', 'in:open,close'],
             'cashier' => ['nullable', 'string', 'max:120'],
             'cash_register_name' => ['required', 'string', 'max:120'],
+            'sales_point_id' => ['nullable', 'integer', 'exists:sales_points,id'],
+            'cash_register_id' => ['nullable', 'integer', 'exists:cash_registers,id'],
+            'cash_register_shift_id' => ['nullable', 'integer', 'exists:cash_register_shifts,id'],
             'at' => ['required', 'date'],
             'opening_fund' => ['nullable', 'numeric'],
             'counted_cash' => ['nullable', 'numeric'],
@@ -34,6 +37,9 @@ class PosSyncController extends Controller
             $user->company_id,
             $user->id,
             $validated['event_type'],
+            $validated['sales_point_id'] ?? '',
+            $validated['cash_register_id'] ?? '',
+            $validated['cash_register_shift_id'] ?? '',
             $validated['cash_register_name'],
             $occurredAt->toIso8601String(),
             $validated['biometric_photo_path'],
@@ -44,6 +50,9 @@ class PosSyncController extends Controller
             [
                 'company_id' => $user->company_id,
                 'cashier_user_id' => $user->id,
+                'sales_point_id' => $validated['sales_point_id'] ?? null,
+                'cash_register_id' => $validated['cash_register_id'] ?? null,
+                'cash_register_shift_id' => $validated['cash_register_shift_id'] ?? null,
                 'cashier' => $validated['cashier'] ?? ($user->name ?? 'Cajero'),
                 'cash_register_name' => $validated['cash_register_name'],
                 'event_type' => $validated['event_type'],
@@ -74,12 +83,18 @@ class PosSyncController extends Controller
             'sold_at' => ['required', 'date'],
             'payment_type' => ['required', 'string', 'max:60'],
             'total' => ['required', 'numeric', 'min:0.01'],
+            'sales_point_id' => ['nullable', 'integer', 'exists:sales_points,id'],
+            'cash_register_id' => ['nullable', 'integer', 'exists:cash_registers,id'],
+            'cash_register_shift_id' => ['nullable', 'integer', 'exists:cash_register_shifts,id'],
         ]);
 
         $soldAt = Carbon::parse($validated['sold_at']);
         $syncHash = hash('sha256', implode('|', [
             $user->company_id,
             $user->id,
+            $validated['sales_point_id'] ?? '',
+            $validated['cash_register_id'] ?? '',
+            $validated['cash_register_shift_id'] ?? '',
             $validated['ticket_code'],
             $soldAt->toIso8601String(),
             $validated['total'],
@@ -90,6 +105,9 @@ class PosSyncController extends Controller
             [
                 'company_id' => $user->company_id,
                 'cashier_user_id' => $user->id,
+                'sales_point_id' => $validated['sales_point_id'] ?? null,
+                'cash_register_id' => $validated['cash_register_id'] ?? null,
+                'cash_register_shift_id' => $validated['cash_register_shift_id'] ?? null,
                 'ticket_code' => $validated['ticket_code'],
                 'payment_type' => $validated['payment_type'],
                 'total' => $validated['total'],
@@ -114,12 +132,18 @@ class PosSyncController extends Controller
             'amount' => ['required', 'numeric'],
             'cashier' => ['nullable', 'string', 'max:120'],
             'at' => ['required', 'date'],
+            'sales_point_id' => ['nullable', 'integer', 'exists:sales_points,id'],
+            'cash_register_id' => ['nullable', 'integer', 'exists:cash_registers,id'],
+            'cash_register_shift_id' => ['nullable', 'integer', 'exists:cash_register_shifts,id'],
         ]);
 
         $occurredAt = Carbon::parse($validated['at']);
         $syncHash = hash('sha256', implode('|', [
             $user->company_id,
             $user->id,
+            $validated['sales_point_id'] ?? '',
+            $validated['cash_register_id'] ?? '',
+            $validated['cash_register_shift_id'] ?? '',
             $validated['type'],
             $validated['detail'],
             $occurredAt->toIso8601String(),
@@ -131,6 +155,9 @@ class PosSyncController extends Controller
             [
                 'company_id' => $user->company_id,
                 'cashier_user_id' => $user->id,
+                'sales_point_id' => $validated['sales_point_id'] ?? null,
+                'cash_register_id' => $validated['cash_register_id'] ?? null,
+                'cash_register_shift_id' => $validated['cash_register_shift_id'] ?? null,
                 'cashier' => $validated['cashier'] ?? ($user->name ?? 'Cajero'),
                 'type' => $validated['type'],
                 'detail' => $validated['detail'],

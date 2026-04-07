@@ -11,6 +11,9 @@ class PosShift extends Model
 
     protected $fillable = [
         'company_id',
+        'sales_point_id',
+        'cash_register_id',
+        'cash_register_shift_id',
         'cashier_user_id',
         'cashier',
         'cash_register_name',
