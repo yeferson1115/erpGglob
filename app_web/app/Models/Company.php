@@ -76,4 +76,9 @@ class Company extends Model
     {
         return $this->hasMany(SalesPoint::class);
     }
+    public function cashRegisterShifts(): HasMany
+    {
+        return $this->hasMany(CashRegisterShift::class);
+    }
 }
+
