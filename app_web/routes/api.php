@@ -19,6 +19,7 @@ use App\Http\Controllers\API\GglobPayController;
 use App\Http\Controllers\API\ProductCategoryController;
 use App\Http\Controllers\API\PosBlueprintController;
 use App\Http\Controllers\API\InventoryProductController;
+use App\Http\Controllers\API\PosSyncController;
 
 
 Route::post('/register', [AuthController::class, 'register']);
@@ -118,6 +119,9 @@ Route::middleware(['auth:api'])->group(function () {
     Route::get('gglob-pay/report', [GglobPayController::class, 'report']);
     Route::get('pos-blueprint', [PosBlueprintController::class, 'show']);
     Route::post('pos-blueprint', [PosBlueprintController::class, 'save']);
+    Route::post('pos/shifts/sync', [PosSyncController::class, 'syncShift']);
+    Route::post('pos/sales/sync', [PosSyncController::class, 'syncSale']);
+    Route::post('pos/cash-movements/sync', [PosSyncController::class, 'syncCashMovement']);
   
 });
 
