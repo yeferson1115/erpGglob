@@ -306,10 +306,30 @@ class GglobPayController extends Controller
     public function salesPoints(Request $request)
     {
         $user = $request->user();
+        $isOwner = $this->isOwner($request);
 
-        $rows = DB::table('sales_points')
-            ->where('company_id', $user->company_id)
-            ->orderBy('name')
+        $rows = DB::table('sales_points as sp')
+            ->where('sp.company_id', $user->company_id)
+            ->when(!$isOwner, function ($query) use ($user) {
+                $query->where(function ($sub) use ($user) {
+                    $sub->whereExists(function ($exists) use ($user) {
+                        $exists->selectRaw('1')
+                            ->from('sales_point_user as spu')
+                            ->whereColumn('spu.sales_point_id', 'sp.id')
+                            ->where('spu.user_id', $user->id)
+                            ->where('spu.is_active', true);
+                    })->orWhereExists(function ($exists) use ($user) {
+                        $exists->selectRaw('1')
+                            ->from('cash_register_user as cru')
+                            ->join('cash_registers as cr', 'cr.id', '=', 'cru.cash_register_id')
+                            ->whereColumn('cr.sales_point_id', 'sp.id')
+                            ->where('cru.user_id', $user->id)
+                            ->where('cr.status', 'active');
+                    });
+                });
+            })
+            ->select('sp.*')
+            ->orderBy('sp.name')
             ->get();
 
         return response()->json(['data' => $rows]);
@@ -895,11 +915,17 @@ class GglobPayController extends Controller
     public function payments(Request $request)
     {
         $companyId = $request->user()->company_id;
+        $isOwner = $this->isOwner($request);
+        $userId = (int) $request->user()->id;
 
         $query = DB::table('gglob_pay_payments')
             ->leftJoin('cash_registers', 'cash_registers.id', '=', 'gglob_pay_payments.cash_register_id')
             ->leftJoin('sales_points', 'sales_points.id', '=', 'gglob_pay_payments.sales_point_id')
             ->where('gglob_pay_payments.company_id', $companyId);
+
+        if (!$isOwner) {
+            $query->where('gglob_pay_payments.cashier_user_id', $userId);
+        }
 
         if ($request->filled('from')) {
             $query->whereDate('verified_at', '>=', $request->input('from'));
@@ -915,6 +941,10 @@ class GglobPayController extends Controller
 
         if ($request->filled('sales_point_id')) {
             $query->where('gglob_pay_payments.sales_point_id', (int) $request->input('sales_point_id'));
+        }
+
+        if ($request->filled('cash_register_id')) {
+            $query->where('gglob_pay_payments.cash_register_id', (int) $request->input('cash_register_id'));
         }
 
         $payments = $query
