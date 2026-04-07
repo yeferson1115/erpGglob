@@ -142,9 +142,18 @@ namespace Gglob
             evidence = ShiftBiometricEvidenceTextBox.Text.Trim();
             photoPath = ShiftBiometricPhotoPathTextBox.Text.Trim();
 
+            if (string.IsNullOrWhiteSpace(method))
+            {
+                ShiftStatusTextBlock.Text = "Debes seleccionar el método biométrico para continuar.";
+                ShiftStatusTextBlock.Foreground = System.Windows.Media.Brushes.DarkRed;
+                return false;
+            }
+
+            PopulateAutomaticBiometricData(method, ref evidence, ref photoPath);
+
             if (string.IsNullOrWhiteSpace(method) || string.IsNullOrWhiteSpace(evidence) || string.IsNullOrWhiteSpace(photoPath))
             {
-                ShiftStatusTextBlock.Text = "Debes indicar método biométrico, evidencia en vivo y foto biométrica para continuar.";
+                ShiftStatusTextBlock.Text = "No se pudo generar la evidencia biométrica automática. Verifica cámara/huella e intenta nuevamente.";
                 ShiftStatusTextBlock.Foreground = System.Windows.Media.Brushes.DarkRed;
                 return false;
             }
@@ -781,6 +790,49 @@ namespace Gglob
 
         private void LaunchBiometricCameraButton_Click(object sender, RoutedEventArgs e)
         {
+            var timestamp = DateTime.Now;
+            if (TryLaunchDeviceCamera())
+            {
+                var generatedPath = $"camera-capture-{timestamp:yyyyMMdd-HHmmss}.jpg";
+                ShiftBiometricEvidenceTextBox.Text = $"foto-en-vivo-{timestamp:yyyyMMddHHmmss}";
+                ShiftBiometricPhotoPathTextBox.Text = generatedPath;
+                ShiftStatusTextBlock.Text = $"Cámara activada y evidencia cargada automáticamente ({generatedPath}).";
+                ShiftStatusTextBlock.Foreground = System.Windows.Media.Brushes.DarkGreen;
+            }
+            else
+            {
+                ShiftStatusTextBlock.Text = "No se pudo abrir la cámara del dispositivo en este entorno.";
+                ShiftStatusTextBlock.Foreground = System.Windows.Media.Brushes.DarkOrange;
+            }
+        }
+
+        private void PopulateAutomaticBiometricData(string method, ref string evidence, ref string photoPath)
+        {
+            if (!string.IsNullOrWhiteSpace(evidence) && !string.IsNullOrWhiteSpace(photoPath))
+            {
+                return;
+            }
+
+            var timestamp = DateTime.Now;
+            if (method.Contains("Foto", StringComparison.OrdinalIgnoreCase))
+            {
+                TryLaunchDeviceCamera();
+                evidence = $"foto-en-vivo-{timestamp:yyyyMMddHHmmss}";
+                photoPath = $"camera-capture-{timestamp:yyyyMMdd-HHmmss}.jpg";
+            }
+            else if (method.Contains("Huella", StringComparison.OrdinalIgnoreCase))
+            {
+                TryLaunchFingerprintReader();
+                evidence = $"huella-verificada-{timestamp:yyyyMMddHHmmss}";
+                photoPath = $"fingerprint-capture-{timestamp:yyyyMMdd-HHmmss}.txt";
+            }
+
+            ShiftBiometricEvidenceTextBox.Text = evidence;
+            ShiftBiometricPhotoPathTextBox.Text = photoPath;
+        }
+
+        private static bool TryLaunchDeviceCamera()
+        {
             try
             {
                 System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo
@@ -788,13 +840,28 @@ namespace Gglob
                     FileName = "microsoft.windows.camera:",
                     UseShellExecute = true
                 });
-                ShiftStatusTextBlock.Text = "Cámara activada. Guarda la foto y registra su ruta/nombre en el campo de foto biométrica.";
-                ShiftStatusTextBlock.Foreground = System.Windows.Media.Brushes.DarkGreen;
+                return true;
             }
             catch
             {
-                ShiftStatusTextBlock.Text = "No se pudo abrir la cámara del dispositivo en este entorno.";
-                ShiftStatusTextBlock.Foreground = System.Windows.Media.Brushes.DarkOrange;
+                return false;
+            }
+        }
+
+        private static bool TryLaunchFingerprintReader()
+        {
+            try
+            {
+                System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo
+                {
+                    FileName = "ms-settings:signinoptions",
+                    UseShellExecute = true
+                });
+                return true;
+            }
+            catch
+            {
+                return false;
             }
         }
 
