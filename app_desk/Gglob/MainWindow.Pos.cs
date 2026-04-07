@@ -173,6 +173,8 @@ namespace Gglob
             }
 
             LoadRegistersForSalesPoint(currentPoint?.Id);
+            _ = LoadProductCategoriesFromApi(currentPoint?.Id);
+            _ = LoadInventoryProductsFromApi();
         }
 
         private void LoadRegistersForSalesPoint(int? salesPointId)
@@ -198,10 +200,12 @@ namespace Gglob
             }
         }
 
-        private void PosSalesPointComboBox_SelectionChanged(object sender, SelectionChangedEventArgs e)
+        private async void PosSalesPointComboBox_SelectionChanged(object sender, SelectionChangedEventArgs e)
         {
             var selectedPoint = PosSalesPointComboBox.SelectedItem as SalesPointOption;
             LoadRegistersForSalesPoint(selectedPoint?.Id);
+            await LoadProductCategoriesFromApi(selectedPoint?.Id);
+            await LoadInventoryProductsFromApi();
             RefreshPosCategoryFilterOptions();
             RefreshProductSearchResults();
         }
