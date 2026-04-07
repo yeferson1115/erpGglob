@@ -24,6 +24,21 @@
                 @method('PUT')
             @endif
 
+            <div class="col-md-6">
+                <label class="form-label">Punto de venta</label>
+                <select name="sales_point_id" id="sales_point_id" class="form-select" required>
+                    <option value="">-- Seleccionar punto de venta --</option>
+                    @foreach($salesPoints as $salesPoint)
+                        <option
+                            value="{{ $salesPoint->id }}"
+                            @selected((string) old('sales_point_id', $editingProduct?->salesPoints->pluck('id')->first()) === (string) $salesPoint->id)
+                        >
+                            {{ $salesPoint->name }}
+                        </option>
+                    @endforeach
+                </select>
+            </div>
+
             <div class="col-md-4">
                 <label class="form-label">Código del producto</label>
                 <input type="text" name="code" class="form-control" value="{{ old('code', $editingProduct?->code) }}" required>
@@ -37,7 +52,11 @@
                 <select name="product_category_id" class="form-select">
                     <option value="">-- Seleccionar categoría --</option>
                     @foreach($categories as $category)
-                        <option value="{{ $category->id }}" @selected((string) old('product_category_id', $editingProduct?->product_category_id) === (string) $category->id)>
+                        <option
+                            value="{{ $category->id }}"
+                            data-sales-points="{{ $category->salesPoints->pluck('id')->implode(',') }}"
+                            @selected((string) old('product_category_id', $editingProduct?->product_category_id) === (string) $category->id)
+                        >
                             {{ $category->name }}
                         </option>
                     @endforeach
@@ -121,13 +140,27 @@
 </div>
 
 <div class="card">
-    <div class="card-header">Listado de productos</div>
+    <div class="card-header d-flex justify-content-between align-items-center gap-2">
+        <span>Listado de productos</span>
+        <form method="GET" action="{{ route('inventories.index') }}" class="d-flex gap-2">
+            <select name="sales_point_id" class="form-select form-select-sm">
+                <option value="">Todos los puntos</option>
+                @foreach($salesPoints as $salesPoint)
+                    <option value="{{ $salesPoint->id }}" @selected((string) $selectedSalesPointId === (string) $salesPoint->id)>
+                        {{ $salesPoint->name }}
+                    </option>
+                @endforeach
+            </select>
+            <button class="btn btn-sm btn-outline-primary">Filtrar</button>
+        </form>
+    </div>
     <div class="card-body table-responsive">
         <table class="table table-sm">
             <thead>
                 <tr>
                     <th>Código</th>
                     <th>Nombre</th>
+                    <th>Punto de venta</th>
                     <th>Categoría</th>
                     <th>Precio</th>
                     <th>Inventario</th>
@@ -140,6 +173,7 @@
                 <tr>
                     <td>{{ $product->code }}</td>
                     <td>{{ $product->name }}</td>
+                    <td>{{ $product->salesPoints->pluck('name')->join(', ') ?: '—' }}</td>
                     <td>{{ $product->category?->name ?? 'Sin categoría' }}</td>
                     <td>${{ number_format((float) $product->price, 2, '.', ',') }}</td>
                     <td>
@@ -153,7 +187,7 @@
                     <td><a class="btn btn-sm btn-outline-primary" href="{{ route('inventories.edit', $product) }}">Editar</a></td>
                 </tr>
             @empty
-                <tr><td colspan="7">No hay productos registrados.</td></tr>
+                <tr><td colspan="8">No hay productos registrados.</td></tr>
             @endforelse
             </tbody>
         </table>
@@ -170,6 +204,8 @@
         const comboFields = document.querySelectorAll('.combo-field');
         const comboCategoryFilter = document.getElementById('combo_category_filter');
         const comboProductsSelect = document.getElementById('combo_products_select');
+        const salesPointSelect = document.getElementById('sales_point_id');
+        const categorySelect = document.querySelector('select[name="product_category_id"]');
 
         const toggleInventoryFields = () => {
             const enabled = tracksInventoryCheck?.checked;
@@ -200,13 +236,39 @@
             });
         };
 
+        const filterCategoryOptions = () => {
+            if (!salesPointSelect || !categorySelect) {
+                return;
+            }
+
+            const selectedPoint = salesPointSelect.value;
+            [...categorySelect.options].forEach((option, index) => {
+                if (index === 0) {
+                    return;
+                }
+
+                const allowedPoints = (option.dataset.salesPoints || '')
+                    .split(',')
+                    .map((value) => value.trim())
+                    .filter(Boolean);
+                const visible = selectedPoint === '' || allowedPoints.includes(selectedPoint);
+                option.hidden = !visible;
+
+                if (!visible && option.selected) {
+                    option.selected = false;
+                }
+            });
+        };
+
         tracksInventoryCheck?.addEventListener('change', toggleInventoryFields);
         isComboCheck?.addEventListener('change', toggleComboFields);
         comboCategoryFilter?.addEventListener('change', filterComboOptions);
+        salesPointSelect?.addEventListener('change', filterCategoryOptions);
 
         toggleInventoryFields();
         toggleComboFields();
         filterComboOptions();
+        filterCategoryOptions();
     });
 </script>
 @endpush
