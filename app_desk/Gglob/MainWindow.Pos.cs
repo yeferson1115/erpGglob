@@ -25,6 +25,7 @@ namespace Gglob
         private readonly List<ShiftSyncEvent> pendingShiftEvents = [];
         private readonly List<SaleSnapshot> pendingSales = [];
         private readonly List<MovementSnapshot> pendingMovements = [];
+        private bool legacyBackfillCompleted;
         private int posTicketSequence = 1;
         private ShiftAuditRecord? activeShift;
 
@@ -519,7 +520,8 @@ namespace Gglob
                     ActiveShift = activeShift is null ? null : ShiftSnapshot.FromModel(activeShift),
                     PendingShiftEvents = pendingShiftEvents.ToList(),
                     PendingSales = pendingSales.ToList(),
-                    PendingMovements = pendingMovements.ToList()
+                    PendingMovements = pendingMovements.ToList(),
+                    LegacyBackfillCompleted = legacyBackfillCompleted
                 };
 
                 var directory = Path.GetDirectoryName(PosAuditCachePath);
@@ -577,10 +579,128 @@ namespace Gglob
                 pendingSales.AddRange(payload.PendingSales ?? []);
                 pendingMovements.Clear();
                 pendingMovements.AddRange(payload.PendingMovements ?? []);
+                legacyBackfillCompleted = payload.LegacyBackfillCompleted;
+                BackfillLegacyRecordsIfNeeded(payload);
             }
             catch
             {
                 // Carga local best-effort.
+            }
+        }
+
+        private void BackfillLegacyRecordsIfNeeded(PosAuditStore payload)
+        {
+            if (payload.LegacyBackfillCompleted)
+            {
+                return;
+            }
+
+            foreach (var shift in shiftHistory)
+            {
+                var (evidence, photoPath) = SplitBiometricEvidence(shift.BiometricEvidence);
+                EnqueueShiftIfMissing(new ShiftSyncEvent
+                {
+                    EventType = "open",
+                    Cashier = shift.Cashier,
+                    CashRegisterName = shift.CashRegisterName,
+                    At = shift.OpenedAt,
+                    OpeningFund = shift.OpeningFund,
+                    BiometricMethod = shift.BiometricMethod,
+                    BiometricEvidence = evidence,
+                    BiometricPhotoPath = photoPath
+                });
+
+                if (shift.ClosedAt.HasValue)
+                {
+                    EnqueueShiftIfMissing(new ShiftSyncEvent
+                    {
+                        EventType = "close",
+                        Cashier = shift.Cashier,
+                        CashRegisterName = shift.CashRegisterName,
+                        At = shift.ClosedAt.Value,
+                        CountedCash = shift.CountedCash ?? 0,
+                        TotalSales = shift.TotalSales,
+                        Difference = shift.Difference,
+                        BiometricMethod = shift.BiometricMethod,
+                        BiometricEvidence = evidence,
+                        BiometricPhotoPath = photoPath
+                    });
+                }
+            }
+
+            foreach (var sale in posSalesAudit)
+            {
+                EnqueueSaleIfMissing(new SaleSnapshot
+                {
+                    TicketCode = sale.TicketCode,
+                    SoldAt = sale.SoldAt,
+                    PaymentType = sale.PaymentType,
+                    Total = sale.Total
+                });
+            }
+
+            foreach (var movement in cashMovements)
+            {
+                EnqueueMovementIfMissing(new MovementSnapshot
+                {
+                    Type = movement.Type,
+                    Detail = movement.Detail,
+                    Amount = movement.Amount,
+                    Cashier = movement.Cashier,
+                    At = movement.At
+                });
+            }
+
+            legacyBackfillCompleted = true;
+            SavePosAuditToDisk();
+        }
+
+        private static (string evidence, string photoPath) SplitBiometricEvidence(string biometricEvidence)
+        {
+            if (string.IsNullOrWhiteSpace(biometricEvidence))
+            {
+                return ("sin-evidencia", "sin-foto");
+            }
+
+            const string marker = "| foto:";
+            var index = biometricEvidence.IndexOf(marker, StringComparison.OrdinalIgnoreCase);
+            if (index < 0)
+            {
+                return (biometricEvidence.Trim(), "sin-foto");
+            }
+
+            var evidence = biometricEvidence[..index].Trim();
+            var photo = biometricEvidence[(index + marker.Length)..].Trim();
+            return (string.IsNullOrWhiteSpace(evidence) ? "sin-evidencia" : evidence, string.IsNullOrWhiteSpace(photo) ? "sin-foto" : photo);
+        }
+
+        private void EnqueueShiftIfMissing(ShiftSyncEvent item)
+        {
+            var key = $"{item.EventType}|{item.CashRegisterName}|{item.At:O}|{item.BiometricPhotoPath}";
+            var exists = pendingShiftEvents.Any(current => $"{current.EventType}|{current.CashRegisterName}|{current.At:O}|{current.BiometricPhotoPath}" == key);
+            if (!exists)
+            {
+                pendingShiftEvents.Add(item);
+            }
+        }
+
+        private void EnqueueSaleIfMissing(SaleSnapshot item)
+        {
+            var key = $"{item.TicketCode}|{item.SoldAt:O}|{item.Total}";
+            var exists = pendingSales.Any(current => $"{current.TicketCode}|{current.SoldAt:O}|{current.Total}" == key);
+            if (!exists)
+            {
+                pendingSales.Add(item);
+            }
+        }
+
+        private void EnqueueMovementIfMissing(MovementSnapshot item)
+        {
+            var key = $"{item.Type}|{item.Detail}|{item.Amount}|{item.At:O}";
+            var exists = pendingMovements.Any(current => $"{current.Type}|{current.Detail}|{current.Amount}|{current.At:O}" == key);
+            if (!exists)
+            {
+                pendingMovements.Add(item);
             }
         }
 
@@ -687,6 +807,7 @@ namespace Gglob
             public List<ShiftSyncEvent>? PendingShiftEvents { get; set; }
             public List<SaleSnapshot>? PendingSales { get; set; }
             public List<MovementSnapshot>? PendingMovements { get; set; }
+            public bool LegacyBackfillCompleted { get; set; }
         }
 
         private class ShiftSnapshot
