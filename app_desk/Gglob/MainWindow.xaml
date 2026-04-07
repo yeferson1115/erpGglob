@@ -327,6 +327,9 @@
 
                                                 <TextBlock Text="Evidencia (ID / referencia local)" FontWeight="SemiBold" />
                                                 <TextBox x:Name="ShiftBiometricEvidenceTextBox" Style="{StaticResource InputText}" />
+                                                <TextBlock Text="Foto biométrica (ruta o nombre del archivo capturado)" FontWeight="SemiBold" />
+                                                <TextBox x:Name="ShiftBiometricPhotoPathTextBox" Style="{StaticResource InputText}" />
+                                                <Button Content="📷 Activar cámara del dispositivo" Margin="0,0,0,8" Click="LaunchBiometricCameraButton_Click" />
 
                                                 <TextBlock Text="Fondo de caja apertura (opcional)" FontWeight="SemiBold" />
                                                 <TextBox x:Name="ShiftOpeningFundTextBox" Style="{StaticResource InputText}" />

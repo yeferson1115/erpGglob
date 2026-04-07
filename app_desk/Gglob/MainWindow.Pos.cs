@@ -2,7 +2,9 @@ using System.Collections.ObjectModel;
 using System.Collections.Specialized;
 using System.Globalization;
 using System.IO;
+using System.Net.Http;
 using System.Text.Json;
+using System.Text;
 using System.Windows;
 using System.Windows.Controls;
 
@@ -20,6 +22,9 @@ namespace Gglob
         private readonly ObservableCollection<CashMovementRecord> cashMovements = [];
         private readonly ObservableCollection<PosSaleAuditRecord> posSalesAudit = [];
         private readonly ObservableCollection<InventoryProductItem> filteredInventoryProducts = [];
+        private readonly List<ShiftSyncEvent> pendingShiftEvents = [];
+        private readonly List<SaleSnapshot> pendingSales = [];
+        private readonly List<MovementSnapshot> pendingMovements = [];
         private int posTicketSequence = 1;
         private ShiftAuditRecord? activeShift;
 
@@ -40,6 +45,7 @@ namespace Gglob
             EnsureActiveTicket();
             RefreshShiftSummary();
             RefreshPosBindings();
+            _ = SyncPendingDataAsync();
         }
 
         private void InventoryProducts_CollectionChanged(object? sender, NotifyCollectionChangedEventArgs e)
@@ -129,14 +135,15 @@ namespace Gglob
             return decimal.TryParse(normalized, NumberStyles.Any, CultureInfo.InvariantCulture, out var value) ? value : 0m;
         }
 
-        private bool ValidateBiometric(out string method, out string evidence)
+        private bool ValidateBiometric(out string method, out string evidence, out string photoPath)
         {
             method = (ShiftBiometricMethodComboBox.SelectedItem as ComboBoxItem)?.Content?.ToString() ?? string.Empty;
             evidence = ShiftBiometricEvidenceTextBox.Text.Trim();
+            photoPath = ShiftBiometricPhotoPathTextBox.Text.Trim();
 
-            if (string.IsNullOrWhiteSpace(method) || string.IsNullOrWhiteSpace(evidence))
+            if (string.IsNullOrWhiteSpace(method) || string.IsNullOrWhiteSpace(evidence) || string.IsNullOrWhiteSpace(photoPath))
             {
-                ShiftStatusTextBlock.Text = "Debes indicar método biométrico y evidencia en vivo para continuar.";
+                ShiftStatusTextBlock.Text = "Debes indicar método biométrico, evidencia en vivo y foto biométrica para continuar.";
                 ShiftStatusTextBlock.Foreground = System.Windows.Media.Brushes.DarkRed;
                 return false;
             }
@@ -153,7 +160,7 @@ namespace Gglob
                 return;
             }
 
-            if (!ValidateBiometric(out var method, out var evidence))
+            if (!ValidateBiometric(out var method, out var evidence, out var photoPath))
             {
                 return;
             }
@@ -167,7 +174,7 @@ namespace Gglob
                 DateTime.Now,
                 null,
                 method,
-                evidence,
+                $"{evidence} | foto:{photoPath}",
                 openingFund,
                 null,
                 0m,
@@ -179,10 +186,22 @@ namespace Gglob
                 0m);
 
             RegisterCashMovement(new CashMovementRecord("APERTURA", "Fondo inicial de caja", openingFund, cashierName, DateTime.Now));
+            pendingShiftEvents.Add(new ShiftSyncEvent
+            {
+                EventType = "open",
+                Cashier = cashierName,
+                CashRegisterName = cashRegister?.Name ?? "Caja sin asignar",
+                At = DateTime.Now,
+                OpeningFund = openingFund,
+                BiometricMethod = method,
+                BiometricEvidence = evidence,
+                BiometricPhotoPath = photoPath
+            });
             ShiftStatusTextBlock.Text = "Turno abierto correctamente con evidencia biométrica.";
             ShiftStatusTextBlock.Foreground = System.Windows.Media.Brushes.DarkGreen;
             RefreshShiftSummary();
             SavePosAuditToDisk();
+            _ = SyncPendingDataAsync();
         }
 
         private void CloseShiftButton_Click(object sender, RoutedEventArgs e)
@@ -194,7 +213,7 @@ namespace Gglob
                 return;
             }
 
-            if (!ValidateBiometric(out _, out _))
+            if (!ValidateBiometric(out var method, out var evidence, out var photoPath))
             {
                 return;
             }
@@ -216,6 +235,19 @@ namespace Gglob
             {
                 RegisterCashMovement(new CashMovementRecord("DESCUADRE", "Diferencia en cierre", difference, closedShift.Cashier, DateTime.Now));
             }
+            pendingShiftEvents.Add(new ShiftSyncEvent
+            {
+                EventType = "close",
+                Cashier = closedShift.Cashier,
+                CashRegisterName = closedShift.CashRegisterName,
+                At = DateTime.Now,
+                CountedCash = counted,
+                Difference = difference,
+                TotalSales = totalSales,
+                BiometricMethod = method,
+                BiometricEvidence = evidence,
+                BiometricPhotoPath = photoPath
+            });
 
             activeShift = null;
             ShiftStatusTextBlock.Text = "Turno cerrado y registrado en auditoría local.";
@@ -223,6 +255,7 @@ namespace Gglob
             RefreshShiftSummary();
             ShiftHistoryDataGrid.Items.Refresh();
             SavePosAuditToDisk();
+            _ = SyncPendingDataAsync();
         }
 
         private void CreateTicketButton_Click(object sender, RoutedEventArgs e)
@@ -406,6 +439,13 @@ namespace Gglob
 
             ticket.Close(paymentType, cash, transfer, card, check);
             posSalesAudit.Insert(0, new PosSaleAuditRecord(ticket.Code, DateTime.Now, paymentType, total));
+            pendingSales.Add(new SaleSnapshot
+            {
+                TicketCode = ticket.Code,
+                SoldAt = DateTime.Now,
+                PaymentType = paymentType,
+                Total = total
+            });
 
             if (cash > 0)
             {
@@ -437,12 +477,21 @@ namespace Gglob
             PosMixedCashTextBox.Text = string.Empty;
             PosMixedTransferTextBox.Text = string.Empty;
             PosCashReceivedTextBox.Text = string.Empty;
+            _ = SyncPendingDataAsync();
         }
 
         private void RegisterCashMovement(CashMovementRecord movement)
         {
             cashMovements.Insert(0, movement);
             CashMovementsDataGrid.Items.Refresh();
+            pendingMovements.Add(new MovementSnapshot
+            {
+                Type = movement.Type,
+                Detail = movement.Detail,
+                Amount = movement.Amount,
+                Cashier = movement.Cashier,
+                At = movement.At
+            });
         }
 
         private void SavePosAuditToDisk()
@@ -467,7 +516,10 @@ namespace Gglob
                         Cashier = movement.Cashier,
                         At = movement.At
                     }).ToList(),
-                    ActiveShift = activeShift is null ? null : ShiftSnapshot.FromModel(activeShift)
+                    ActiveShift = activeShift is null ? null : ShiftSnapshot.FromModel(activeShift),
+                    PendingShiftEvents = pendingShiftEvents.ToList(),
+                    PendingSales = pendingSales.ToList(),
+                    PendingMovements = pendingMovements.ToList()
                 };
 
                 var directory = Path.GetDirectoryName(PosAuditCachePath);
@@ -519,10 +571,110 @@ namespace Gglob
                 }
 
                 activeShift = payload.ActiveShift?.ToModel();
+                pendingShiftEvents.Clear();
+                pendingShiftEvents.AddRange(payload.PendingShiftEvents ?? []);
+                pendingSales.Clear();
+                pendingSales.AddRange(payload.PendingSales ?? []);
+                pendingMovements.Clear();
+                pendingMovements.AddRange(payload.PendingMovements ?? []);
             }
             catch
             {
                 // Carga local best-effort.
+            }
+        }
+
+        private async Task SyncPendingDataAsync()
+        {
+            if (pendingShiftEvents.Count == 0 && pendingSales.Count == 0 && pendingMovements.Count == 0)
+            {
+                return;
+            }
+
+            var syncedShiftEvents = new List<ShiftSyncEvent>();
+            foreach (var shiftEvent in pendingShiftEvents)
+            {
+                var ok = await PostJsonAsync("/pos/shifts/sync", shiftEvent);
+                if (ok)
+                {
+                    syncedShiftEvents.Add(shiftEvent);
+                }
+            }
+
+            var syncedSales = new List<SaleSnapshot>();
+            foreach (var sale in pendingSales)
+            {
+                var ok = await PostJsonAsync("/pos/sales/sync", new
+                {
+                    ticket_code = sale.TicketCode,
+                    sold_at = sale.SoldAt.ToString("yyyy-MM-dd HH:mm:ss"),
+                    payment_type = sale.PaymentType,
+                    total = sale.Total,
+                    company_id = currentUser?.CompanyId,
+                    cashier_user_id = currentUser?.Id
+                });
+                if (ok)
+                {
+                    syncedSales.Add(sale);
+                }
+            }
+
+            var syncedMovements = new List<MovementSnapshot>();
+            foreach (var movement in pendingMovements)
+            {
+                var ok = await PostJsonAsync("/pos/cash-movements/sync", new
+                {
+                    type = movement.Type,
+                    detail = movement.Detail,
+                    amount = movement.Amount,
+                    cashier = movement.Cashier,
+                    at = movement.At.ToString("yyyy-MM-dd HH:mm:ss"),
+                    company_id = currentUser?.CompanyId,
+                    cashier_user_id = currentUser?.Id
+                });
+                if (ok)
+                {
+                    syncedMovements.Add(movement);
+                }
+            }
+
+            pendingShiftEvents.RemoveAll(item => syncedShiftEvents.Contains(item));
+            pendingSales.RemoveAll(item => syncedSales.Contains(item));
+            pendingMovements.RemoveAll(item => syncedMovements.Contains(item));
+            SavePosAuditToDisk();
+        }
+
+        private async Task<bool> PostJsonAsync(string endpoint, object payload)
+        {
+            try
+            {
+                var json = JsonSerializer.Serialize(payload);
+                using var content = new StringContent(json, Encoding.UTF8, "application/json");
+                using var response = await HttpClient.PostAsync($"{ApiBaseUrl}{endpoint}", content);
+                return response.IsSuccessStatusCode;
+            }
+            catch
+            {
+                return false;
+            }
+        }
+
+        private void LaunchBiometricCameraButton_Click(object sender, RoutedEventArgs e)
+        {
+            try
+            {
+                System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo
+                {
+                    FileName = "microsoft.windows.camera:",
+                    UseShellExecute = true
+                });
+                ShiftStatusTextBlock.Text = "Cámara activada. Guarda la foto y registra su ruta/nombre en el campo de foto biométrica.";
+                ShiftStatusTextBlock.Foreground = System.Windows.Media.Brushes.DarkGreen;
+            }
+            catch
+            {
+                ShiftStatusTextBlock.Text = "No se pudo abrir la cámara del dispositivo en este entorno.";
+                ShiftStatusTextBlock.Foreground = System.Windows.Media.Brushes.DarkOrange;
             }
         }
 
@@ -532,6 +684,9 @@ namespace Gglob
             public List<SaleSnapshot>? Sales { get; set; }
             public List<MovementSnapshot>? Movements { get; set; }
             public ShiftSnapshot? ActiveShift { get; set; }
+            public List<ShiftSyncEvent>? PendingShiftEvents { get; set; }
+            public List<SaleSnapshot>? PendingSales { get; set; }
+            public List<MovementSnapshot>? PendingMovements { get; set; }
         }
 
         private class ShiftSnapshot
@@ -607,6 +762,21 @@ namespace Gglob
             public decimal Amount { get; set; }
             public string? Cashier { get; set; }
             public DateTime At { get; set; }
+        }
+
+        private class ShiftSyncEvent
+        {
+            public string? EventType { get; set; }
+            public string? Cashier { get; set; }
+            public string? CashRegisterName { get; set; }
+            public DateTime At { get; set; }
+            public decimal OpeningFund { get; set; }
+            public decimal CountedCash { get; set; }
+            public decimal TotalSales { get; set; }
+            public decimal Difference { get; set; }
+            public string? BiometricMethod { get; set; }
+            public string? BiometricEvidence { get; set; }
+            public string? BiometricPhotoPath { get; set; }
         }
     }
 }
