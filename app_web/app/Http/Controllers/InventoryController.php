@@ -15,10 +15,11 @@ class InventoryController extends Controller
 {
     public function index(): View
     {
-        $user = $this->ensureOwner();
-        $selectedSalesPointId = request()->integer('sales_point_id');
+        $user = $this->ensureBusinessUser();
+        $allowedSalesPointIds = $this->allowedSalesPointIds($user->id, (int) $user->company_id);
+        $selectedSalesPointId = $this->resolveSelectedSalesPointId(request()->integer('sales_point_id'), $allowedSalesPointIds);
         $salesPoints = SalesPoint::query()
-            ->where('company_id', $user->company_id)
+            ->whereIn('id', $allowedSalesPointIds)
             ->orderBy('name')
             ->get();
 
@@ -32,6 +33,7 @@ class InventoryController extends Controller
         $categories = ProductCategory::query()
             ->with('salesPoints:id')
             ->where('company_id', $user->company_id)
+            ->whereHas('salesPoints', fn ($query) => $query->whereIn('sales_points.id', $allowedSalesPointIds))
             ->where('is_active', true)
             ->orderBy('name')
             ->get();
@@ -42,16 +44,23 @@ class InventoryController extends Controller
             'editingProduct' => null,
             'salesPoints' => $salesPoints,
             'selectedSalesPointId' => $selectedSalesPointId,
+            'canSelectSalesPoint' => $this->canSelectSalesPoint($user),
         ]);
     }
 
     public function edit(InventoryProduct $inventory): View
     {
-        $user = $this->ensureOwner();
+        $user = $this->ensureBusinessUser();
+        $allowedSalesPointIds = $this->allowedSalesPointIds($user->id, (int) $user->company_id);
         abort_unless((int) $inventory->company_id === (int) $user->company_id, 403);
-        $selectedSalesPointId = request()->integer('sales_point_id');
+        abort_unless(
+            strtolower((string) $user->business_role) === 'owner' ||
+            $inventory->salesPoints()->whereIn('sales_points.id', $allowedSalesPointIds)->exists(),
+            403
+        );
+        $selectedSalesPointId = $this->resolveSelectedSalesPointId(request()->integer('sales_point_id'), $allowedSalesPointIds);
         $salesPoints = SalesPoint::query()
-            ->where('company_id', $user->company_id)
+            ->whereIn('id', $allowedSalesPointIds)
             ->orderBy('name')
             ->get();
 
@@ -65,6 +74,7 @@ class InventoryController extends Controller
         $categories = ProductCategory::query()
             ->with('salesPoints:id')
             ->where('company_id', $user->company_id)
+            ->whereHas('salesPoints', fn ($query) => $query->whereIn('sales_points.id', $allowedSalesPointIds))
             ->where('is_active', true)
             ->orderBy('name')
             ->get();
@@ -75,14 +85,16 @@ class InventoryController extends Controller
             'editingProduct' => $inventory,
             'salesPoints' => $salesPoints,
             'selectedSalesPointId' => $selectedSalesPointId,
+            'canSelectSalesPoint' => $this->canSelectSalesPoint($user),
         ]);
     }
 
     public function store(Request $request): RedirectResponse
     {
-        $user = $this->ensureOwner();
+        $user = $this->ensureBusinessUser();
+        $allowedSalesPointIds = $this->allowedSalesPointIds($user->id, (int) $user->company_id);
 
-        $data = $this->validatedData($request, $user->company_id);
+        $data = $this->validatedData($request, (int) $user->company_id, $allowedSalesPointIds);
         $salesPointId = (int) $data['sales_point_id'];
         unset($data['sales_point_id']);
         $product = InventoryProduct::create($data);
@@ -93,10 +105,16 @@ class InventoryController extends Controller
 
     public function update(Request $request, InventoryProduct $inventory): RedirectResponse
     {
-        $user = $this->ensureOwner();
+        $user = $this->ensureBusinessUser();
+        $allowedSalesPointIds = $this->allowedSalesPointIds($user->id, (int) $user->company_id);
         abort_unless((int) $inventory->company_id === (int) $user->company_id, 403);
+        abort_unless(
+            strtolower((string) $user->business_role) === 'owner' ||
+            $inventory->salesPoints()->whereIn('sales_points.id', $allowedSalesPointIds)->exists(),
+            403
+        );
 
-        $data = $this->validatedData($request, $user->company_id, $inventory->id);
+        $data = $this->validatedData($request, (int) $user->company_id, $allowedSalesPointIds, $inventory->id);
         $salesPointId = (int) $data['sales_point_id'];
         unset($data['sales_point_id']);
         $inventory->update($data);
@@ -105,7 +123,7 @@ class InventoryController extends Controller
         return redirect()->route('inventories.index')->with('success', 'Producto actualizado correctamente.');
     }
 
-    private function validatedData(Request $request, int $companyId, ?int $ignoreId = null): array
+    private function validatedData(Request $request, int $companyId, array $allowedSalesPointIds, ?int $ignoreId = null): array
     {
         $data = $request->validate([
             'code' => ['required', 'string', 'max:80', Rule::unique('inventory_products', 'code')->where(fn ($query) => $query->where('company_id', $companyId))->ignore($ignoreId)],
@@ -119,7 +137,7 @@ class InventoryController extends Controller
             'combo_product_codes' => ['nullable', 'string'],
             'combo_product_ids' => ['nullable', 'array'],
             'combo_product_ids.*' => ['integer', Rule::exists('inventory_products', 'id')->where(fn ($query) => $query->where('company_id', $companyId))],
-            'sales_point_id' => ['required', 'integer', Rule::exists('sales_points', 'id')->where(fn ($query) => $query->where('company_id', $companyId))],
+            'sales_point_id' => ['required', 'integer', Rule::exists('sales_points', 'id')->where(fn ($query) => $query->where('company_id', $companyId)->whereIn('id', $allowedSalesPointIds))],
         ]);
 
         $tracksInventory = (bool) ($data['tracks_inventory'] ?? false);
@@ -161,12 +179,48 @@ class InventoryController extends Controller
         ];
     }
 
-    private function ensureOwner()
+    private function ensureBusinessUser()
     {
         $user = Auth::user();
         abort_unless($user !== null && $user->company_id, 403);
-        abort_unless(strtolower((string) $user->business_role) === 'owner', 403);
 
         return $user;
+    }
+
+    private function allowedSalesPointIds(int $userId, int $companyId): array
+    {
+        $owner = strtolower((string) Auth::user()?->business_role) === 'owner';
+        if ($owner) {
+            return SalesPoint::query()
+                ->where('company_id', $companyId)
+                ->pluck('id')
+                ->map(fn ($id) => (int) $id)
+                ->all();
+        }
+
+        $ids = SalesPoint::query()
+            ->where('company_id', $companyId)
+            ->whereHas('users', fn ($query) => $query->where('users.id', $userId))
+            ->pluck('id')
+            ->map(fn ($id) => (int) $id)
+            ->all();
+
+        abort_unless(!empty($ids), 403);
+
+        return $ids;
+    }
+
+    private function resolveSelectedSalesPointId(?int $requestedId, array $allowedSalesPointIds): ?int
+    {
+        if ($requestedId && in_array($requestedId, $allowedSalesPointIds, true)) {
+            return $requestedId;
+        }
+
+        return count($allowedSalesPointIds) === 1 ? $allowedSalesPointIds[0] : null;
+    }
+
+    private function canSelectSalesPoint($user): bool
+    {
+        return strtolower((string) $user->business_role) === 'owner';
     }
 }
