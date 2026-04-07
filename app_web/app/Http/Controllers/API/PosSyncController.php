@@ -9,6 +9,8 @@ use App\Models\PosShift;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Str;
 
 class PosSyncController extends Controller
 {
@@ -31,14 +33,15 @@ class PosSyncController extends Controller
             'biometric_method' => ['required', 'string', 'max:60'],
             'biometric_evidence' => ['required', 'string', 'max:250'],
             'biometric_photo_path' => ['required', 'string', 'max:255'],
+            'biometric_photo_base64' => ['nullable', 'string'],
         ]);
 
         $occurredAt = Carbon::parse($validated['at']);
         $this->ensurePosContextAccess($user->id, $user->company_id, (int) $validated['sales_point_id'], (int) $validated['cash_register_id']);
         $this->ensureCashRegisterShiftConsistency(
             $validated['event_type'],
-            (int) $validated['cash_register_id'],
-            $user->id
+            (int) $validated['sales_point_id'],
+            (int) $validated['cash_register_id']
         );
         $syncHash = hash('sha256', implode('|', [
             $user->company_id,
@@ -51,6 +54,7 @@ class PosSyncController extends Controller
             $occurredAt->toIso8601String(),
             $validated['biometric_photo_path'],
         ]));
+        $storedBiometricPhotoPath = $this->storeBiometricPhotoIfPresent($validated['biometric_photo_base64'] ?? null, $validated['biometric_photo_path']);
 
         $shiftEvent = PosShift::query()->firstOrCreate(
             ['sync_hash' => $syncHash],
@@ -70,7 +74,7 @@ class PosSyncController extends Controller
                 'difference' => $validated['difference'] ?? 0,
                 'biometric_method' => $validated['biometric_method'],
                 'biometric_evidence' => $validated['biometric_evidence'],
-                'biometric_photo_path' => $validated['biometric_photo_path'],
+                'biometric_photo_path' => $storedBiometricPhotoPath,
                 'synced_at' => now(),
             ]
         );
@@ -97,6 +101,11 @@ class PosSyncController extends Controller
 
         $soldAt = Carbon::parse($validated['sold_at']);
         $this->ensurePosContextAccess($user->id, $user->company_id, (int) $validated['sales_point_id'], (int) $validated['cash_register_id']);
+        $this->ensureCashRegisterHasActiveShiftForCashier(
+            (int) $validated['sales_point_id'],
+            (int) $validated['cash_register_id'],
+            $user->id
+        );
         $syncHash = hash('sha256', implode('|', [
             $user->company_id,
             $user->id,
@@ -147,6 +156,11 @@ class PosSyncController extends Controller
 
         $occurredAt = Carbon::parse($validated['at']);
         $this->ensurePosContextAccess($user->id, $user->company_id, (int) $validated['sales_point_id'], (int) $validated['cash_register_id']);
+        $this->ensureCashRegisterHasActiveShiftForCashier(
+            (int) $validated['sales_point_id'],
+            (int) $validated['cash_register_id'],
+            $user->id
+        );
         $syncHash = hash('sha256', implode('|', [
             $user->company_id,
             $user->id,
@@ -209,10 +223,11 @@ class PosSyncController extends Controller
         abort_unless($assignedToSalesPoint || $assignedToRegister, 403, 'El cajero no está asignado al punto de venta.');
     }
 
-    private function ensureCashRegisterShiftConsistency(string $eventType, int $cashRegisterId, int $userId): void
+    private function ensureCashRegisterShiftConsistency(string $eventType, int $salesPointId, int $cashRegisterId): void
     {
         $latestOpen = PosShift::query()
             ->where('event_type', 'open')
+            ->where('sales_point_id', $salesPointId)
             ->where('cash_register_id', $cashRegisterId)
             ->orderByDesc('occurred_at')
             ->first();
@@ -220,13 +235,62 @@ class PosSyncController extends Controller
         if ($eventType === 'open' && $latestOpen !== null) {
             $latestClose = PosShift::query()
                 ->where('event_type', 'close')
+                ->where('sales_point_id', $salesPointId)
                 ->where('cash_register_id', $cashRegisterId)
                 ->where('occurred_at', '>=', $latestOpen->occurred_at)
                 ->exists();
 
-            if (!$latestClose && (int) $latestOpen->cashier_user_id !== $userId) {
-                abort(422, 'La caja ya tiene un turno activo por otro cajero.');
+            if (!$latestClose) {
+                abort(422, 'La caja seleccionada ya tiene un turno activo.');
             }
         }
+    }
+
+    private function ensureCashRegisterHasActiveShiftForCashier(int $salesPointId, int $cashRegisterId, int $userId): void
+    {
+        $latestOpen = PosShift::query()
+            ->where('event_type', 'open')
+            ->where('sales_point_id', $salesPointId)
+            ->where('cash_register_id', $cashRegisterId)
+            ->orderByDesc('occurred_at')
+            ->first();
+
+        abort_unless($latestOpen !== null, 422, 'Debes abrir turno en la caja seleccionada para registrar ventas o movimientos.');
+
+        $latestClose = PosShift::query()
+            ->where('event_type', 'close')
+            ->where('sales_point_id', $salesPointId)
+            ->where('cash_register_id', $cashRegisterId)
+            ->where('occurred_at', '>=', $latestOpen->occurred_at)
+            ->exists();
+
+        abort_if($latestClose, 422, 'Debes abrir turno en la caja seleccionada para registrar ventas o movimientos.');
+        abort_if((int) $latestOpen->cashier_user_id !== $userId, 422, 'La caja seleccionada tiene un turno activo de otro cajero.');
+    }
+
+    private function storeBiometricPhotoIfPresent(?string $photoBase64, string $fallbackPath): string
+    {
+        if (empty($photoBase64)) {
+            return $fallbackPath;
+        }
+
+        if (!preg_match('/^data:image\/(\w+);base64,/', $photoBase64, $matches)) {
+            return $fallbackPath;
+        }
+
+        $binary = base64_decode(substr($photoBase64, strpos($photoBase64, ',') + 1), true);
+        if ($binary === false || $binary === '') {
+            return $fallbackPath;
+        }
+
+        $extension = strtolower($matches[1] ?? 'jpg');
+        if (!in_array($extension, ['jpg', 'jpeg', 'png', 'webp'], true)) {
+            $extension = 'jpg';
+        }
+
+        $path = 'pos-biometric/' . now()->format('Y/m/d') . '/' . Str::uuid() . '.' . $extension;
+        Storage::disk('public')->put($path, $binary);
+
+        return $path;
     }
 }

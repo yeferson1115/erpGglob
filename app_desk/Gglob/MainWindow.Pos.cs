@@ -12,10 +12,17 @@ namespace Gglob
 {
     public partial class MainWindow
     {
-        private static readonly string PosAuditCachePath = Path.Combine(
-            Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
-            "Gglob",
-            "pos-audit.json");
+        private string GetPosAuditCachePath()
+        {
+            var companyId = currentUser?.CompanyId ?? 0;
+            var userId = currentUser?.Id ?? 0;
+            var fileName = $"pos-audit-c{companyId}-u{userId}.json";
+
+            return Path.Combine(
+                Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+                "Gglob",
+                fileName);
+        }
 
         private readonly ObservableCollection<PosTicket> posTickets = [];
         private readonly ObservableCollection<ShiftAuditRecord> shiftHistory = [];
@@ -23,6 +30,7 @@ namespace Gglob
         private readonly ObservableCollection<PosSaleAuditRecord> posSalesAudit = [];
         private readonly ObservableCollection<InventoryProductItem> filteredInventoryProducts = [];
         private readonly ObservableCollection<CashRegisterOption> posShiftRegisterOptions = [];
+        private readonly ObservableCollection<ProductCategoryItem> posCategoryFilterOptions = [];
         private readonly List<ShiftSyncEvent> pendingShiftEvents = [];
         private readonly List<SaleSnapshot> pendingSales = [];
         private readonly List<MovementSnapshot> pendingMovements = [];
@@ -39,12 +47,16 @@ namespace Gglob
             PosProductResultsListBox.ItemsSource = filteredInventoryProducts;
             PosSalesPointComboBox.ItemsSource = salesPointOptions;
             PosCashRegisterComboBox.ItemsSource = posShiftRegisterOptions;
+            PosProductCategoryFilterComboBox.ItemsSource = posCategoryFilterOptions;
+            PosProductCategoryFilterComboBox.DisplayMemberPath = "Name";
             PosCashRegisterComboBox.DisplayMemberPath = "Name";
             ShiftBiometricMethodComboBox.SelectedIndex = 0;
             PosPaymentTypeComboBox.SelectedIndex = 0;
 
             inventoryProducts.CollectionChanged += InventoryProducts_CollectionChanged;
+            productCategories.CollectionChanged += ProductCategories_CollectionChanged;
             EnsureFallbackProducts();
+            RefreshPosCategoryFilterOptions();
             RefreshProductSearchResults();
             LoadPosAuditFromDisk();
             EnsureActiveTicket();
@@ -56,6 +68,12 @@ namespace Gglob
 
         private void InventoryProducts_CollectionChanged(object? sender, NotifyCollectionChangedEventArgs e)
         {
+            RefreshProductSearchResults();
+        }
+
+        private void ProductCategories_CollectionChanged(object? sender, NotifyCollectionChangedEventArgs e)
+        {
+            RefreshPosCategoryFilterOptions();
             RefreshProductSearchResults();
         }
 
@@ -79,10 +97,15 @@ namespace Gglob
             }
 
             var query = PosProductSearchTextBox.Text.Trim();
+            var selectedPointId = (PosSalesPointComboBox.SelectedItem as SalesPointOption)?.Id;
+            var selectedCategoryId = PosProductCategoryFilterComboBox.SelectedValue as int?;
             var matches = inventoryProducts
-                .Where(product => string.IsNullOrWhiteSpace(query)
-                    || product.Name.Contains(query, StringComparison.OrdinalIgnoreCase)
-                    || product.Code.Contains(query, StringComparison.OrdinalIgnoreCase))
+                .Where(product =>
+                    (!selectedPointId.HasValue || product.SalesPointIds.Count == 0 || product.SalesPointIds.Contains(selectedPointId.Value)) &&
+                    (!selectedCategoryId.HasValue || product.ProductCategoryId == selectedCategoryId.Value) &&
+                    (string.IsNullOrWhiteSpace(query)
+                        || product.Name.Contains(query, StringComparison.OrdinalIgnoreCase)
+                        || product.Code.Contains(query, StringComparison.OrdinalIgnoreCase)))
                 .Take(50)
                 .ToList();
 
@@ -91,6 +114,31 @@ namespace Gglob
             {
                 filteredInventoryProducts.Add(match);
             }
+        }
+
+        private void RefreshPosCategoryFilterOptions()
+        {
+            var selectedPointId = (PosSalesPointComboBox.SelectedItem as SalesPointOption)?.Id;
+            var previousSelectedId = PosProductCategoryFilterComboBox.SelectedValue as int?;
+
+            posCategoryFilterOptions.Clear();
+            posCategoryFilterOptions.Add(new ProductCategoryItem(0, "Todas las categorías", string.Empty, true));
+
+            var allowedCategories = productCategories
+                .Where(category => selectedPointId is null
+                    || category.SalesPointIds.Count == 0
+                    || category.SalesPointIds.Contains(selectedPointId.Value))
+                .OrderBy(category => category.Name, StringComparer.OrdinalIgnoreCase)
+                .ToList();
+
+            foreach (var category in allowedCategories)
+            {
+                posCategoryFilterOptions.Add(category);
+            }
+
+            var selectedCategory = posCategoryFilterOptions.FirstOrDefault(c => c.Id == previousSelectedId)
+                ?? posCategoryFilterOptions.FirstOrDefault();
+            PosProductCategoryFilterComboBox.SelectedItem = selectedCategory;
         }
 
         private void EnsureActiveTicket()
@@ -152,6 +200,8 @@ namespace Gglob
         {
             var selectedPoint = PosSalesPointComboBox.SelectedItem as SalesPointOption;
             LoadRegistersForSalesPoint(selectedPoint?.Id);
+            RefreshPosCategoryFilterOptions();
+            RefreshProductSearchResults();
         }
 
         private async void RefreshPosContextButton_Click(object sender, RoutedEventArgs e)
@@ -225,13 +275,6 @@ namespace Gglob
 
         private void OpenShiftButton_Click(object sender, RoutedEventArgs e)
         {
-            if (activeShift is not null)
-            {
-                ShiftStatusTextBlock.Text = "Ya existe un turno activo. Debes cerrarlo antes de abrir uno nuevo.";
-                ShiftStatusTextBlock.Foreground = System.Windows.Media.Brushes.DarkOrange;
-                return;
-            }
-
             if (!ValidateBiometric(out var method, out var evidence, out var photoPath))
             {
                 return;
@@ -243,6 +286,13 @@ namespace Gglob
             {
                 ShiftStatusTextBlock.Text = "Debes seleccionar una caja asignada para abrir turno.";
                 ShiftStatusTextBlock.Foreground = System.Windows.Media.Brushes.DarkRed;
+                return;
+            }
+
+            if (activeShift is not null && activeShift.CashRegisterId == cashRegister.Id)
+            {
+                ShiftStatusTextBlock.Text = "La caja seleccionada ya tiene un turno activo. Debes cerrarlo antes de abrir uno nuevo.";
+                ShiftStatusTextBlock.Foreground = System.Windows.Media.Brushes.DarkOrange;
                 return;
             }
 
@@ -281,7 +331,8 @@ namespace Gglob
                 OpeningFund = openingFund,
                 BiometricMethod = method,
                 BiometricEvidence = evidence,
-                BiometricPhotoPath = photoPath
+                BiometricPhotoPath = photoPath,
+                BiometricPhotoBase64 = ResolveBiometricPhotoBase64(photoPath)
             });
             ShiftStatusTextBlock.Text = "Turno abierto correctamente con evidencia biométrica.";
             ShiftStatusTextBlock.Foreground = System.Windows.Media.Brushes.DarkGreen;
@@ -335,7 +386,8 @@ namespace Gglob
                 TotalSales = totalSales,
                 BiometricMethod = method,
                 BiometricEvidence = evidence,
-                BiometricPhotoPath = photoPath
+                BiometricPhotoPath = photoPath,
+                BiometricPhotoBase64 = ResolveBiometricPhotoBase64(photoPath)
             });
 
             activeShift = null;
@@ -457,6 +509,11 @@ namespace Gglob
             RefreshProductSearchResults();
         }
 
+        private void PosProductCategoryFilterComboBox_SelectionChanged(object sender, SelectionChangedEventArgs e)
+        {
+            RefreshProductSearchResults();
+        }
+
         private void PosProductResultsListBox_SelectionChanged(object sender, SelectionChangedEventArgs e)
         {
             if (PosProductResultsListBox.SelectedItem is InventoryProductItem product)
@@ -473,9 +530,10 @@ namespace Gglob
                 return;
             }
 
-            if (activeShift is null)
+            var cashRegister = PosCashRegisterComboBox.SelectedItem as CashRegisterOption;
+            if (activeShift is null || cashRegister is null || activeShift.CashRegisterId != cashRegister.Id)
             {
-                PosStatusTextBlock.Text = "Debes abrir turno antes de cobrar ventas.";
+                PosStatusTextBlock.Text = "Debes abrir turno en la caja seleccionada antes de cobrar ventas.";
                 PosStatusTextBlock.Foreground = System.Windows.Media.Brushes.DarkRed;
                 return;
             }
@@ -618,13 +676,14 @@ namespace Gglob
                     LegacyBackfillCompleted = legacyBackfillCompleted
                 };
 
-                var directory = Path.GetDirectoryName(PosAuditCachePath);
+                var cachePath = GetPosAuditCachePath();
+                var directory = Path.GetDirectoryName(cachePath);
                 if (!string.IsNullOrWhiteSpace(directory))
                 {
                     Directory.CreateDirectory(directory);
                 }
 
-                File.WriteAllText(PosAuditCachePath, JsonSerializer.Serialize(payload, new JsonSerializerOptions { WriteIndented = true }));
+                File.WriteAllText(cachePath, JsonSerializer.Serialize(payload, new JsonSerializerOptions { WriteIndented = true }));
             }
             catch
             {
@@ -636,12 +695,13 @@ namespace Gglob
         {
             try
             {
-                if (!File.Exists(PosAuditCachePath))
+                var cachePath = GetPosAuditCachePath();
+                if (!File.Exists(cachePath))
                 {
                     return;
                 }
 
-                var raw = File.ReadAllText(PosAuditCachePath);
+                var raw = File.ReadAllText(cachePath);
                 var payload = JsonSerializer.Deserialize<PosAuditStore>(raw);
                 if (payload is null)
                 {
@@ -704,7 +764,8 @@ namespace Gglob
                     OpeningFund = shift.OpeningFund,
                     BiometricMethod = shift.BiometricMethod,
                     BiometricEvidence = evidence,
-                    BiometricPhotoPath = photoPath
+                    BiometricPhotoPath = photoPath,
+                    BiometricPhotoBase64 = ResolveBiometricPhotoBase64(photoPath)
                 });
 
                 if (shift.ClosedAt.HasValue)
@@ -723,7 +784,8 @@ namespace Gglob
                         Difference = shift.Difference,
                         BiometricMethod = shift.BiometricMethod,
                         BiometricEvidence = evidence,
-                        BiometricPhotoPath = photoPath
+                        BiometricPhotoPath = photoPath,
+                        BiometricPhotoBase64 = ResolveBiometricPhotoBase64(photoPath)
                     });
                 }
             }
@@ -811,20 +873,45 @@ namespace Gglob
                 return;
             }
 
+            string? syncError = null;
             var syncedShiftEvents = new List<ShiftSyncEvent>();
             foreach (var shiftEvent in pendingShiftEvents)
             {
-                var ok = await PostJsonAsync("/pos/shifts/sync", shiftEvent);
+                var result = await PostJsonAsync("/pos/shifts/sync", new
+                {
+                    event_type = shiftEvent.EventType,
+                    cashier = shiftEvent.Cashier,
+                    sales_point_id = shiftEvent.SalesPointId,
+                    cash_register_id = shiftEvent.CashRegisterId,
+                    cash_register_shift_id = shiftEvent.CashRegisterShiftId,
+                    cash_register_name = shiftEvent.CashRegisterName,
+                    at = shiftEvent.At.ToString("yyyy-MM-dd HH:mm:ss"),
+                    opening_fund = shiftEvent.OpeningFund,
+                    counted_cash = shiftEvent.CountedCash,
+                    total_sales = shiftEvent.TotalSales,
+                    difference = shiftEvent.Difference,
+                    biometric_method = shiftEvent.BiometricMethod,
+                    biometric_evidence = shiftEvent.BiometricEvidence,
+                    biometric_photo_path = shiftEvent.BiometricPhotoPath,
+                    biometric_photo_base64 = shiftEvent.BiometricPhotoBase64,
+                    company_id = currentUser?.CompanyId,
+                    cashier_user_id = currentUser?.Id
+                });
+                var ok = result.ok;
                 if (ok)
                 {
                     syncedShiftEvents.Add(shiftEvent);
+                }
+                else
+                {
+                    syncError ??= result.error;
                 }
             }
 
             var syncedSales = new List<SaleSnapshot>();
             foreach (var sale in pendingSales)
             {
-                var ok = await PostJsonAsync("/pos/sales/sync", new
+                var result = await PostJsonAsync("/pos/sales/sync", new
                 {
                     ticket_code = sale.TicketCode,
                     sold_at = sale.SoldAt.ToString("yyyy-MM-dd HH:mm:ss"),
@@ -836,16 +923,21 @@ namespace Gglob
                     company_id = currentUser?.CompanyId,
                     cashier_user_id = currentUser?.Id
                 });
+                var ok = result.ok;
                 if (ok)
                 {
                     syncedSales.Add(sale);
+                }
+                else
+                {
+                    syncError ??= result.error;
                 }
             }
 
             var syncedMovements = new List<MovementSnapshot>();
             foreach (var movement in pendingMovements)
             {
-                var ok = await PostJsonAsync("/pos/cash-movements/sync", new
+                var result = await PostJsonAsync("/pos/cash-movements/sync", new
                 {
                     type = movement.Type,
                     detail = movement.Detail,
@@ -858,9 +950,14 @@ namespace Gglob
                     company_id = currentUser?.CompanyId,
                     cashier_user_id = currentUser?.Id
                 });
+                var ok = result.ok;
                 if (ok)
                 {
                     syncedMovements.Add(movement);
+                }
+                else
+                {
+                    syncError ??= result.error;
                 }
             }
 
@@ -868,20 +965,37 @@ namespace Gglob
             pendingSales.RemoveAll(item => syncedSales.Contains(item));
             pendingMovements.RemoveAll(item => syncedMovements.Contains(item));
             SavePosAuditToDisk();
+
+            if (pendingShiftEvents.Count == 0 && pendingSales.Count == 0 && pendingMovements.Count == 0)
+            {
+                ShiftStatusTextBlock.Text = "Datos POS sincronizados correctamente con base de datos.";
+                ShiftStatusTextBlock.Foreground = System.Windows.Media.Brushes.DarkGreen;
+            }
+            else if (!string.IsNullOrWhiteSpace(syncError))
+            {
+                ShiftStatusTextBlock.Text = $"Hay datos POS pendientes de sincronizar. Error: {syncError}";
+                ShiftStatusTextBlock.Foreground = System.Windows.Media.Brushes.DarkOrange;
+            }
         }
 
-        private async Task<bool> PostJsonAsync(string endpoint, object payload)
+        private async Task<(bool ok, string? error)> PostJsonAsync(string endpoint, object payload)
         {
             try
             {
                 var json = JsonSerializer.Serialize(payload);
                 using var content = new StringContent(json, Encoding.UTF8, "application/json");
                 using var response = await HttpClient.PostAsync($"{ApiBaseUrl}{endpoint}", content);
-                return response.IsSuccessStatusCode;
+                if (response.IsSuccessStatusCode)
+                {
+                    return (true, null);
+                }
+
+                var body = await response.Content.ReadAsStringAsync();
+                return (false, $"HTTP {(int) response.StatusCode} {body}");
             }
             catch
             {
-                return false;
+                return (false, "Sin conexión con servidor");
             }
         }
 
@@ -960,6 +1074,25 @@ namespace Gglob
             {
                 return false;
             }
+        }
+
+        private static string ResolveBiometricPhotoBase64(string? photoPath)
+        {
+            try
+            {
+                if (!string.IsNullOrWhiteSpace(photoPath) && File.Exists(photoPath))
+                {
+                    var bytes = File.ReadAllBytes(photoPath);
+                    return $"data:image/jpeg;base64,{Convert.ToBase64String(bytes)}";
+                }
+            }
+            catch
+            {
+                // Fallback a placeholder.
+            }
+
+            const string transparentPngBase64 = "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAusB9pU6x+QAAAAASUVORK5CYII=";
+            return $"data:image/png;base64,{transparentPngBase64}";
         }
 
         private class PosAuditStore
@@ -1083,6 +1216,7 @@ namespace Gglob
             public string? BiometricMethod { get; set; }
             public string? BiometricEvidence { get; set; }
             public string? BiometricPhotoPath { get; set; }
+            public string? BiometricPhotoBase64 { get; set; }
         }
     }
 }
