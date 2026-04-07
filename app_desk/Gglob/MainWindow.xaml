@@ -402,6 +402,13 @@
                                             </WrapPanel>
                                             <TextBlock Text="Buscar producto por nombre/código" FontWeight="SemiBold" />
                                             <TextBox x:Name="PosProductSearchTextBox" Style="{StaticResource InputText}" Margin="0,6,0,6" TextChanged="PosProductSearchTextBox_TextChanged" />
+                                            <TextBlock Text="Filtrar por categoría" FontWeight="SemiBold" />
+                                            <ComboBox x:Name="PosProductCategoryFilterComboBox"
+                                                      Height="34"
+                                                      Margin="0,6,0,6"
+                                                      DisplayMemberPath="Name"
+                                                      SelectedValuePath="Id"
+                                                      SelectionChanged="PosProductCategoryFilterComboBox_SelectionChanged" />
                                             <ListBox x:Name="PosProductResultsListBox" Height="90" DisplayMemberPath="CodeAndName" SelectionChanged="PosProductResultsListBox_SelectionChanged" />
                                             <WrapPanel Margin="0,0,0,10">
                                                 <TextBox x:Name="PosQuantityTextBox" Width="120" Text="1" Margin="0,0,8,0" />
