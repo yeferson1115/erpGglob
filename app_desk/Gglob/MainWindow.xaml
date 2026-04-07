@@ -358,51 +358,52 @@
                     </Border>
 
                     <Border x:Name="ProductsPanel" Visibility="Collapsed" Background="White" CornerRadius="12" Padding="14" BorderBrush="#e2e8f3" BorderThickness="1">
-                        <Grid>
-                            <Grid.RowDefinitions>
-                                <RowDefinition Height="Auto" />
-                                <RowDefinition Height="*" />
-                                <RowDefinition Height="Auto" />
-                            </Grid.RowDefinitions>
+                        <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+                            <Grid>
+                                <Grid.RowDefinitions>
+                                    <RowDefinition Height="Auto" />
+                                    <RowDefinition Height="Auto" />
+                                    <RowDefinition Height="Auto" />
+                                </Grid.RowDefinitions>
 
-                            <DockPanel Grid.Row="0" Margin="0,0,0,10">
-                                <StackPanel DockPanel.Dock="Left">
-                                    <TextBlock Text="Gestión de productos" FontSize="20" FontWeight="SemiBold" Foreground="#1e293b" />
-                                    <TextBlock Text="Consulta, crea, edita y elimina productos desde este módulo dedicado." Foreground="#64748b" Margin="0,3,0,0" />
-                                </StackPanel>
-                                <WrapPanel DockPanel.Dock="Right" HorizontalAlignment="Right" VerticalAlignment="Center">
-                                    <Button Content="↩ Volver a POS" Margin="0,0,8,0" Click="BackToPosButton_Click" />
-                                    <Button Content="🔄 Recargar" Margin="0,0,8,0" Click="ReloadInventoryProductsButton_Click" />
-                                    <Button Content="📥 Carga masiva Excel" Margin="0,0,8,0" Click="BulkImportInventoryProductsButton_Click" />
-                                    <Button Content="🗂️ Categorías" Margin="0,0,8,0" Click="OpenCategoriesButton_Click" />
-                                    <Button Content="➕ Crear producto" Style="{StaticResource PrimaryButton}" Width="180" Margin="0" Click="OpenCreateInventoryFormButton_Click" />
-                                </WrapPanel>
-                            </DockPanel>
+                                <DockPanel Grid.Row="0" Margin="0,0,0,10">
+                                    <StackPanel DockPanel.Dock="Left">
+                                        <TextBlock Text="Gestión de productos" FontSize="20" FontWeight="SemiBold" Foreground="#1e293b" />
+                                        <TextBlock Text="Consulta, crea, edita y elimina productos desde este módulo dedicado." Foreground="#64748b" Margin="0,3,0,0" />
+                                    </StackPanel>
+                                    <WrapPanel DockPanel.Dock="Right" HorizontalAlignment="Right" VerticalAlignment="Center">
+                                        <Button Content="↩ Volver a POS" Margin="0,0,8,0" Click="BackToPosButton_Click" />
+                                        <Button Content="🔄 Recargar" Margin="0,0,8,0" Click="ReloadInventoryProductsButton_Click" />
+                                        <Button Content="📥 Carga masiva Excel" Margin="0,0,8,0" Click="BulkImportInventoryProductsButton_Click" />
+                                        <Button Content="🗂️ Categorías" Margin="0,0,8,0" Click="OpenCategoriesButton_Click" />
+                                        <Button Content="➕ Crear producto" Style="{StaticResource PrimaryButton}" Width="180" Margin="0" Click="OpenCreateInventoryFormButton_Click" />
+                                    </WrapPanel>
+                                </DockPanel>
 
-                            <Border Grid.Row="1" Background="White" BorderBrush="#dbe3f0" BorderThickness="1" CornerRadius="10" Padding="8">
-                                <DataGrid x:Name="DeskInventoryProductsDataGrid" AutoGenerateColumns="False" IsReadOnly="True" CanUserAddRows="False" HeadersVisibility="Column" RowHeaderWidth="0" SelectionChanged="DeskInventoryProductsDataGrid_SelectionChanged">
-                                    <DataGrid.Columns>
-                                        <DataGridTextColumn Header="Código" Binding="{Binding Code}" Width="*" />
-                                        <DataGridTextColumn Header="Nombre" Binding="{Binding Name}" Width="2*" />
-                                        <DataGridTextColumn Header="Categoría" Binding="{Binding CategoryName}" Width="*" />
-                                        <DataGridTextColumn Header="Precio" Binding="{Binding PriceLabel}" Width="*" />
-                                        <DataGridTextColumn Header="Tipo" Binding="{Binding TypeLabel}" Width="*" />
-                                        <DataGridTemplateColumn Header="Acciones" Width="190">
-                                            <DataGridTemplateColumn.CellTemplate>
-                                                <DataTemplate>
-                                                    <WrapPanel>
-                                                        <Button Content="✏️ Editar" Width="82" Height="30" Margin="0,2,6,2" Tag="{Binding}" Click="EditInventoryRowButton_Click" />
-                                                        <Button Content="🗑 Eliminar" Width="90" Height="30" Margin="0,2,0,2" Tag="{Binding}" Click="DeleteInventoryRowButton_Click" />
-                                                    </WrapPanel>
-                                                </DataTemplate>
-                                            </DataGridTemplateColumn.CellTemplate>
-                                        </DataGridTemplateColumn>
-                                    </DataGrid.Columns>
-                                </DataGrid>
-                            </Border>
+                                <Border Grid.Row="1" Background="White" BorderBrush="#dbe3f0" BorderThickness="1" CornerRadius="10" Padding="8" Margin="0,0,0,12">
+                                    <DataGrid x:Name="DeskInventoryProductsDataGrid" AutoGenerateColumns="False" IsReadOnly="True" CanUserAddRows="False" HeadersVisibility="Column" RowHeaderWidth="0" SelectionChanged="DeskInventoryProductsDataGrid_SelectionChanged" MaxHeight="360">
+                                        <DataGrid.Columns>
+                                            <DataGridTextColumn Header="Código" Binding="{Binding Code}" Width="*" />
+                                            <DataGridTextColumn Header="Nombre" Binding="{Binding Name}" Width="2*" />
+                                            <DataGridTextColumn Header="Categoría" Binding="{Binding CategoryName}" Width="*" />
+                                            <DataGridTextColumn Header="Precio" Binding="{Binding PriceLabel}" Width="*" />
+                                            <DataGridTextColumn Header="Tipo" Binding="{Binding TypeLabel}" Width="*" />
+                                            <DataGridTemplateColumn Header="Acciones" Width="190">
+                                                <DataGridTemplateColumn.CellTemplate>
+                                                    <DataTemplate>
+                                                        <WrapPanel>
+                                                            <Button Content="✏️ Editar" Width="82" Height="30" Margin="0,2,6,2" Tag="{Binding}" Click="EditInventoryRowButton_Click" />
+                                                            <Button Content="🗑 Eliminar" Width="90" Height="30" Margin="0,2,0,2" Tag="{Binding}" Click="DeleteInventoryRowButton_Click" />
+                                                        </WrapPanel>
+                                                    </DataTemplate>
+                                                </DataGridTemplateColumn.CellTemplate>
+                                            </DataGridTemplateColumn>
+                                        </DataGrid.Columns>
+                                    </DataGrid>
+                                </Border>
 
-                            <Border x:Name="DeskInventoryFormCard" Grid.Row="2" Margin="0,12,0,0" Background="#f8fbff" BorderBrush="#d9e4ff" BorderThickness="1" CornerRadius="10" Padding="14" Visibility="Collapsed">
-                                <StackPanel>
+                                <Border x:Name="DeskInventoryFormCard" Grid.Row="2" Margin="0,0,0,0" Background="#f8fbff" BorderBrush="#d9e4ff" BorderThickness="1" CornerRadius="10" Padding="14" Visibility="Collapsed">
+                                    <StackPanel>
                                     <TextBlock x:Name="DeskInventoryFormTitleTextBlock" Text="Crear producto" FontSize="17" FontWeight="SemiBold" Foreground="#1e293b" Margin="0,0,0,10" />
 
                                     <UniformGrid Columns="2" Margin="0,0,0,8">
@@ -495,9 +496,10 @@
                                         <Button x:Name="SaveInventoryProductButton" Content="💾 Guardar producto" Width="170" Style="{StaticResource PrimaryButton}" Margin="0" Click="SubmitInventoryProductButton_Click" />
                                         <Button Content="Cancelar" Width="120" Margin="8,0,0,0" Click="CancelInventoryEditButton_Click" />
                                     </WrapPanel>
-                                </StackPanel>
-                            </Border>
-                        </Grid>
+                                    </StackPanel>
+                                </Border>
+                            </Grid>
+                        </ScrollViewer>
                     </Border>
 
                     <Border x:Name="ProductCategoriesPanel" Visibility="Collapsed" Background="White" CornerRadius="12" Padding="14" BorderBrush="#e2e8f3" BorderThickness="1">
