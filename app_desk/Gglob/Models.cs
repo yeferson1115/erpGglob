@@ -742,5 +742,26 @@ namespace Gglob
         }
     }
 
+    public class PosSaleAuditRecord(string ticketCode, DateTime soldAt, string paymentType, decimal total)
+    {
+        public string TicketCode { get; } = ticketCode;
+        public DateTime SoldAt { get; } = soldAt;
+        public string PaymentType { get; } = paymentType;
+        public decimal Total { get; } = total;
+        public string SoldAtLabel => SoldAt.ToString("yyyy-MM-dd HH:mm");
+        public string TotalLabel => Total.ToString("C0", CultureInfo.GetCultureInfo("es-CO"));
+    }
+
+    public class CashMovementRecord(string type, string detail, decimal amount, string cashier, DateTime at)
+    {
+        public string Type { get; } = type;
+        public string Detail { get; } = detail;
+        public decimal Amount { get; } = amount;
+        public string Cashier { get; } = cashier;
+        public DateTime At { get; } = at;
+        public string AmountLabel => Amount.ToString("C0", CultureInfo.GetCultureInfo("es-CO"));
+        public string AtLabel => At.ToString("yyyy-MM-dd HH:mm");
+    }
+
     public record AccessValidation(bool IsValid, string Message);
 }

@@ -307,6 +307,7 @@
 
                             <TabControl Grid.Row="1">
                                 <TabItem Header="🕒 Turnos">
+                                    <ScrollViewer VerticalScrollBarVisibility="Auto">
                                     <Grid Margin="10">
                                         <Grid.ColumnDefinitions>
                                             <ColumnDefinition Width="1.1*" />
@@ -348,7 +349,8 @@
                                                     <TextBlock x:Name="CurrentShiftSummaryTextBlock" Text="No hay turno activo." Margin="0,6,0,0" TextWrapping="Wrap" />
                                                 </StackPanel>
                                             </Border>
-                                            <DataGrid x:Name="ShiftHistoryDataGrid" AutoGenerateColumns="False" IsReadOnly="True" CanUserAddRows="False" HeadersVisibility="Column">
+                                            <TextBlock Text="Histórico de turnos" FontWeight="SemiBold" Margin="0,0,0,6" />
+                                            <DataGrid x:Name="ShiftHistoryDataGrid" AutoGenerateColumns="False" IsReadOnly="True" CanUserAddRows="False" HeadersVisibility="Column" Height="170" Margin="0,0,0,10">
                                                 <DataGrid.Columns>
                                                     <DataGridTextColumn Header="Cajero" Binding="{Binding Cashier}" Width="*" />
                                                     <DataGridTextColumn Header="Caja" Binding="{Binding CashRegisterName}" Width="*" />
@@ -358,11 +360,24 @@
                                                     <DataGridTextColumn Header="Descuadre" Binding="{Binding DifferenceLabel}" Width="120" />
                                                 </DataGrid.Columns>
                                             </DataGrid>
+
+                                            <TextBlock Text="Movimientos de caja (usuario)" FontWeight="SemiBold" Margin="0,0,0,6" />
+                                            <DataGrid x:Name="CashMovementsDataGrid" AutoGenerateColumns="False" IsReadOnly="True" CanUserAddRows="False" HeadersVisibility="Column" Height="170">
+                                                <DataGrid.Columns>
+                                                    <DataGridTextColumn Header="Fecha" Binding="{Binding AtLabel}" Width="140" />
+                                                    <DataGridTextColumn Header="Tipo" Binding="{Binding Type}" Width="170" />
+                                                    <DataGridTextColumn Header="Detalle" Binding="{Binding Detail}" Width="2*" />
+                                                    <DataGridTextColumn Header="Valor" Binding="{Binding AmountLabel}" Width="120" />
+                                                    <DataGridTextColumn Header="Usuario" Binding="{Binding Cashier}" Width="*" />
+                                                </DataGrid.Columns>
+                                            </DataGrid>
                                         </StackPanel>
                                     </Grid>
+                                    </ScrollViewer>
                                 </TabItem>
 
                                 <TabItem Header="💳 Ventas">
+                                    <ScrollViewer VerticalScrollBarVisibility="Auto">
                                     <Grid Margin="10">
                                         <Grid.ColumnDefinitions>
                                             <ColumnDefinition Width="2*" />
@@ -375,8 +390,9 @@
                                                 <Button Content="🧹 Limpiar ticket" Margin="0,0,8,0" Click="ClearTicketButton_Click" />
                                                 <Button Content="🗑 Eliminar ticket" Click="DeleteTicketButton_Click" />
                                             </WrapPanel>
-                                            <TextBlock Text="Agregar producto (búsqueda por nombre/código)" FontWeight="SemiBold" />
-                                            <ComboBox x:Name="PosProductPickerComboBox" DisplayMemberPath="CodeAndName" Margin="0,6,0,8" Height="34" />
+                                            <TextBlock Text="Buscar producto por nombre/código" FontWeight="SemiBold" />
+                                            <TextBox x:Name="PosProductSearchTextBox" Style="{StaticResource InputText}" Margin="0,6,0,6" TextChanged="PosProductSearchTextBox_TextChanged" />
+                                            <ListBox x:Name="PosProductResultsListBox" Height="90" DisplayMemberPath="CodeAndName" SelectionChanged="PosProductResultsListBox_SelectionChanged" />
                                             <WrapPanel Margin="0,0,0,10">
                                                 <TextBox x:Name="PosQuantityTextBox" Width="120" Text="1" Margin="0,0,8,0" />
                                                 <Button Content="Agregar al ticket" Click="AddProductToTicketButton_Click" />
@@ -426,9 +442,20 @@
                                                 <TextBlock x:Name="PosChangeTextBlock" Foreground="#065f46" />
                                                 <Button Content="💰 Cobrar ticket" Style="{StaticResource PrimaryButton}" Click="ChargeTicketButton_Click" />
                                                 <TextBlock x:Name="PosStatusTextBlock" Margin="0,8,0,0" TextWrapping="Wrap" />
+
+                                                <TextBlock Text="Últimas ventas" FontWeight="SemiBold" Margin="0,8,0,6" />
+                                                <DataGrid x:Name="PosSalesAuditDataGrid" AutoGenerateColumns="False" IsReadOnly="True" CanUserAddRows="False" HeadersVisibility="Column" Height="180">
+                                                    <DataGrid.Columns>
+                                                        <DataGridTextColumn Header="Fecha" Binding="{Binding SoldAtLabel}" Width="120" />
+                                                        <DataGridTextColumn Header="Ticket" Binding="{Binding TicketCode}" Width="*" />
+                                                        <DataGridTextColumn Header="Pago" Binding="{Binding PaymentType}" Width="*" />
+                                                        <DataGridTextColumn Header="Total" Binding="{Binding TotalLabel}" Width="100" />
+                                                    </DataGrid.Columns>
+                                                </DataGrid>
                                             </StackPanel>
                                         </Border>
                                     </Grid>
+                                    </ScrollViewer>
                                 </TabItem>
                             </TabControl>
                         </Grid>
