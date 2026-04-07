@@ -2,17 +2,16 @@
 
 namespace App\Models;
 
-use Illuminate\Foundation\Auth\User as Authenticatable;
-use Spatie\Permission\Traits\HasRoles;
-use Tymon\JWTAuth\Contracts\JWTSubject;  // <- importa esta interfaz
-use Illuminate\Notifications\Notifiable;
-use Illuminate\Auth\Notifications\ResetPassword;
 use App\Notifications\CustomResetPasswordNotification;
-use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
+use Illuminate\Foundation\Auth\User as Authenticatable;
+use Illuminate\Notifications\Notifiable;
+use Spatie\Permission\Traits\HasRoles;
+use Tymon\JWTAuth\Contracts\JWTSubject;
 
-class User extends Authenticatable implements JWTSubject  // <- implementa la interfaz
+class User extends Authenticatable implements JWTSubject
 {
     use Notifiable, HasRoles;
 
@@ -24,7 +23,7 @@ class User extends Authenticatable implements JWTSubject  // <- implementa la in
         'password',
         'gender',
         'company_id',
-        'business_role'
+        'business_role',
     ];
 
     protected $hidden = [
@@ -36,19 +35,11 @@ class User extends Authenticatable implements JWTSubject  // <- implementa la in
         'email_verified_at' => 'datetime',
     ];
 
-    // Métodos requeridos por JWTSubject:
-
-    /**
-     * Get the identifier that will be stored in the subject claim of the JWT.
-     */
     public function getJWTIdentifier()
     {
         return $this->getKey();
     }
 
-    /**
-     * Return a key value array, containing any custom claims to be added to the JWT.
-     */
     public function getJWTCustomClaims()
     {
         return [];
@@ -75,6 +66,11 @@ class User extends Authenticatable implements JWTSubject  // <- implementa la in
             ->withPivot(['assigned_by', 'assigned_at', 'is_primary'])
             ->withTimestamps();
     }
+
+    public function salesPoints(): BelongsToMany
+    {
+        return $this->belongsToMany(SalesPoint::class, 'sales_point_user')
+            ->withPivot(['company_id', 'assigned_by', 'assigned_at', 'is_active'])
+            ->withTimestamps();
+    }
 }
-
-

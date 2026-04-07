@@ -780,6 +780,8 @@ namespace Gglob
                         var primaryIndex = cashRegisterOptions.ToList().FindIndex(x => x.IsPrimary);
                         QrCashierComboBox.SelectedIndex = primaryIndex >= 0 ? primaryIndex : 0;
                     }
+
+                    RefreshPosContextSelectors();
                 }
 
                 CashRegistersDataGrid.ItemsSource = null;
@@ -871,6 +873,7 @@ namespace Gglob
 
                 SalesPointsDataGrid.ItemsSource = null;
                 SalesPointsDataGrid.ItemsSource = salesPointOptions;
+                RefreshPosContextSelectors();
                 return true;
             }
             catch
@@ -1114,6 +1117,8 @@ namespace Gglob
                 var primaryIndex = cashRegisterOptions.ToList().FindIndex(x => x.IsPrimary);
                 QrCashierComboBox.SelectedIndex = primaryIndex >= 0 ? primaryIndex : 0;
             }
+
+            RefreshPosContextSelectors();
 
             CashRegistersDataGrid.ItemsSource = cashRegisterManagementOptions;
 
