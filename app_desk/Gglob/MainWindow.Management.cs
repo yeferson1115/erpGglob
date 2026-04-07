@@ -66,6 +66,11 @@ namespace Gglob
 
         private async void BulkImportInventoryProductsButton_Click(object sender, RoutedEventArgs e)
         {
+            if (!EnsureOwnerForCatalogAction("Solo el dueño puede crear productos."))
+            {
+                return;
+            }
+
             var dialog = new OpenFileDialog
             {
                 Title = "Seleccionar archivo Excel de productos",
@@ -154,6 +159,11 @@ namespace Gglob
 
         private async void SubmitInventoryProductButton_Click(object sender, RoutedEventArgs e)
         {
+            if (!EnsureOwnerForCatalogAction("Solo el dueño puede crear o editar productos."))
+            {
+                return;
+            }
+
             await SaveOrUpdateInventoryProduct(editingInventoryProductId.HasValue);
         }
 
@@ -205,12 +215,22 @@ namespace Gglob
 
         private void OpenCreateInventoryFormButton_Click(object sender, RoutedEventArgs e)
         {
+            if (!EnsureOwnerForCatalogAction("Solo el dueño puede crear productos."))
+            {
+                return;
+            }
+
             ResetInventoryForm();
             ShowInventoryForm(true);
         }
 
         private async void DeleteInventoryProductButton_Click(object sender, RoutedEventArgs e)
         {
+            if (!EnsureOwnerForCatalogAction("Solo el dueño puede eliminar productos."))
+            {
+                return;
+            }
+
             if (editingInventoryProductId is null)
             {
                 ShowAlert("Selecciona un producto de la tabla para eliminar.");
@@ -235,6 +255,11 @@ namespace Gglob
 
         private void EditInventoryRowButton_Click(object sender, RoutedEventArgs e)
         {
+            if (!EnsureOwnerForCatalogAction("Solo el dueño puede editar productos."))
+            {
+                return;
+            }
+
             if (sender is not Button { Tag: InventoryProductItem selected })
             {
                 return;
@@ -246,6 +271,11 @@ namespace Gglob
 
         private async void DeleteInventoryRowButton_Click(object sender, RoutedEventArgs e)
         {
+            if (!EnsureOwnerForCatalogAction("Solo el dueño puede eliminar productos."))
+            {
+                return;
+            }
+
             if (sender is not Button { Tag: InventoryProductItem selected })
             {
                 return;
@@ -394,6 +424,11 @@ namespace Gglob
 
         private async void SaveCategoryButton_Click(object sender, RoutedEventArgs e)
         {
+            if (!EnsureOwnerForCatalogAction("Solo el dueño puede crear o editar categorías."))
+            {
+                return;
+            }
+
             var name = CategoryNameTextBox.Text.Trim();
             var description = CategoryDescriptionTextBox.Text.Trim();
             var isActive = CategoryActiveCheckBox.IsChecked ?? true;
@@ -451,6 +486,11 @@ namespace Gglob
 
         private void EditCategoryRowButton_Click(object sender, RoutedEventArgs e)
         {
+            if (!EnsureOwnerForCatalogAction("Solo el dueño puede editar categorías."))
+            {
+                return;
+            }
+
             if (sender is not Button { Tag: ProductCategoryItem selected })
             {
                 return;
@@ -467,6 +507,11 @@ namespace Gglob
 
         private async void DeleteCategoryRowButton_Click(object sender, RoutedEventArgs e)
         {
+            if (!EnsureOwnerForCatalogAction("Solo el dueño puede eliminar categorías."))
+            {
+                return;
+            }
+
             if (sender is not Button { Tag: ProductCategoryItem selected })
             {
                 return;
@@ -907,13 +952,42 @@ namespace Gglob
         private void ApplyConfigurationAccess(ApiUser user)
         {
             var isOwner = IsOwner(user);
+            var canManageCatalog = isOwner;
             SaveWompiSettingsButton.IsEnabled = isOwner;
             SaveBancolombiaSettingsButton.IsEnabled = isOwner;
             SaveBancolombiaDestinationButton.IsEnabled = isOwner;
             CreateCashRegisterButton.IsEnabled = isOwner;
+            CreateInventoryProductButton.Visibility = canManageCatalog ? Visibility.Visible : Visibility.Collapsed;
+            BulkImportInventoryProductsButton.Visibility = canManageCatalog ? Visibility.Visible : Visibility.Collapsed;
+            SaveInventoryProductButton.Visibility = canManageCatalog ? Visibility.Visible : Visibility.Collapsed;
+            CancelInventoryEditButton.Visibility = canManageCatalog ? Visibility.Visible : Visibility.Collapsed;
+            InventoryActionsColumn.Visibility = canManageCatalog ? Visibility.Visible : Visibility.Collapsed;
+            SaveCategoryButton.Visibility = canManageCatalog ? Visibility.Visible : Visibility.Collapsed;
+            CancelCategoryEditButton.Visibility = canManageCatalog ? Visibility.Visible : Visibility.Collapsed;
+            CategoryActionsColumn.Visibility = canManageCatalog ? Visibility.Visible : Visibility.Collapsed;
+            CategoryNameTextBox.IsEnabled = canManageCatalog;
+            CategoryDescriptionTextBox.IsEnabled = canManageCatalog;
+            CategoryActiveCheckBox.IsEnabled = canManageCatalog;
+
+            if (!canManageCatalog)
+            {
+                DeskInventoryFormCard.Visibility = Visibility.Collapsed;
+            }
 
             WompiConfigTab.Visibility = isOwner ? Visibility.Visible : Visibility.Collapsed;
             BancolombiaConfigTab.Visibility = isOwner ? Visibility.Visible : Visibility.Collapsed;
+        }
+
+        private bool EnsureOwnerForCatalogAction(string message)
+        {
+            if (currentUser is not null && IsOwner(currentUser))
+            {
+                return true;
+            }
+
+            QrStatusTextBlock.Text = message;
+            QrStatusTextBlock.Foreground = Brushes.DarkOrange;
+            return false;
         }
 
         private async Task LoadProviderSettingsFromApi()

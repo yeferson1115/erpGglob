@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\InventoryProduct;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Validation\Rule;
 
 class InventoryProductController extends Controller
@@ -34,6 +35,8 @@ class InventoryProductController extends Controller
 
     public function store(Request $request): JsonResponse
     {
+        $this->ensureOwner();
+
         $data = $this->validatedData($request);
         $product = InventoryProduct::create($data);
 
@@ -45,6 +48,8 @@ class InventoryProductController extends Controller
 
     public function update(Request $request, InventoryProduct $inventoryProduct): JsonResponse
     {
+        $this->ensureOwner();
+
         $data = $this->validatedData($request, $inventoryProduct->id);
         $inventoryProduct->update($data);
 
@@ -56,6 +61,8 @@ class InventoryProductController extends Controller
 
     public function destroy(InventoryProduct $inventoryProduct): JsonResponse
     {
+        $this->ensureOwner();
+
         $inventoryProduct->delete();
 
         return response()->json(['message' => 'Producto eliminado correctamente.']);
@@ -111,5 +118,16 @@ class InventoryProductController extends Controller
             'is_combo' => $isCombo,
             'combo_product_codes' => $isCombo ? $comboCodes : null,
         ];
+    }
+
+    private function ensureOwner(): void
+    {
+        $user = Auth::user();
+        abort_unless(
+            $user !== null
+                && $user->company_id
+                && strtolower((string) $user->business_role) === 'owner',
+            403
+        );
     }
 }

@@ -25,7 +25,7 @@ class ProductCategoryController extends Controller
 
     public function store(Request $request): JsonResponse
     {
-        $user = $this->ensureBusinessUser();
+        $user = $this->ensureOwner();
         $data = $this->validatedData($request, $user->company_id);
 
         $category = ProductCategory::create([
@@ -41,7 +41,7 @@ class ProductCategoryController extends Controller
 
     public function update(Request $request, ProductCategory $productCategory): JsonResponse
     {
-        $user = $this->ensureBusinessUser();
+        $user = $this->ensureOwner();
         abort_unless((int) $productCategory->company_id === (int) $user->company_id, 403);
 
         $data = $this->validatedData($request, $user->company_id, $productCategory->id);
@@ -55,7 +55,7 @@ class ProductCategoryController extends Controller
 
     public function destroy(ProductCategory $productCategory): JsonResponse
     {
-        $user = $this->ensureBusinessUser();
+        $user = $this->ensureOwner();
         abort_unless((int) $productCategory->company_id === (int) $user->company_id, 403);
 
         $productCategory->delete();
@@ -83,6 +83,14 @@ class ProductCategoryController extends Controller
     {
         $user = Auth::user();
         abort_unless($user !== null && $user->company_id, 403);
+
+        return $user;
+    }
+
+    private function ensureOwner()
+    {
+        $user = $this->ensureBusinessUser();
+        abort_unless(strtolower((string) $user->business_role) === 'owner', 403);
 
         return $user;
     }
