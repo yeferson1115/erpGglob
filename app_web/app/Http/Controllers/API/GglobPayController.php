@@ -306,10 +306,30 @@ class GglobPayController extends Controller
     public function salesPoints(Request $request)
     {
         $user = $request->user();
+        $isOwner = $this->isOwner($request);
 
-        $rows = DB::table('sales_points')
-            ->where('company_id', $user->company_id)
-            ->orderBy('name')
+        $rows = DB::table('sales_points as sp')
+            ->where('sp.company_id', $user->company_id)
+            ->when(!$isOwner, function ($query) use ($user) {
+                $query->where(function ($sub) use ($user) {
+                    $sub->whereExists(function ($exists) use ($user) {
+                        $exists->selectRaw('1')
+                            ->from('sales_point_user as spu')
+                            ->whereColumn('spu.sales_point_id', 'sp.id')
+                            ->where('spu.user_id', $user->id)
+                            ->where('spu.is_active', true);
+                    })->orWhereExists(function ($exists) use ($user) {
+                        $exists->selectRaw('1')
+                            ->from('cash_register_user as cru')
+                            ->join('cash_registers as cr', 'cr.id', '=', 'cru.cash_register_id')
+                            ->whereColumn('cr.sales_point_id', 'sp.id')
+                            ->where('cru.user_id', $user->id)
+                            ->where('cr.status', 'active');
+                    });
+                });
+            })
+            ->select('sp.*')
+            ->orderBy('sp.name')
             ->get();
 
         return response()->json(['data' => $rows]);
@@ -895,11 +915,20 @@ class GglobPayController extends Controller
     public function payments(Request $request)
     {
         $companyId = $request->user()->company_id;
+        $isOwner = $this->isOwner($request);
+        $userId = (int) $request->user()->id;
+        $allowedSalesPointIds = $this->allowedSalesPointIdsForUser($companyId, $userId, $isOwner);
 
         $query = DB::table('gglob_pay_payments')
             ->leftJoin('cash_registers', 'cash_registers.id', '=', 'gglob_pay_payments.cash_register_id')
             ->leftJoin('sales_points', 'sales_points.id', '=', 'gglob_pay_payments.sales_point_id')
             ->where('gglob_pay_payments.company_id', $companyId);
+
+        if (!$isOwner) {
+            $query
+                ->where('gglob_pay_payments.cashier_user_id', $userId)
+                ->whereIn('gglob_pay_payments.sales_point_id', $allowedSalesPointIds);
+        }
 
         if ($request->filled('from')) {
             $query->whereDate('verified_at', '>=', $request->input('from'));
@@ -917,6 +946,10 @@ class GglobPayController extends Controller
             $query->where('gglob_pay_payments.sales_point_id', (int) $request->input('sales_point_id'));
         }
 
+        if ($request->filled('cash_register_id')) {
+            $query->where('gglob_pay_payments.cash_register_id', (int) $request->input('cash_register_id'));
+        }
+
         $payments = $query
             ->select(
                 'gglob_pay_payments.*',
@@ -927,6 +960,36 @@ class GglobPayController extends Controller
             ->get();
 
         return response()->json(['data' => $payments]);
+    }
+
+    private function allowedSalesPointIdsForUser(int $companyId, int $userId, bool $isOwner): array
+    {
+        if ($isOwner) {
+            return DB::table('sales_points')
+                ->where('company_id', $companyId)
+                ->pluck('id')
+                ->map(fn ($id) => (int) $id)
+                ->all();
+        }
+
+        $direct = DB::table('sales_point_user')
+            ->where('company_id', $companyId)
+            ->where('user_id', $userId)
+            ->where('is_active', true)
+            ->pluck('sales_point_id')
+            ->map(fn ($id) => (int) $id)
+            ->all();
+
+        $fromRegisters = DB::table('cash_register_user as cru')
+            ->join('cash_registers as cr', 'cr.id', '=', 'cru.cash_register_id')
+            ->where('cr.company_id', $companyId)
+            ->where('cru.user_id', $userId)
+            ->whereNotNull('cr.sales_point_id')
+            ->pluck('cr.sales_point_id')
+            ->map(fn ($id) => (int) $id)
+            ->all();
+
+        return array_values(array_unique([...$direct, ...$fromRegisters]));
     }
 
     public function storePayment(Request $request)

@@ -12,10 +12,17 @@ namespace Gglob
 {
     public partial class MainWindow
     {
-        private static readonly string PosAuditCachePath = Path.Combine(
-            Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
-            "Gglob",
-            "pos-audit.json");
+        private string GetPosAuditCachePath()
+        {
+            var companyId = currentUser?.CompanyId ?? 0;
+            var userId = currentUser?.Id ?? 0;
+            var fileName = $"pos-audit-c{companyId}-u{userId}.json";
+
+            return Path.Combine(
+                Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+                "Gglob",
+                fileName);
+        }
 
         private readonly ObservableCollection<PosTicket> posTickets = [];
         private readonly ObservableCollection<ShiftAuditRecord> shiftHistory = [];
@@ -225,13 +232,6 @@ namespace Gglob
 
         private void OpenShiftButton_Click(object sender, RoutedEventArgs e)
         {
-            if (activeShift is not null)
-            {
-                ShiftStatusTextBlock.Text = "Ya existe un turno activo. Debes cerrarlo antes de abrir uno nuevo.";
-                ShiftStatusTextBlock.Foreground = System.Windows.Media.Brushes.DarkOrange;
-                return;
-            }
-
             if (!ValidateBiometric(out var method, out var evidence, out var photoPath))
             {
                 return;
@@ -243,6 +243,13 @@ namespace Gglob
             {
                 ShiftStatusTextBlock.Text = "Debes seleccionar una caja asignada para abrir turno.";
                 ShiftStatusTextBlock.Foreground = System.Windows.Media.Brushes.DarkRed;
+                return;
+            }
+
+            if (activeShift is not null && activeShift.CashRegisterId == cashRegister.Id)
+            {
+                ShiftStatusTextBlock.Text = "La caja seleccionada ya tiene un turno activo. Debes cerrarlo antes de abrir uno nuevo.";
+                ShiftStatusTextBlock.Foreground = System.Windows.Media.Brushes.DarkOrange;
                 return;
             }
 
@@ -473,9 +480,10 @@ namespace Gglob
                 return;
             }
 
-            if (activeShift is null)
+            var cashRegister = PosCashRegisterComboBox.SelectedItem as CashRegisterOption;
+            if (activeShift is null || cashRegister is null || activeShift.CashRegisterId != cashRegister.Id)
             {
-                PosStatusTextBlock.Text = "Debes abrir turno antes de cobrar ventas.";
+                PosStatusTextBlock.Text = "Debes abrir turno en la caja seleccionada antes de cobrar ventas.";
                 PosStatusTextBlock.Foreground = System.Windows.Media.Brushes.DarkRed;
                 return;
             }
@@ -618,13 +626,14 @@ namespace Gglob
                     LegacyBackfillCompleted = legacyBackfillCompleted
                 };
 
-                var directory = Path.GetDirectoryName(PosAuditCachePath);
+                var cachePath = GetPosAuditCachePath();
+                var directory = Path.GetDirectoryName(cachePath);
                 if (!string.IsNullOrWhiteSpace(directory))
                 {
                     Directory.CreateDirectory(directory);
                 }
 
-                File.WriteAllText(PosAuditCachePath, JsonSerializer.Serialize(payload, new JsonSerializerOptions { WriteIndented = true }));
+                File.WriteAllText(cachePath, JsonSerializer.Serialize(payload, new JsonSerializerOptions { WriteIndented = true }));
             }
             catch
             {
@@ -636,12 +645,13 @@ namespace Gglob
         {
             try
             {
-                if (!File.Exists(PosAuditCachePath))
+                var cachePath = GetPosAuditCachePath();
+                if (!File.Exists(cachePath))
                 {
                     return;
                 }
 
-                var raw = File.ReadAllText(PosAuditCachePath);
+                var raw = File.ReadAllText(cachePath);
                 var payload = JsonSerializer.Deserialize<PosAuditStore>(raw);
                 if (payload is null)
                 {
