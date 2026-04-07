@@ -26,17 +26,23 @@
 
             <div class="col-md-6">
                 <label class="form-label">Punto de venta</label>
-                <select name="sales_point_id" id="sales_point_id" class="form-select" required>
-                    <option value="">-- Seleccionar punto de venta --</option>
-                    @foreach($salesPoints as $salesPoint)
-                        <option
-                            value="{{ $salesPoint->id }}"
-                            @selected((string) old('sales_point_id', $editingProduct?->salesPoints->pluck('id')->first()) === (string) $salesPoint->id)
-                        >
-                            {{ $salesPoint->name }}
-                        </option>
-                    @endforeach
-                </select>
+                @if($canSelectSalesPoint)
+                    <select name="sales_point_id" id="sales_point_id" class="form-select" required>
+                        <option value="">-- Seleccionar punto de venta --</option>
+                        @foreach($salesPoints as $salesPoint)
+                            <option
+                                value="{{ $salesPoint->id }}"
+                                @selected((string) old('sales_point_id', $editingProduct?->salesPoints->pluck('id')->first() ?? $selectedSalesPointId) === (string) $salesPoint->id)
+                            >
+                                {{ $salesPoint->name }}
+                            </option>
+                        @endforeach
+                    </select>
+                @else
+                    @php($lockedSalesPoint = $salesPoints->firstWhere('id', old('sales_point_id', $editingProduct?->salesPoints->pluck('id')->first() ?? $selectedSalesPointId)))
+                    <input type="hidden" name="sales_point_id" id="sales_point_id" value="{{ old('sales_point_id', $editingProduct?->salesPoints->pluck('id')->first() ?? $selectedSalesPointId) }}">
+                    <input type="text" class="form-control" value="{{ $lockedSalesPoint?->name ?? 'Punto de venta asignado' }}" disabled>
+                @endif
             </div>
 
             <div class="col-md-4">
@@ -142,17 +148,19 @@
 <div class="card">
     <div class="card-header d-flex justify-content-between align-items-center gap-2">
         <span>Listado de productos</span>
-        <form method="GET" action="{{ route('inventories.index') }}" class="d-flex gap-2">
-            <select name="sales_point_id" class="form-select form-select-sm">
-                <option value="">Todos los puntos</option>
-                @foreach($salesPoints as $salesPoint)
-                    <option value="{{ $salesPoint->id }}" @selected((string) $selectedSalesPointId === (string) $salesPoint->id)>
-                        {{ $salesPoint->name }}
-                    </option>
-                @endforeach
-            </select>
-            <button class="btn btn-sm btn-outline-primary">Filtrar</button>
-        </form>
+        @if($canSelectSalesPoint)
+            <form method="GET" action="{{ route('inventories.index') }}" class="d-flex gap-2">
+                <select name="sales_point_id" class="form-select form-select-sm">
+                    <option value="">Todos los puntos</option>
+                    @foreach($salesPoints as $salesPoint)
+                        <option value="{{ $salesPoint->id }}" @selected((string) $selectedSalesPointId === (string) $salesPoint->id)>
+                            {{ $salesPoint->name }}
+                        </option>
+                    @endforeach
+                </select>
+                <button class="btn btn-sm btn-outline-primary">Filtrar</button>
+            </form>
+        @endif
     </div>
     <div class="card-body table-responsive">
         <table class="table table-sm">
