@@ -592,6 +592,9 @@ namespace Gglob
         [JsonPropertyName("events_secret")]
         public string? EventsSecret { get; set; }
 
+        [JsonPropertyName("integrity_key")]
+        public string? IntegrityKey { get; set; }
+
         [JsonPropertyName("base_url")]
         public string? BaseUrl { get; set; }
 
