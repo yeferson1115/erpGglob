@@ -691,7 +691,11 @@ namespace Gglob
         decimal totalCard,
         decimal totalCheck,
         decimal returns,
-        decimal difference)
+        decimal difference,
+        int? salesPointId = null,
+        string? salesPointName = null,
+        int? cashRegisterId = null,
+        int? cashRegisterShiftId = null)
     {
         public string Cashier { get; } = cashier;
         public string CashRegisterName { get; } = cashRegisterName;
@@ -708,6 +712,10 @@ namespace Gglob
         public decimal TotalCheck { get; } = totalCheck;
         public decimal Returns { get; } = returns;
         public decimal Difference { get; } = difference;
+        public int? SalesPointId { get; } = salesPointId;
+        public string SalesPointName { get; } = salesPointName ?? "Sin punto de venta";
+        public int? CashRegisterId { get; } = cashRegisterId;
+        public int? CashRegisterShiftId { get; } = cashRegisterShiftId;
         public string OpenedAtLabel => OpenedAt.ToString("yyyy-MM-dd HH:mm");
         public string ClosedAtLabel => ClosedAt?.ToString("yyyy-MM-dd HH:mm") ?? "-";
         public string TotalSalesLabel => TotalSales.ToString("C0", CultureInfo.GetCultureInfo("es-CO"));
@@ -738,7 +746,11 @@ namespace Gglob
                 totalCard,
                 totalCheck,
                 Returns,
-                difference);
+                difference,
+                SalesPointId,
+                SalesPointName,
+                CashRegisterId,
+                CashRegisterShiftId);
         }
     }
 

@@ -318,6 +318,12 @@
                                             <StackPanel>
                                                 <TextBlock Text="Control de turno con biometría" FontWeight="SemiBold" FontSize="16" Foreground="#1f2937" />
                                                 <TextBlock Text="Se requiere evidencia biométrica en vivo para abrir y cerrar turno." Foreground="#64748b" TextWrapping="Wrap" Margin="0,4,0,10" />
+                                                <TextBlock Text="Punto de venta (asignado)" FontWeight="SemiBold" />
+                                                <ComboBox x:Name="PosSalesPointComboBox" Height="34" DisplayMemberPath="Name" SelectionChanged="PosSalesPointComboBox_SelectionChanged" />
+
+                                                <TextBlock Text="Caja (asignada)" FontWeight="SemiBold" />
+                                                <ComboBox x:Name="PosCashRegisterComboBox" Height="34" DisplayMemberPath="Name" />
+                                                <Button Content="🔄 Refrescar asignaciones" Margin="0,0,0,8" Click="RefreshPosContextButton_Click" />
 
                                                 <TextBlock Text="Método biométrico" FontWeight="SemiBold" />
                                                 <ComboBox x:Name="ShiftBiometricMethodComboBox" Height="34">
@@ -356,6 +362,7 @@
                                             <DataGrid x:Name="ShiftHistoryDataGrid" AutoGenerateColumns="False" IsReadOnly="True" CanUserAddRows="False" HeadersVisibility="Column" Height="170" Margin="0,0,0,10">
                                                 <DataGrid.Columns>
                                                     <DataGridTextColumn Header="Cajero" Binding="{Binding Cashier}" Width="*" />
+                                                    <DataGridTextColumn Header="Punto venta" Binding="{Binding SalesPointName}" Width="*" />
                                                     <DataGridTextColumn Header="Caja" Binding="{Binding CashRegisterName}" Width="*" />
                                                     <DataGridTextColumn Header="Apertura" Binding="{Binding OpenedAtLabel}" Width="140" />
                                                     <DataGridTextColumn Header="Cierre" Binding="{Binding ClosedAtLabel}" Width="140" />
