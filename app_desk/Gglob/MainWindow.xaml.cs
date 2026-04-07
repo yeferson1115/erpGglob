@@ -46,6 +46,7 @@ namespace Gglob
         {
             InitializeComponent();
             InitializeGglobPayModule();
+            InitializePosModule();
             DeskTracksInventoryCheck_Changed(this, new RoutedEventArgs());
             DeskIsComboCheck_Changed(this, new RoutedEventArgs());
         }

@@ -1,4 +1,7 @@
 using System.Globalization;
+using System.ComponentModel;
+using System.Collections.ObjectModel;
+using System.Runtime.CompilerServices;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using System.Windows.Media;
@@ -612,6 +615,131 @@ namespace Gglob
 
         [JsonPropertyName("payload")]
         public string? Payload { get; set; }
+    }
+
+    public class PosTicketLine(string productCode, string productName, int quantity, decimal unitPrice) : INotifyPropertyChanged
+    {
+        public string ProductCode { get; } = productCode;
+        public string ProductName { get; } = productName;
+        private int quantity = quantity;
+        public int Quantity
+        {
+            get => quantity;
+            set
+            {
+                if (quantity == value)
+                {
+                    return;
+                }
+
+                quantity = value;
+                OnPropertyChanged();
+                OnPropertyChanged(nameof(Subtotal));
+                OnPropertyChanged(nameof(SubtotalLabel));
+            }
+        }
+
+        public decimal UnitPrice { get; } = unitPrice;
+        public decimal Subtotal => UnitPrice * Quantity;
+        public string UnitPriceLabel => UnitPrice.ToString("C0", CultureInfo.GetCultureInfo("es-CO"));
+        public string SubtotalLabel => Subtotal.ToString("C0", CultureInfo.GetCultureInfo("es-CO"));
+
+        public event PropertyChangedEventHandler? PropertyChanged;
+
+        private void OnPropertyChanged([CallerMemberName] string? propertyName = null)
+        {
+            PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
+        }
+    }
+
+    public class PosTicket(string code)
+    {
+        public string Code { get; } = code;
+        public ObservableCollection<PosTicketLine> Lines { get; } = [];
+        public bool IsClosed { get; private set; }
+        public string PaymentType { get; private set; } = string.Empty;
+        public decimal CashAmount { get; private set; }
+        public decimal TransferAmount { get; private set; }
+        public decimal CardAmount { get; private set; }
+        public decimal CheckAmount { get; private set; }
+        public decimal Total => Lines.Sum(line => line.Subtotal);
+        public string DisplayName => $"{Code} • {Total.ToString("C0", CultureInfo.GetCultureInfo("es-CO"))}{(IsClosed ? " ✅" : string.Empty)}";
+
+        public void Close(string paymentType, decimal cash, decimal transfer, decimal card, decimal check)
+        {
+            IsClosed = true;
+            PaymentType = paymentType;
+            CashAmount = cash;
+            TransferAmount = transfer;
+            CardAmount = card;
+            CheckAmount = check;
+        }
+    }
+
+    public class ShiftAuditRecord(
+        string cashier,
+        string cashRegisterName,
+        DateTime openedAt,
+        DateTime? closedAt,
+        string biometricMethod,
+        string biometricEvidence,
+        decimal openingFund,
+        decimal? countedCash,
+        decimal totalSales,
+        decimal totalCash,
+        decimal totalTransfer,
+        decimal totalCard,
+        decimal totalCheck,
+        decimal returns,
+        decimal difference)
+    {
+        public string Cashier { get; } = cashier;
+        public string CashRegisterName { get; } = cashRegisterName;
+        public DateTime OpenedAt { get; } = openedAt;
+        public DateTime? ClosedAt { get; } = closedAt;
+        public string BiometricMethod { get; } = biometricMethod;
+        public string BiometricEvidence { get; } = biometricEvidence;
+        public decimal OpeningFund { get; } = openingFund;
+        public decimal? CountedCash { get; } = countedCash;
+        public decimal TotalSales { get; } = totalSales;
+        public decimal TotalCash { get; } = totalCash;
+        public decimal TotalTransfer { get; } = totalTransfer;
+        public decimal TotalCard { get; } = totalCard;
+        public decimal TotalCheck { get; } = totalCheck;
+        public decimal Returns { get; } = returns;
+        public decimal Difference { get; } = difference;
+        public string OpenedAtLabel => OpenedAt.ToString("yyyy-MM-dd HH:mm");
+        public string ClosedAtLabel => ClosedAt?.ToString("yyyy-MM-dd HH:mm") ?? "-";
+        public string TotalSalesLabel => TotalSales.ToString("C0", CultureInfo.GetCultureInfo("es-CO"));
+        public string DifferenceLabel => Difference.ToString("C0", CultureInfo.GetCultureInfo("es-CO"));
+
+        public ShiftAuditRecord WithClose(
+            DateTime closedAt,
+            decimal totalSales,
+            decimal totalCash,
+            decimal totalTransfer,
+            decimal totalCard,
+            decimal totalCheck,
+            decimal countedCash,
+            decimal difference)
+        {
+            return new ShiftAuditRecord(
+                Cashier,
+                CashRegisterName,
+                OpenedAt,
+                closedAt,
+                BiometricMethod,
+                BiometricEvidence,
+                OpeningFund,
+                countedCash,
+                totalSales,
+                totalCash,
+                totalTransfer,
+                totalCard,
+                totalCheck,
+                Returns,
+                difference);
+        }
     }
 
     public record AccessValidation(bool IsValid, string Message);
