@@ -1,0 +1,612 @@
+using System.Collections.ObjectModel;
+using System.Collections.Specialized;
+using System.Globalization;
+using System.IO;
+using System.Text.Json;
+using System.Windows;
+using System.Windows.Controls;
+
+namespace Gglob
+{
+    public partial class MainWindow
+    {
+        private static readonly string PosAuditCachePath = Path.Combine(
+            Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+            "Gglob",
+            "pos-audit.json");
+
+        private readonly ObservableCollection<PosTicket> posTickets = [];
+        private readonly ObservableCollection<ShiftAuditRecord> shiftHistory = [];
+        private readonly ObservableCollection<CashMovementRecord> cashMovements = [];
+        private readonly ObservableCollection<PosSaleAuditRecord> posSalesAudit = [];
+        private readonly ObservableCollection<InventoryProductItem> filteredInventoryProducts = [];
+        private int posTicketSequence = 1;
+        private ShiftAuditRecord? activeShift;
+
+        private void InitializePosModule()
+        {
+            PosTicketsListBox.ItemsSource = posTickets;
+            ShiftHistoryDataGrid.ItemsSource = shiftHistory;
+            CashMovementsDataGrid.ItemsSource = cashMovements;
+            PosSalesAuditDataGrid.ItemsSource = posSalesAudit;
+            PosProductResultsListBox.ItemsSource = filteredInventoryProducts;
+            ShiftBiometricMethodComboBox.SelectedIndex = 0;
+            PosPaymentTypeComboBox.SelectedIndex = 0;
+
+            inventoryProducts.CollectionChanged += InventoryProducts_CollectionChanged;
+            EnsureFallbackProducts();
+            RefreshProductSearchResults();
+            LoadPosAuditFromDisk();
+            EnsureActiveTicket();
+            RefreshShiftSummary();
+            RefreshPosBindings();
+        }
+
+        private void InventoryProducts_CollectionChanged(object? sender, NotifyCollectionChangedEventArgs e)
+        {
+            RefreshProductSearchResults();
+        }
+
+        private void EnsureFallbackProducts()
+        {
+            if (inventoryProducts.Count > 0)
+            {
+                return;
+            }
+
+            inventoryProducts.Add(new InventoryProductItem(0, "7701", "Agua 600ml", null, "General", 2500m, true, 50, 5, false, []));
+            inventoryProducts.Add(new InventoryProductItem(0, "7702", "Gaseosa 400ml", null, "General", 4200m, true, 40, 5, false, []));
+            inventoryProducts.Add(new InventoryProductItem(0, "7703", "Snack Papas", null, "General", 3500m, true, 35, 5, false, []));
+        }
+
+        private void RefreshProductSearchResults()
+        {
+            if (PosProductSearchTextBox is null)
+            {
+                return;
+            }
+
+            var query = PosProductSearchTextBox.Text.Trim();
+            var matches = inventoryProducts
+                .Where(product => string.IsNullOrWhiteSpace(query)
+                    || product.Name.Contains(query, StringComparison.OrdinalIgnoreCase)
+                    || product.Code.Contains(query, StringComparison.OrdinalIgnoreCase))
+                .Take(50)
+                .ToList();
+
+            filteredInventoryProducts.Clear();
+            foreach (var match in matches)
+            {
+                filteredInventoryProducts.Add(match);
+            }
+        }
+
+        private void EnsureActiveTicket()
+        {
+            if (posTickets.Count > 0)
+            {
+                return;
+            }
+
+            var ticket = new PosTicket($"T-{DateTime.Now:yyyyMMdd}-{posTicketSequence:000}");
+            posTicketSequence++;
+            posTickets.Add(ticket);
+            PosTicketsListBox.SelectedItem = ticket;
+        }
+
+        private PosTicket? GetSelectedTicket() => PosTicketsListBox.SelectedItem as PosTicket;
+
+        private void RefreshPosBindings()
+        {
+            var selected = GetSelectedTicket();
+            PosTicketLinesDataGrid.ItemsSource = selected?.Lines;
+            PosTotalsTextBlock.Text = selected is null
+                ? "Total ticket: $0"
+                : $"Total ticket: {selected.Total.ToString("C0", CultureInfo.GetCultureInfo("es-CO"))}";
+            PosTicketsListBox.Items.Refresh();
+        }
+
+        private void RefreshShiftSummary()
+        {
+            if (activeShift is null)
+            {
+                CurrentShiftSummaryTextBlock.Text = "No hay turno activo.";
+                return;
+            }
+
+            CurrentShiftSummaryTextBlock.Text =
+                $"Cajero: {activeShift.Cashier}\nCaja: {activeShift.CashRegisterName}\nInicio: {activeShift.OpenedAt:yyyy-MM-dd HH:mm}\nFondo: {activeShift.OpeningFund.ToString("C0", CultureInfo.GetCultureInfo("es-CO"))}";
+        }
+
+        private decimal ParseMoney(string? raw)
+        {
+            if (string.IsNullOrWhiteSpace(raw))
+            {
+                return 0m;
+            }
+
+            var normalized = raw.Replace("$", string.Empty).Replace(" ", string.Empty).Replace(".", string.Empty).Replace(',', '.');
+            return decimal.TryParse(normalized, NumberStyles.Any, CultureInfo.InvariantCulture, out var value) ? value : 0m;
+        }
+
+        private bool ValidateBiometric(out string method, out string evidence)
+        {
+            method = (ShiftBiometricMethodComboBox.SelectedItem as ComboBoxItem)?.Content?.ToString() ?? string.Empty;
+            evidence = ShiftBiometricEvidenceTextBox.Text.Trim();
+
+            if (string.IsNullOrWhiteSpace(method) || string.IsNullOrWhiteSpace(evidence))
+            {
+                ShiftStatusTextBlock.Text = "Debes indicar método biométrico y evidencia en vivo para continuar.";
+                ShiftStatusTextBlock.Foreground = System.Windows.Media.Brushes.DarkRed;
+                return false;
+            }
+
+            return true;
+        }
+
+        private void OpenShiftButton_Click(object sender, RoutedEventArgs e)
+        {
+            if (activeShift is not null)
+            {
+                ShiftStatusTextBlock.Text = "Ya existe un turno activo. Debes cerrarlo antes de abrir uno nuevo.";
+                ShiftStatusTextBlock.Foreground = System.Windows.Media.Brushes.DarkOrange;
+                return;
+            }
+
+            if (!ValidateBiometric(out var method, out var evidence))
+            {
+                return;
+            }
+
+            var cashRegister = cashRegisterOptions.FirstOrDefault();
+            var cashierName = currentUser?.Name ?? "Cajero";
+            var openingFund = ParseMoney(ShiftOpeningFundTextBox.Text);
+            activeShift = new ShiftAuditRecord(
+                cashierName,
+                cashRegister?.Name ?? "Caja sin asignar",
+                DateTime.Now,
+                null,
+                method,
+                evidence,
+                openingFund,
+                null,
+                0m,
+                0m,
+                0m,
+                0m,
+                0m,
+                0m,
+                0m);
+
+            RegisterCashMovement(new CashMovementRecord("APERTURA", "Fondo inicial de caja", openingFund, cashierName, DateTime.Now));
+            ShiftStatusTextBlock.Text = "Turno abierto correctamente con evidencia biométrica.";
+            ShiftStatusTextBlock.Foreground = System.Windows.Media.Brushes.DarkGreen;
+            RefreshShiftSummary();
+            SavePosAuditToDisk();
+        }
+
+        private void CloseShiftButton_Click(object sender, RoutedEventArgs e)
+        {
+            if (activeShift is null)
+            {
+                ShiftStatusTextBlock.Text = "No hay turno activo para cerrar.";
+                ShiftStatusTextBlock.Foreground = System.Windows.Media.Brushes.DarkOrange;
+                return;
+            }
+
+            if (!ValidateBiometric(out _, out _))
+            {
+                return;
+            }
+
+            var counted = ParseMoney(ShiftClosingCountedCashTextBox.Text);
+            var totalSales = posSalesAudit.Sum(sale => sale.Total);
+            var totalCash = cashMovements.Where(m => m.Type == "VENTA_EFECTIVO").Sum(m => m.Amount);
+            var totalTransfer = cashMovements.Where(m => m.Type == "VENTA_TRANSFERENCIA").Sum(m => m.Amount);
+            var totalCard = cashMovements.Where(m => m.Type == "VENTA_TARJETA").Sum(m => m.Amount);
+            var totalCheck = cashMovements.Where(m => m.Type == "VENTA_CHEQUE").Sum(m => m.Amount);
+            var expectedCash = activeShift.OpeningFund + totalCash - Math.Abs(cashMovements.Where(m => m.Type == "CAMBIO").Sum(m => m.Amount));
+            var difference = counted > 0 ? counted - expectedCash : 0m;
+
+            var closedShift = activeShift.WithClose(DateTime.Now, totalSales, totalCash, totalTransfer, totalCard, totalCheck, counted, difference);
+            shiftHistory.Insert(0, closedShift);
+
+            RegisterCashMovement(new CashMovementRecord("CIERRE", "Cierre de turno", counted, closedShift.Cashier, DateTime.Now));
+            if (difference != 0)
+            {
+                RegisterCashMovement(new CashMovementRecord("DESCUADRE", "Diferencia en cierre", difference, closedShift.Cashier, DateTime.Now));
+            }
+
+            activeShift = null;
+            ShiftStatusTextBlock.Text = "Turno cerrado y registrado en auditoría local.";
+            ShiftStatusTextBlock.Foreground = System.Windows.Media.Brushes.DarkGreen;
+            RefreshShiftSummary();
+            ShiftHistoryDataGrid.Items.Refresh();
+            SavePosAuditToDisk();
+        }
+
+        private void CreateTicketButton_Click(object sender, RoutedEventArgs e)
+        {
+            var ticket = new PosTicket($"T-{DateTime.Now:yyyyMMdd}-{posTicketSequence:000}");
+            posTicketSequence++;
+            posTickets.Add(ticket);
+            PosTicketsListBox.SelectedItem = ticket;
+            PosStatusTextBlock.Text = "Nuevo ticket creado.";
+            RefreshPosBindings();
+        }
+
+        private void ClearTicketButton_Click(object sender, RoutedEventArgs e)
+        {
+            var ticket = GetSelectedTicket();
+            if (ticket is null)
+            {
+                return;
+            }
+
+            ticket.Lines.Clear();
+            RefreshPosBindings();
+        }
+
+        private void DeleteTicketButton_Click(object sender, RoutedEventArgs e)
+        {
+            var ticket = GetSelectedTicket();
+            if (ticket is null)
+            {
+                return;
+            }
+
+            posTickets.Remove(ticket);
+            EnsureActiveTicket();
+            PosTicketsListBox.SelectedIndex = 0;
+            RefreshPosBindings();
+        }
+
+        private void AddProductToTicketButton_Click(object sender, RoutedEventArgs e)
+        {
+            var ticket = GetSelectedTicket();
+            var product = PosProductResultsListBox.SelectedItem as InventoryProductItem;
+            if (ticket is null || product is null)
+            {
+                PosStatusTextBlock.Text = "Selecciona ticket y producto.";
+                return;
+            }
+
+            var qty = int.TryParse(PosQuantityTextBox.Text, out var parsedQty) && parsedQty > 0 ? parsedQty : 1;
+            var existing = ticket.Lines.FirstOrDefault(x => x.ProductCode == product.Code);
+            if (existing is null)
+            {
+                ticket.Lines.Add(new PosTicketLine(product.Code, product.Name, qty, product.Price));
+            }
+            else
+            {
+                existing.Quantity += qty;
+            }
+
+            PosStatusTextBlock.Text = $"Producto agregado: {product.Name}.";
+            RefreshPosBindings();
+        }
+
+        private void IncreaseLineQuantityButton_Click(object sender, RoutedEventArgs e)
+        {
+            if (PosTicketLinesDataGrid.SelectedItem is not PosTicketLine line)
+            {
+                return;
+            }
+
+            line.Quantity += 1;
+            RefreshPosBindings();
+        }
+
+        private void DecreaseLineQuantityButton_Click(object sender, RoutedEventArgs e)
+        {
+            if (PosTicketLinesDataGrid.SelectedItem is not PosTicketLine line)
+            {
+                return;
+            }
+
+            line.Quantity = Math.Max(1, line.Quantity - 1);
+            RefreshPosBindings();
+        }
+
+        private void RemoveLineButton_Click(object sender, RoutedEventArgs e)
+        {
+            var ticket = GetSelectedTicket();
+            if (ticket is null || PosTicketLinesDataGrid.SelectedItem is not PosTicketLine line)
+            {
+                return;
+            }
+
+            ticket.Lines.Remove(line);
+            RefreshPosBindings();
+        }
+
+        private void PosTicketsListBox_SelectionChanged(object sender, SelectionChangedEventArgs e)
+        {
+            RefreshPosBindings();
+        }
+
+        private void PosMixedPaymentCheckBox_Changed(object sender, RoutedEventArgs e)
+        {
+            PosMixedPaymentPanel.Visibility = PosMixedPaymentCheckBox.IsChecked == true ? Visibility.Visible : Visibility.Collapsed;
+        }
+
+        private void PosProductSearchTextBox_TextChanged(object sender, TextChangedEventArgs e)
+        {
+            RefreshProductSearchResults();
+        }
+
+        private void PosProductResultsListBox_SelectionChanged(object sender, SelectionChangedEventArgs e)
+        {
+            if (PosProductResultsListBox.SelectedItem is InventoryProductItem product)
+            {
+                PosStatusTextBlock.Text = $"Producto seleccionado: {product.CodeAndName}";
+            }
+        }
+
+        private void ChargeTicketButton_Click(object sender, RoutedEventArgs e)
+        {
+            var ticket = GetSelectedTicket();
+            if (ticket is null)
+            {
+                return;
+            }
+
+            if (activeShift is null)
+            {
+                PosStatusTextBlock.Text = "Debes abrir turno antes de cobrar ventas.";
+                PosStatusTextBlock.Foreground = System.Windows.Media.Brushes.DarkRed;
+                return;
+            }
+
+            if (ticket.Lines.Count == 0)
+            {
+                PosStatusTextBlock.Text = "El ticket está vacío.";
+                PosStatusTextBlock.Foreground = System.Windows.Media.Brushes.DarkOrange;
+                return;
+            }
+
+            var total = ticket.Total;
+            var paymentType = (PosPaymentTypeComboBox.SelectedItem as ComboBoxItem)?.Content?.ToString() ?? "efectivo";
+            decimal cash = 0m;
+            decimal transfer = 0m;
+            decimal card = 0m;
+            decimal check = 0m;
+
+            if (PosMixedPaymentCheckBox.IsChecked == true)
+            {
+                cash = ParseMoney(PosMixedCashTextBox.Text);
+                transfer = ParseMoney(PosMixedTransferTextBox.Text);
+                if ((cash + transfer) != total)
+                {
+                    PosStatusTextBlock.Text = "En pago mixto, efectivo + transferencia debe ser igual al total del ticket.";
+                    PosStatusTextBlock.Foreground = System.Windows.Media.Brushes.DarkRed;
+                    return;
+                }
+                paymentType = "mixto";
+            }
+            else
+            {
+                switch (paymentType)
+                {
+                    case "transferencia": transfer = total; break;
+                    case "tarjeta": card = total; break;
+                    case "cheque": check = total; break;
+                    default: cash = total; break;
+                }
+            }
+
+            var received = ParseMoney(PosCashReceivedTextBox.Text);
+            var change = cash > 0 ? Math.Max(0, received - cash) : 0m;
+            if (cash > 0 && received < cash)
+            {
+                PosStatusTextBlock.Text = "El efectivo recibido es menor al valor cobrado en efectivo.";
+                PosStatusTextBlock.Foreground = System.Windows.Media.Brushes.DarkRed;
+                return;
+            }
+
+            ticket.Close(paymentType, cash, transfer, card, check);
+            posSalesAudit.Insert(0, new PosSaleAuditRecord(ticket.Code, DateTime.Now, paymentType, total));
+
+            if (cash > 0)
+            {
+                RegisterCashMovement(new CashMovementRecord("VENTA_EFECTIVO", $"Cobro ticket {ticket.Code}", cash, activeShift.Cashier, DateTime.Now));
+            }
+            if (transfer > 0)
+            {
+                RegisterCashMovement(new CashMovementRecord("VENTA_TRANSFERENCIA", $"Cobro ticket {ticket.Code}", transfer, activeShift.Cashier, DateTime.Now));
+            }
+            if (card > 0)
+            {
+                RegisterCashMovement(new CashMovementRecord("VENTA_TARJETA", $"Cobro ticket {ticket.Code}", card, activeShift.Cashier, DateTime.Now));
+            }
+            if (check > 0)
+            {
+                RegisterCashMovement(new CashMovementRecord("VENTA_CHEQUE", $"Cobro ticket {ticket.Code}", check, activeShift.Cashier, DateTime.Now));
+            }
+            if (change > 0)
+            {
+                RegisterCashMovement(new CashMovementRecord("CAMBIO", $"Cambio entregado ticket {ticket.Code}", -change, activeShift.Cashier, DateTime.Now));
+            }
+
+            PosChangeTextBlock.Text = $"Cambio: {change.ToString("C0", CultureInfo.GetCultureInfo("es-CO"))}";
+            PosStatusTextBlock.Text = $"Ticket {ticket.Code} cobrado ({paymentType}).";
+            PosStatusTextBlock.Foreground = System.Windows.Media.Brushes.DarkGreen;
+
+            SavePosAuditToDisk();
+            CreateTicketButton_Click(sender, e);
+            PosMixedCashTextBox.Text = string.Empty;
+            PosMixedTransferTextBox.Text = string.Empty;
+            PosCashReceivedTextBox.Text = string.Empty;
+        }
+
+        private void RegisterCashMovement(CashMovementRecord movement)
+        {
+            cashMovements.Insert(0, movement);
+            CashMovementsDataGrid.Items.Refresh();
+        }
+
+        private void SavePosAuditToDisk()
+        {
+            try
+            {
+                var payload = new PosAuditStore
+                {
+                    ShiftHistory = shiftHistory.Select(ShiftSnapshot.FromModel).ToList(),
+                    Sales = posSalesAudit.Select(sale => new SaleSnapshot
+                    {
+                        TicketCode = sale.TicketCode,
+                        SoldAt = sale.SoldAt,
+                        PaymentType = sale.PaymentType,
+                        Total = sale.Total
+                    }).ToList(),
+                    Movements = cashMovements.Select(movement => new MovementSnapshot
+                    {
+                        Type = movement.Type,
+                        Detail = movement.Detail,
+                        Amount = movement.Amount,
+                        Cashier = movement.Cashier,
+                        At = movement.At
+                    }).ToList(),
+                    ActiveShift = activeShift is null ? null : ShiftSnapshot.FromModel(activeShift)
+                };
+
+                var directory = Path.GetDirectoryName(PosAuditCachePath);
+                if (!string.IsNullOrWhiteSpace(directory))
+                {
+                    Directory.CreateDirectory(directory);
+                }
+
+                File.WriteAllText(PosAuditCachePath, JsonSerializer.Serialize(payload, new JsonSerializerOptions { WriteIndented = true }));
+            }
+            catch
+            {
+                // Persistencia local best-effort.
+            }
+        }
+
+        private void LoadPosAuditFromDisk()
+        {
+            try
+            {
+                if (!File.Exists(PosAuditCachePath))
+                {
+                    return;
+                }
+
+                var raw = File.ReadAllText(PosAuditCachePath);
+                var payload = JsonSerializer.Deserialize<PosAuditStore>(raw);
+                if (payload is null)
+                {
+                    return;
+                }
+
+                shiftHistory.Clear();
+                foreach (var item in payload.ShiftHistory ?? [])
+                {
+                    shiftHistory.Add(item.ToModel());
+                }
+
+                posSalesAudit.Clear();
+                foreach (var item in payload.Sales ?? [])
+                {
+                    posSalesAudit.Add(new PosSaleAuditRecord(item.TicketCode ?? string.Empty, item.SoldAt, item.PaymentType ?? string.Empty, item.Total));
+                }
+
+                cashMovements.Clear();
+                foreach (var item in payload.Movements ?? [])
+                {
+                    cashMovements.Add(new CashMovementRecord(item.Type ?? string.Empty, item.Detail ?? string.Empty, item.Amount, item.Cashier ?? string.Empty, item.At));
+                }
+
+                activeShift = payload.ActiveShift?.ToModel();
+            }
+            catch
+            {
+                // Carga local best-effort.
+            }
+        }
+
+        private class PosAuditStore
+        {
+            public List<ShiftSnapshot>? ShiftHistory { get; set; }
+            public List<SaleSnapshot>? Sales { get; set; }
+            public List<MovementSnapshot>? Movements { get; set; }
+            public ShiftSnapshot? ActiveShift { get; set; }
+        }
+
+        private class ShiftSnapshot
+        {
+            public string? Cashier { get; set; }
+            public string? CashRegisterName { get; set; }
+            public DateTime OpenedAt { get; set; }
+            public DateTime? ClosedAt { get; set; }
+            public string? BiometricMethod { get; set; }
+            public string? BiometricEvidence { get; set; }
+            public decimal OpeningFund { get; set; }
+            public decimal? CountedCash { get; set; }
+            public decimal TotalSales { get; set; }
+            public decimal TotalCash { get; set; }
+            public decimal TotalTransfer { get; set; }
+            public decimal TotalCard { get; set; }
+            public decimal TotalCheck { get; set; }
+            public decimal Returns { get; set; }
+            public decimal Difference { get; set; }
+
+            public ShiftAuditRecord ToModel() => new(
+                Cashier ?? string.Empty,
+                CashRegisterName ?? string.Empty,
+                OpenedAt,
+                ClosedAt,
+                BiometricMethod ?? string.Empty,
+                BiometricEvidence ?? string.Empty,
+                OpeningFund,
+                CountedCash,
+                TotalSales,
+                TotalCash,
+                TotalTransfer,
+                TotalCard,
+                TotalCheck,
+                Returns,
+                Difference);
+
+            public static ShiftSnapshot FromModel(ShiftAuditRecord model)
+            {
+                return new ShiftSnapshot
+                {
+                    Cashier = model.Cashier,
+                    CashRegisterName = model.CashRegisterName,
+                    OpenedAt = model.OpenedAt,
+                    ClosedAt = model.ClosedAt,
+                    BiometricMethod = model.BiometricMethod,
+                    BiometricEvidence = model.BiometricEvidence,
+                    OpeningFund = model.OpeningFund,
+                    CountedCash = model.CountedCash,
+                    TotalSales = model.TotalSales,
+                    TotalCash = model.TotalCash,
+                    TotalTransfer = model.TotalTransfer,
+                    TotalCard = model.TotalCard,
+                    TotalCheck = model.TotalCheck,
+                    Returns = model.Returns,
+                    Difference = model.Difference
+                };
+            }
+        }
+
+        private class SaleSnapshot
+        {
+            public string? TicketCode { get; set; }
+            public DateTime SoldAt { get; set; }
+            public string? PaymentType { get; set; }
+            public decimal Total { get; set; }
+        }
+
+        private class MovementSnapshot
+        {
+            public string? Type { get; set; }
+            public string? Detail { get; set; }
+            public decimal Amount { get; set; }
+            public string? Cashier { get; set; }
+            public DateTime At { get; set; }
+        }
+    }
+}
