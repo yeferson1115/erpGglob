@@ -328,11 +328,16 @@
                                                      Text="Filtros: sucursal/punto de venta, periodo (hoy/ayer/semana/mes/rango).&#x0a;Widgets: ventas por forma de pago + torta, ganancias, ventas por categoría, ventas por hora, producto, turno.&#x0a;Regla de acceso: solo plan pago con nube activa, vista inicial día actual y filtros dinámicos." />
                                         </TabItem>
                                         <TabItem x:Name="PosInventoryTab" Header="📦 Inventarios">
-                                            <Border Margin="0,8,0,0" Background="#f8fbff" BorderBrush="#d9e4ff" BorderThickness="1" CornerRadius="8" Padding="14">
-                                                <TextBlock Text="La gestión de productos ya no vive en POS visual. Usa el botón 🧺 Productos del módulo POS."
-                                                           Foreground="#334155"
-                                                           TextWrapping="Wrap" />
-                                            </Border>
+                                            <StackPanel Margin="0,8,0,0">
+                                                <Border Background="#f8fbff" BorderBrush="#d9e4ff" BorderThickness="1" CornerRadius="8" Padding="14">
+                                                    <TextBlock Text="La gestión de productos ya no vive en POS visual. Usa el botón 🧺 Productos del módulo POS."
+                                                               Foreground="#334155"
+                                                               TextWrapping="Wrap" />
+                                                </Border>
+                                                <TextBox x:Name="PosInventoryTextBox"
+                                                         Visibility="Collapsed"
+                                                         Text="Nuevo producto, edición, eliminación, ajustes de inventario, KIT/COMBO, categorías, promociones, importación Excel, catálogo, bajo inventario y kardex.&#x0a;Reglas clave: productos sin inventario fijo (ilimitados), mínimos para alertas, combos descuentan componentes." />
+                                            </StackPanel>
                                         </TabItem>
                                         <TabItem Header="⚙️ Configuración">
                                             <TextBox x:Name="PosSystemConfigTextBox" Margin="0,8,0,0" Height="230" TextWrapping="Wrap" AcceptsReturn="True" VerticalScrollBarVisibility="Auto"
