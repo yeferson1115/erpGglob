@@ -287,16 +287,151 @@
 
 
                     <Border x:Name="GglobPosPanel" Visibility="Collapsed" Background="White" CornerRadius="12" Padding="14" BorderBrush="#e2e8f3" BorderThickness="1">
-                        <StackPanel>
-                            <TextBlock Text="🧾 Gglob POS" FontSize="20" FontWeight="SemiBold" Foreground="#1f2937" />
-                            <TextBlock Text="Accesos rápidos del punto de venta. Aquí podrán convivir más botones de operación." Foreground="#6b7280" Margin="0,4,0,14" TextWrapping="Wrap" />
-                            <WrapPanel>
-                                <Button x:Name="OpenPosBlueprintButton" Content="🧠 POS completo (visual)" Width="220" Height="56" Margin="0,0,12,12" Background="#0f766e" Foreground="White" FontSize="16" FontWeight="Bold" BorderThickness="0" Click="OpenPosBlueprintButton_Click" />
-                                <Button x:Name="OpenProductsButton" Content="🧺 Productos" Width="220" Height="56" Margin="0,0,12,12" Background="#1d4ed8" Foreground="White" FontSize="16" FontWeight="Bold" BorderThickness="0" Click="OpenProductsButton_Click" />
-                                <Button x:Name="OpenCategoriesButton" Content="🗂️ Categorías" Width="220" Height="56" Margin="0,0,12,12" Background="#f97316" Foreground="White" FontSize="16" FontWeight="Bold" BorderThickness="0" Click="OpenCategoriesButton_Click" />
-                                <Button Content="🧾 Pedidos (próximamente)" Width="220" Height="56" Margin="0,0,12,12" IsEnabled="False" />
-                            </WrapPanel>
-                        </StackPanel>
+                        <Grid>
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto" />
+                                <RowDefinition Height="*" />
+                            </Grid.RowDefinitions>
+
+                            <DockPanel Margin="0,0,0,12">
+                                <StackPanel DockPanel.Dock="Left">
+                                    <TextBlock Text="🧾 Gglob POS" FontSize="20" FontWeight="SemiBold" Foreground="#1f2937" />
+                                    <TextBlock Text="Operación diaria de cajero: Turnos + Ventas (ticket y cobro)." Foreground="#6b7280" Margin="0,4,0,0" TextWrapping="Wrap" />
+                                </StackPanel>
+                                <WrapPanel DockPanel.Dock="Right" HorizontalAlignment="Right" VerticalAlignment="Center">
+                                    <Button x:Name="OpenProductsButton" Content="🧺 Productos" Margin="0,0,8,0" Click="OpenProductsButton_Click" />
+                                    <Button x:Name="OpenCategoriesButton" Content="🗂️ Categorías" Margin="0,0,8,0" Click="OpenCategoriesButton_Click" />
+                                    <Button x:Name="OpenPosBlueprintButton" Content="🧠 POS Blueprint" Click="OpenPosBlueprintButton_Click" />
+                                </WrapPanel>
+                            </DockPanel>
+
+                            <TabControl Grid.Row="1">
+                                <TabItem Header="🕒 Turnos">
+                                    <Grid Margin="10">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="1.1*" />
+                                            <ColumnDefinition Width="1.8*" />
+                                        </Grid.ColumnDefinitions>
+
+                                        <Border Background="#f8fbff" BorderBrush="#d9e4ff" BorderThickness="1" CornerRadius="10" Padding="12" Margin="0,0,12,0">
+                                            <StackPanel>
+                                                <TextBlock Text="Control de turno con biometría" FontWeight="SemiBold" FontSize="16" Foreground="#1f2937" />
+                                                <TextBlock Text="Se requiere evidencia biométrica en vivo para abrir y cerrar turno." Foreground="#64748b" TextWrapping="Wrap" Margin="0,4,0,10" />
+
+                                                <TextBlock Text="Método biométrico" FontWeight="SemiBold" />
+                                                <ComboBox x:Name="ShiftBiometricMethodComboBox" Height="34">
+                                                    <ComboBoxItem Content="Foto en vivo" />
+                                                    <ComboBoxItem Content="Huella dactilar" />
+                                                </ComboBox>
+
+                                                <TextBlock Text="Evidencia (ID / referencia local)" FontWeight="SemiBold" />
+                                                <TextBox x:Name="ShiftBiometricEvidenceTextBox" Style="{StaticResource InputText}" />
+
+                                                <TextBlock Text="Fondo de caja apertura (opcional)" FontWeight="SemiBold" />
+                                                <TextBox x:Name="ShiftOpeningFundTextBox" Style="{StaticResource InputText}" />
+
+                                                <TextBlock Text="Efectivo contado al cierre (opcional)" FontWeight="SemiBold" />
+                                                <TextBox x:Name="ShiftClosingCountedCashTextBox" Style="{StaticResource InputText}" />
+
+                                                <WrapPanel Margin="0,8,0,0">
+                                                    <Button Content="▶ Apertura de turno" Style="{StaticResource PrimaryButton}" Margin="0,0,8,0" Click="OpenShiftButton_Click" />
+                                                    <Button Content="⏹ Cierre de turno" Click="CloseShiftButton_Click" />
+                                                </WrapPanel>
+                                                <TextBlock x:Name="ShiftStatusTextBlock" Margin="0,10,0,0" Foreground="#065f46" TextWrapping="Wrap" />
+                                            </StackPanel>
+                                        </Border>
+
+                                        <StackPanel Grid.Column="1">
+                                            <Border Background="#f8fbff" BorderBrush="#d9e4ff" BorderThickness="1" CornerRadius="10" Padding="12" Margin="0,0,0,10">
+                                                <StackPanel>
+                                                    <TextBlock Text="Turno activo" FontWeight="SemiBold" FontSize="16" />
+                                                    <TextBlock x:Name="CurrentShiftSummaryTextBlock" Text="No hay turno activo." Margin="0,6,0,0" TextWrapping="Wrap" />
+                                                </StackPanel>
+                                            </Border>
+                                            <DataGrid x:Name="ShiftHistoryDataGrid" AutoGenerateColumns="False" IsReadOnly="True" CanUserAddRows="False" HeadersVisibility="Column">
+                                                <DataGrid.Columns>
+                                                    <DataGridTextColumn Header="Cajero" Binding="{Binding Cashier}" Width="*" />
+                                                    <DataGridTextColumn Header="Caja" Binding="{Binding CashRegisterName}" Width="*" />
+                                                    <DataGridTextColumn Header="Apertura" Binding="{Binding OpenedAtLabel}" Width="140" />
+                                                    <DataGridTextColumn Header="Cierre" Binding="{Binding ClosedAtLabel}" Width="140" />
+                                                    <DataGridTextColumn Header="Ventas turno" Binding="{Binding TotalSalesLabel}" Width="130" />
+                                                    <DataGridTextColumn Header="Descuadre" Binding="{Binding DifferenceLabel}" Width="120" />
+                                                </DataGrid.Columns>
+                                            </DataGrid>
+                                        </StackPanel>
+                                    </Grid>
+                                </TabItem>
+
+                                <TabItem Header="💳 Ventas">
+                                    <Grid Margin="10">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="2*" />
+                                            <ColumnDefinition Width="1.2*" />
+                                        </Grid.ColumnDefinitions>
+
+                                        <StackPanel Margin="0,0,12,0">
+                                            <WrapPanel Margin="0,0,0,8">
+                                                <Button Content="➕ Nuevo ticket" Margin="0,0,8,0" Click="CreateTicketButton_Click" />
+                                                <Button Content="🧹 Limpiar ticket" Margin="0,0,8,0" Click="ClearTicketButton_Click" />
+                                                <Button Content="🗑 Eliminar ticket" Click="DeleteTicketButton_Click" />
+                                            </WrapPanel>
+                                            <TextBlock Text="Agregar producto (búsqueda por nombre/código)" FontWeight="SemiBold" />
+                                            <ComboBox x:Name="PosProductPickerComboBox" DisplayMemberPath="CodeAndName" Margin="0,6,0,8" Height="34" />
+                                            <WrapPanel Margin="0,0,0,10">
+                                                <TextBox x:Name="PosQuantityTextBox" Width="120" Text="1" Margin="0,0,8,0" />
+                                                <Button Content="Agregar al ticket" Click="AddProductToTicketButton_Click" />
+                                            </WrapPanel>
+
+                                            <DataGrid x:Name="PosTicketLinesDataGrid" AutoGenerateColumns="False" IsReadOnly="True" CanUserAddRows="False" HeadersVisibility="Column" Height="270">
+                                                <DataGrid.Columns>
+                                                    <DataGridTextColumn Header="Producto" Binding="{Binding ProductName}" Width="2*" />
+                                                    <DataGridTextColumn Header="Cant." Binding="{Binding Quantity}" Width="80" />
+                                                    <DataGridTextColumn Header="Valor unitario" Binding="{Binding UnitPriceLabel}" Width="120" />
+                                                    <DataGridTextColumn Header="Subtotal" Binding="{Binding SubtotalLabel}" Width="120" />
+                                                </DataGrid.Columns>
+                                            </DataGrid>
+
+                                            <WrapPanel Margin="0,8,0,0">
+                                                <Button Content="+ Cantidad" Margin="0,0,8,0" Click="IncreaseLineQuantityButton_Click" />
+                                                <Button Content="- Cantidad" Margin="0,0,8,0" Click="DecreaseLineQuantityButton_Click" />
+                                                <Button Content="Quitar línea" Click="RemoveLineButton_Click" />
+                                            </WrapPanel>
+                                        </StackPanel>
+
+                                        <Border Grid.Column="1" Background="#f8fbff" BorderBrush="#d9e4ff" BorderThickness="1" CornerRadius="10" Padding="12">
+                                            <StackPanel>
+                                                <TextBlock Text="Tickets activos" FontWeight="SemiBold" />
+                                                <ListBox x:Name="PosTicketsListBox" Height="96" DisplayMemberPath="DisplayName" SelectionChanged="PosTicketsListBox_SelectionChanged" />
+
+                                                <TextBlock Text="Tipo de pago" FontWeight="SemiBold" Margin="0,10,0,0" />
+                                                <ComboBox x:Name="PosPaymentTypeComboBox" Height="34">
+                                                    <ComboBoxItem Content="efectivo" />
+                                                    <ComboBoxItem Content="transferencia" />
+                                                    <ComboBoxItem Content="tarjeta" />
+                                                    <ComboBoxItem Content="cheque" />
+                                                </ComboBox>
+
+                                                <CheckBox x:Name="PosMixedPaymentCheckBox" Content="Pago mixto (efectivo + transferencia)" Margin="0,8,0,0" Checked="PosMixedPaymentCheckBox_Changed" Unchecked="PosMixedPaymentCheckBox_Changed" />
+                                                <StackPanel x:Name="PosMixedPaymentPanel" Visibility="Collapsed">
+                                                    <TextBlock Text="Valor en efectivo" FontWeight="SemiBold" />
+                                                    <TextBox x:Name="PosMixedCashTextBox" Style="{StaticResource InputText}" />
+                                                    <TextBlock Text="Valor en transferencia" FontWeight="SemiBold" />
+                                                    <TextBox x:Name="PosMixedTransferTextBox" Style="{StaticResource InputText}" />
+                                                </StackPanel>
+
+                                                <TextBlock Text="Con cuánto paga (efectivo)" FontWeight="SemiBold" />
+                                                <TextBox x:Name="PosCashReceivedTextBox" Style="{StaticResource InputText}" />
+
+                                                <TextBlock x:Name="PosTotalsTextBlock" FontWeight="SemiBold" Margin="0,4,0,0" />
+                                                <TextBlock x:Name="PosChangeTextBlock" Foreground="#065f46" />
+                                                <Button Content="💰 Cobrar ticket" Style="{StaticResource PrimaryButton}" Click="ChargeTicketButton_Click" />
+                                                <TextBlock x:Name="PosStatusTextBlock" Margin="0,8,0,0" TextWrapping="Wrap" />
+                                            </StackPanel>
+                                        </Border>
+                                    </Grid>
+                                </TabItem>
+                            </TabControl>
+                        </Grid>
                     </Border>
 
                     <Border x:Name="PosBlueprintPanel" Visibility="Collapsed" Background="White" CornerRadius="12" Padding="14" BorderBrush="#e2e8f3" BorderThickness="1">

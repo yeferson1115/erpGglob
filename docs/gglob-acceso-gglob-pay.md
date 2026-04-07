@@ -179,16 +179,125 @@ Transición recomendada:
 
 ---
 
-## 3) Requerimiento técnico de datos (auditoría)
 
-## 3.1 Vinculación estricta por Caja y Cajero
+## 3) Área de usuario final (Cajeros)
+
+Esta es el área más utilizada porque el cajero mantiene el POS abierto durante toda la jornada laboral. Debe ser rápida, simple y operativa para atender clientes en fila, evitando pasos innecesarios.
+
+### 3.1 Principios operativos del módulo de cajeros
+
+- Operación **offline-first**: el cajero puede vender sin internet.
+- Persistencia local obligatoria de ventas y eventos operativos.
+- Sincronización automática cuando regrese la conexión.
+- Permisos heredados desde Dueño/Administrador con control granular.
+
+Permisos configurables por el dueño (ejemplos):
+- permitir descuentos,
+- permitir devoluciones,
+- permitir salidas de dinero,
+- permitir anulación de ticket,
+- permitir reapertura de ticket cerrado.
+
+> Regla de negocio: el cajero no puede ejecutar funciones fuera de sus permisos asignados.
+
+### 3.2 Operación de turno con control biométrico (entrada/salida)
+
+Debe existir en el menú principal la pestaña **Turnos**, con dos acciones: **Apertura de turno** y **Cierre de turno**.
+
+#### A) Apertura de turno
+
+Flujo mínimo:
+1. El trabajador selecciona **Apertura de turno**.
+2. El sistema valida identidad por biometría en vivo:
+   - foto en vivo desde cámara (no se permite cargar archivo), o
+   - huella dactilar con lector biométrico.
+3. Según configuración del negocio, solicita **Fondo de Caja** (opcional u obligatorio).
+4. Se confirma apertura y se habilita operación POS.
+
+Registro automático obligatorio:
+- fecha y hora de apertura,
+- cajero,
+- caja (Caja 1, Caja 2, etc.),
+- sucursal o punto de venta,
+- evidencia biométrica (foto/huella),
+- monto de fondo de caja (si aplica).
+
+#### B) Cierre de turno
+
+Flujo mínimo:
+1. El trabajador selecciona **Cerrar turno**.
+2. El sistema vuelve a validar identidad por biometría en vivo (foto/huella).
+3. Según reglas del negocio, solicita:
+   - generar corte de cajero,
+   - confirmar efectivo contado (opcional).
+4. El sistema calcula diferencia entre efectivo esperado y efectivo contado cuando aplique.
+
+Registro automático obligatorio:
+- fecha y hora de cierre,
+- totales vendidos del turno,
+- ventas por tipo de pago (efectivo, transferencia, tarjeta, cheque),
+- devoluciones,
+- entradas y salidas de efectivo,
+- diferencia o descuadre.
+
+**Control administrativo:** aperturas y cierres deben listarse en el panel del administrador para auditoría de horarios, identidad y desempeño por turno.
+
+### 3.3 Registro de ventas (operación POS diaria)
+
+Debe existir una pestaña principal **Ventas** como pantalla de trabajo continuo del cajero.
+
+#### A) Definición de Ticket
+Un **Ticket** es la venta en proceso (carrito). Debe permitir múltiples tickets simultáneos (activo + pendientes).
+
+#### B) Formas de agregar productos
+1. **Lector de código de barras** (principal): lectura y adición automática.
+2. **Búsqueda rápida** por:
+   - nombre,
+   - código interno,
+   - código de barras.
+3. **Selección por categorías**:
+   - categoría,
+   - producto.
+
+> Esta modalidad es clave para negocios con productos sin código (cafeterías, comidas rápidas, panadería, etc.).
+
+#### C) Operaciones dentro del ticket
+El cajero debe poder:
+- aumentar/disminuir cantidad,
+- eliminar producto,
+- ver precio antes de vender (verificador),
+- aplicar promociones o descuentos (solo si está permitido por rol).
+
+### 3.4 Cobro y selección del tipo de pago
+
+El POS debe incluir acción de **Cobrar** que abra la pantalla de pago con métodos habilitados por configuración del negocio:
+- transferencia,
+- tarjeta,
+- efectivo,
+- cheque.
+
+Reglas:
+- El dueño define métodos disponibles.
+- El cajero solo puede usar métodos previamente habilitados.
+- Soporte de **pago mixto** (recomendado): combinación de dos o más medios en una venta.
+
+#### Efectivo y cálculo de cambio
+Cuando el medio de pago incluya efectivo:
+1. el cajero digita monto recibido,
+2. el sistema calcula y muestra cambio automáticamente,
+3. el cambio queda registrado en el comprobante y en auditoría del movimiento.
+
+
+## 4) Requerimiento técnico de datos (auditoría)
+
+## 4.1 Vinculación estricta por Caja y Cajero
 Toda transacción en Gglob Pay debe registrar de forma obligatoria:
 - `company_id`
 - `cash_register_id` (**NO NULL**)
 - `cashier_user_id` (**NO NULL**)
 - `created_by_user_id` (si difiere del cajero)
 
-## 3.2 Esquema recomendado de `gglob_pay_payments`
+## 4.2 Esquema recomendado de `gglob_pay_payments`
 Campos sugeridos (además de los actuales):
 - `payment_intent_id` (UUID)
 - `reference_code` (único por empresa)
@@ -208,7 +317,7 @@ Campos sugeridos (además de los actuales):
 - `company_id`
 - `metadata` JSON
 
-## 3.3 Restricciones e integridad
+## 4.3 Restricciones e integridad
 - FK `cash_register_id -> cash_registers.id`
 - FK `cashier_user_id -> users.id`
 - FK `company_id -> companies.id`
