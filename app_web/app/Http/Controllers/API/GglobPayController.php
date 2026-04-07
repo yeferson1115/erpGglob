@@ -739,10 +739,13 @@ class GglobPayController extends Controller
             }
             $amountInCents = (int) round(((float) $validated['amount']) * 100);
 
-            $checkoutUrl = "https://checkout.wompi.co/l/{$setting['public_key']}"
-                . "?reference=" . urlencode($referenceCode)
-                . "&amount-in-cents={$amountInCents}"
-                . "&currency=COP";
+            $checkoutQuery = http_build_query([
+                'currency' => 'COP',
+                'reference' => $referenceCode,
+                'amount-in-cents' => $amountInCents,
+            ], '', '&', PHP_QUERY_RFC3986);
+
+            $checkoutUrl = "https://checkout.wompi.co/l/{$setting['public_key']}?{$checkoutQuery}";
 
             $payload = [
                 'provider' => 'wompi',
