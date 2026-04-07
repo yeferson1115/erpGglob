@@ -102,6 +102,8 @@ namespace Gglob
             DeskComboCategoryFilterComboBox.ItemsSource = productCategories;
             CategorySalesPointComboBox.ItemsSource = salesPointOptions;
             DeskInventorySalesPointComboBox.ItemsSource = salesPointOptions;
+            DeskInventoryFilterSalesPointComboBox.ItemsSource = salesPointOptions;
+            CategoryFilterSalesPointComboBox.ItemsSource = salesPointOptions;
             DeskComboProductsListBox.ItemsSource = inventoryProductsForCombo;
             DeskComboProductsListBox.DisplayMemberPath = "CodeAndName";
             ResetCashierForm();
@@ -883,6 +885,16 @@ namespace Gglob
                 if (DeskInventorySalesPointComboBox.SelectedItem is null)
                 {
                     DeskInventorySalesPointComboBox.SelectedItem = salesPointOptions.FirstOrDefault();
+                }
+
+                if (DeskInventoryFilterSalesPointComboBox.SelectedItem is null)
+                {
+                    DeskInventoryFilterSalesPointComboBox.SelectedIndex = -1;
+                }
+
+                if (CategoryFilterSalesPointComboBox.SelectedItem is null)
+                {
+                    CategoryFilterSalesPointComboBox.SelectedIndex = -1;
                 }
 
                 SalesPointsDataGrid.ItemsSource = null;

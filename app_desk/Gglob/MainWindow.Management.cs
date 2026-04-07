@@ -64,6 +64,27 @@ namespace Gglob
             await LoadInventoryProductsFromApi();
         }
 
+        private async void DeskInventoryFilterSalesPointComboBox_SelectionChanged(object sender, SelectionChangedEventArgs e)
+        {
+            await LoadInventoryProductsFromApi();
+        }
+
+        private async void CategoryFilterSalesPointComboBox_SelectionChanged(object sender, SelectionChangedEventArgs e)
+        {
+            await LoadProductCategoriesFromApi();
+        }
+
+        private async void DeskInventorySalesPointComboBox_SelectionChanged(object sender, SelectionChangedEventArgs e)
+        {
+            if (DeskInventorySalesPointComboBox?.SelectedValue is not int salesPointId)
+            {
+                return;
+            }
+
+            await LoadProductCategoriesFromApi(salesPointId);
+            EnsureInventoryCategoryIsValidForSelectedSalesPoint(salesPointId);
+        }
+
         private async void BulkImportInventoryProductsButton_Click(object sender, RoutedEventArgs e)
         {
             if (!EnsureOwnerForCatalogAction("Solo el dueño puede crear productos."))
@@ -560,11 +581,11 @@ namespace Gglob
             }
         }
 
-        private async Task LoadProductCategoriesFromApi()
+        private async Task LoadProductCategoriesFromApi(int? forcedSalesPointId = null)
         {
             try
             {
-                var salesPointId = ResolveCatalogSalesPointId();
+                var salesPointId = forcedSalesPointId ?? ResolveCatalogSalesPointId("categories");
                 var endpoint = salesPointId.HasValue
                     ? $"{ApiBaseUrl}/product-categories?sales_point_id={salesPointId.Value}"
                     : $"{ApiBaseUrl}/product-categories";
@@ -609,7 +630,7 @@ namespace Gglob
         {
             try
             {
-                var salesPointId = ResolveCatalogSalesPointId();
+                var salesPointId = ResolveCatalogSalesPointId("products");
                 var endpoint = salesPointId.HasValue
                     ? $"{ApiBaseUrl}/inventory-products?sales_point_id={salesPointId.Value}"
                     : $"{ApiBaseUrl}/inventory-products";
@@ -741,6 +762,20 @@ namespace Gglob
             DeskInventoryProductsDataGrid.SelectedItem = null;
             DeskTracksInventoryCheck_Changed(this, new RoutedEventArgs());
             DeskIsComboCheck_Changed(this, new RoutedEventArgs());
+        }
+
+        private void EnsureInventoryCategoryIsValidForSelectedSalesPoint(int salesPointId)
+        {
+            if (DeskProductCategoryComboBox?.SelectedValue is not int selectedCategoryId)
+            {
+                return;
+            }
+
+            var category = productCategories.FirstOrDefault(item => item.Id == selectedCategoryId);
+            if (category is null || !category.SalesPointIds.Contains(salesPointId))
+            {
+                DeskProductCategoryComboBox.SelectedItem = null;
+            }
         }
 
         private void ApplyComboFilter()
@@ -919,7 +954,7 @@ namespace Gglob
             NumberHandling = JsonNumberHandling.AllowReadingFromString
         };
 
-        private int? ResolveCatalogSalesPointId()
+        private int? ResolveCatalogSalesPointId(string context)
         {
             if (currentUser is null)
             {
@@ -928,12 +963,12 @@ namespace Gglob
 
             if (IsOwner(currentUser))
             {
-                if (DeskInventorySalesPointComboBox?.SelectedValue is int ownerProductPointId)
+                if (context == "products" && DeskInventoryFilterSalesPointComboBox?.SelectedValue is int ownerProductPointId)
                 {
                     return ownerProductPointId;
                 }
 
-                if (CategorySalesPointComboBox?.SelectedValue is int ownerCategoryPointId)
+                if (context == "categories" && CategoryFilterSalesPointComboBox?.SelectedValue is int ownerCategoryPointId)
                 {
                     return ownerCategoryPointId;
                 }
