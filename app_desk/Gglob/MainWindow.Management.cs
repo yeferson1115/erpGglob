@@ -782,6 +782,7 @@ namespace Gglob
                 WompiPublicKeyTextBox.Text = string.Empty;
                 WompiPrivateKeyTextBox.Text = string.Empty;
                 WompiEventsSecretTextBox.Text = string.Empty;
+                WompiIntegrityKeyTextBox.Text = string.Empty;
                 BancolombiaBaseUrlTextBox.Text = string.Empty;
                 BancolombiaClientIdTextBox.Text = string.Empty;
                 BancolombiaClientSecretTextBox.Text = string.Empty;
@@ -803,6 +804,7 @@ namespace Gglob
             WompiPublicKeyTextBox.Text = data.PublicKey ?? string.Empty;
             WompiPrivateKeyTextBox.Text = data.PrivateKey ?? string.Empty;
             WompiEventsSecretTextBox.Text = data.EventsSecret ?? string.Empty;
+            WompiIntegrityKeyTextBox.Text = data.IntegrityKey ?? string.Empty;
         }
 
         private async Task LoadBancolombiaSettingsFromApi()
@@ -867,6 +869,7 @@ namespace Gglob
                 public_key = WompiPublicKeyTextBox.Text.Trim(),
                 private_key = WompiPrivateKeyTextBox.Text.Trim(),
                 events_secret = WompiEventsSecretTextBox.Text.Trim(),
+                integrity_key = WompiIntegrityKeyTextBox.Text.Trim(),
             });
             SetLoading(false);
 

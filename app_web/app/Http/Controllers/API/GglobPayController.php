@@ -655,8 +655,10 @@ class GglobPayController extends Controller
             $public['public_key'] = $raw['public_key'] ?? null;
             $public['private_key'] = $raw['private_key'] ?? null;
             $public['events_secret'] = $raw['events_secret'] ?? null;
+            $public['integrity_key'] = $raw['integrity_key'] ?? null;
             $public['events_secret_configured'] = !empty($raw['events_secret']);
             $public['private_key_configured'] = !empty($raw['private_key']);
+            $public['integrity_key_configured'] = !empty($raw['integrity_key']);
         } else {
             $public['base_url'] = $raw['base_url'] ?? null;
             $public['client_id'] = $raw['client_id'] ?? null;
@@ -683,6 +685,7 @@ class GglobPayController extends Controller
                 'public_key' => ['required', 'string', 'max:255'],
                 'private_key' => ['required', 'string', 'max:255'],
                 'events_secret' => ['required', 'string', 'max:255'],
+                'integrity_key' => ['required', 'string', 'max:255'],
             ]);
         } else {
             if (!$this->isOwner($request)) {
@@ -734,15 +737,22 @@ class GglobPayController extends Controller
 
         if ($sourceChannel === 'wompi_credit_card') {
             $setting = $this->readProviderConfig($companyId, 'wompi');
-            if (!$setting || empty($setting['public_key']) || empty($setting['private_key'])) {
+            if (
+                !$setting ||
+                empty($setting['public_key']) ||
+                empty($setting['private_key']) ||
+                empty($setting['integrity_key'])
+            ) {
                 return response()->json(['message' => 'Wompi no está configurado por el dueño.'], 422);
             }
             $amountInCents = (int) round(((float) $validated['amount']) * 100);
+            $signature = hash('sha256', $referenceCode . $amountInCents . 'COP' . $setting['integrity_key']);
 
             $checkoutQuery = http_build_query([
                 'currency' => 'COP',
                 'reference' => $referenceCode,
                 'amount-in-cents' => $amountInCents,
+                'signature:integrity' => $signature,
             ], '', '&', PHP_QUERY_RFC3986);
 
             $checkoutUrl = "https://checkout.wompi.co/l/{$setting['public_key']}?{$checkoutQuery}";
@@ -752,6 +762,7 @@ class GglobPayController extends Controller
                 'reference' => $referenceCode,
                 'amount_in_cents' => (int) round(((float) $validated['amount']) * 100),
                 'currency' => 'COP',
+                'signature' => $signature,
                 'public_key' => $setting['public_key'],
                 'checkout_url' => $checkoutUrl,
             ];
