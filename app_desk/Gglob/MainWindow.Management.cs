@@ -1502,6 +1502,13 @@ namespace Gglob
                 return;
             }
 
+            if (businessCashiers.Count == 0)
+            {
+                SetLoading(true);
+                await LoadBusinessCashiersFromApi();
+                SetLoading(false);
+            }
+
             var assignedNames = (selected.AssignedCashiers ?? string.Empty)
                 .Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
                 .ToHashSet(StringComparer.OrdinalIgnoreCase);
