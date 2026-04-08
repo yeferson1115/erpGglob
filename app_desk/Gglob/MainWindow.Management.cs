@@ -257,7 +257,7 @@ namespace Gglob
             }
 
             ResetCategoryForm();
-            ShowCategoryForm(true);
+            ToggleCategoryForm(true);
         }
 
         private async void DeleteInventoryProductButton_Click(object sender, RoutedEventArgs e)
@@ -505,7 +505,7 @@ namespace Gglob
                 var wasEditing = editingCategoryId.HasValue;
                 await LoadProductCategoriesFromApi();
                 ResetCategoryForm();
-                ShowCategoryForm(false);
+                ToggleCategoryForm(false);
                 QrStatusTextBlock.Text = wasEditing
                     ? "Categoría actualizada correctamente."
                     : "Categoría creada correctamente.";
@@ -524,7 +524,7 @@ namespace Gglob
         private void CancelCategoryEditButton_Click(object sender, RoutedEventArgs e)
         {
             ResetCategoryForm();
-            ShowCategoryForm(false);
+            ToggleCategoryForm(false);
         }
 
         private void EditCategoryRowButton_Click(object sender, RoutedEventArgs e)
@@ -550,7 +550,7 @@ namespace Gglob
             }
             SaveCategoryButton.Content = "💾 Actualizar categoría";
             CancelCategoryEditButton.Content = "↩ Volver al listado";
-            ShowCategoryForm(true);
+            ToggleCategoryForm(true);
         }
 
         private async void DeleteCategoryRowButton_Click(object sender, RoutedEventArgs e)
@@ -588,7 +588,7 @@ namespace Gglob
 
                 await LoadProductCategoriesFromApi();
                 ResetCategoryForm();
-                ShowCategoryForm(false);
+                ToggleCategoryForm(false);
                 QrStatusTextBlock.Text = "Categoría eliminada correctamente.";
                 QrStatusTextBlock.Foreground = Brushes.DarkGreen;
             }
@@ -977,12 +977,7 @@ namespace Gglob
             CancelCategoryEditButton.Content = "↩ Volver al listado";
         }
 
-        private void ShowCategoryForm(bool visible)
-        {
-            CategoryFormCard.Visibility = visible ? Visibility.Visible : Visibility.Collapsed;
-        }
-
-        private void ShowCategoryForm(bool visible)
+        private void ToggleCategoryForm(bool visible)
         {
             CategoryFormCard.Visibility = visible ? Visibility.Visible : Visibility.Collapsed;
         }
