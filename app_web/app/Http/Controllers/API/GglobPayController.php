@@ -663,6 +663,44 @@ class GglobPayController extends Controller
         return response()->json(['message' => 'Caja asignada al cajero correctamente.']);
     }
 
+    public function unassignCashRegisterFromCashier(Request $request, int $cashRegister, int $cashier)
+    {
+        $user = $request->user();
+        if (!$this->isOwner($request)) {
+            return response()->json(['message' => 'Solo el dueño puede quitar cajeros de una caja.'], 403);
+        }
+
+        $register = DB::table('cash_registers')
+            ->where('id', $cashRegister)
+            ->where('company_id', $user->company_id)
+            ->first();
+
+        if (!$register) {
+            return response()->json(['message' => 'Caja no encontrada para la empresa.'], 404);
+        }
+
+        $cashierUser = DB::table('users')
+            ->where('id', $cashier)
+            ->where('company_id', $user->company_id)
+            ->where('business_role', 'cashier')
+            ->first();
+
+        if (!$cashierUser) {
+            return response()->json(['message' => 'Cajero no encontrado para la empresa.'], 404);
+        }
+
+        $deleted = DB::table('cash_register_user')
+            ->where('cash_register_id', $cashRegister)
+            ->where('user_id', $cashier)
+            ->delete();
+
+        if (!$deleted) {
+            return response()->json(['message' => 'El cajero no estaba asignado a la caja.'], 404);
+        }
+
+        return response()->json(['message' => 'Cajero removido de la caja correctamente.']);
+    }
+
     public function providerSettings(Request $request, string $provider)
     {
         $provider = strtolower($provider);
