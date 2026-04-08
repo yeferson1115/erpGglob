@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Auth;
 
 use App\Http\Controllers\Controller;
 use App\Models\Company;
+use App\Models\Plan;
 use App\Models\User;
 use Illuminate\Auth\Events\Registered;
 use Illuminate\Http\RedirectResponse;
@@ -36,14 +37,37 @@ class BusinessRegistrationController extends Controller
         ]);
 
         $user = DB::transaction(function () use ($validated) {
+            $now = now();
+            $trialEndsAt = $now->copy()->addMonthsNoOverflow(2);
+
+            $plan = Plan::query()->first();
+
+            if (!$plan) {
+                $plan = Plan::create([
+                    'name' => 'Plan Bienvenida',
+                    'gglob_cloud_enabled' => true,
+                    'gglob_pay_enabled' => true,
+                    'gglob_pos_enabled' => true,
+                    'pos_mode' => 'mono',
+                    'pos_boxes' => 1,
+                    'gglob_accounting_enabled' => false,
+                ]);
+            }
+
             $company = Company::create([
                 'name' => $validated['company_name'],
                 'nit' => $validated['nit'],
                 'email' => $validated['company_email'],
                 'address' => $validated['address'],
                 'contact_name' => trim($validated['owner_name'] . ' ' . $validated['owner_last_name']),
-                'service_status' => 'inactive',
-                'plan_name' => 'Sin plan',
+                'plan_id' => $plan->id,
+                'plan_name' => $plan->name,
+                'service_status' => 'active',
+                'started_at' => $now->toDateString(),
+                'active_until' => $trialEndsAt->toDateString(),
+                'gglob_cloud_enabled' => true,
+                'gglob_pay_enabled' => true,
+                'gglob_pos_enabled' => true,
             ]);
 
             $user = User::create([
