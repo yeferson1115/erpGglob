@@ -107,6 +107,7 @@ Route::middleware(['auth:api'])->group(function () {
     Route::put('gglob-pay/cashiers/{cashier}', [GglobPayController::class, 'updateCashier']);
     Route::delete('gglob-pay/cashiers/{cashier}', [GglobPayController::class, 'destroyCashier']);
     Route::post('gglob-pay/cash-registers/{cashRegister}/assign-user', [GglobPayController::class, 'assignCashRegisterToCashier']);
+    Route::delete('gglob-pay/cash-registers/{cashRegister}/users/{cashier}', [GglobPayController::class, 'unassignCashRegisterFromCashier']);
     Route::post('gglob-pay/cash-registers/{cashRegister}/assign-me', [GglobPayController::class, 'assignCashRegisterToCurrentUser']);
     Route::get('gglob-pay/provider-settings/{provider}', [GglobPayController::class, 'providerSettings']);
     Route::post('gglob-pay/provider-settings/{provider}', [GglobPayController::class, 'saveProviderSettings']);

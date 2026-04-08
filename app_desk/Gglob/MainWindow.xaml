@@ -99,13 +99,13 @@
             <Setter Property="Height" Value="40" />
             <Setter Property="Padding" Value="14,8" />
             <Setter Property="FontSize" Value="14" />
-            <Setter Property="Margin" Value="0,0,8,0" />
+            <Setter Property="Margin" Value="0,0,8,8" />
         </Style>
 
         <Style x:Key="ToolbarPrimaryButton" TargetType="Button" BasedOn="{StaticResource PrimaryButton}">
             <Setter Property="Height" Value="40" />
             <Setter Property="Padding" Value="14,0" />
-            <Setter Property="Margin" Value="0" />
+            <Setter Property="Margin" Value="0,0,0,8" />
             <Setter Property="FontSize" Value="14" />
         </Style>
 
@@ -565,8 +565,7 @@
                             <Grid>
                                 <Grid.RowDefinitions>
                                     <RowDefinition Height="Auto" />
-                                    <RowDefinition Height="Auto" />
-                                    <RowDefinition Height="Auto" />
+                                    <RowDefinition Height="*" />
                                 </Grid.RowDefinitions>
 
                                 <DockPanel Grid.Row="0" Margin="0,0,0,10">
@@ -587,7 +586,7 @@
                                     </WrapPanel>
                                 </DockPanel>
 
-                                <Border Grid.Row="1" Background="White" BorderBrush="#dbe3f0" BorderThickness="1" CornerRadius="10" Padding="8" Margin="0,0,0,12">
+                                <Border x:Name="DeskInventoryGridCard" Grid.Row="1" Background="White" BorderBrush="#dbe3f0" BorderThickness="1" CornerRadius="10" Padding="8" Margin="0,0,0,12">
                                     <DataGrid x:Name="DeskInventoryProductsDataGrid" AutoGenerateColumns="False" IsReadOnly="True" CanUserAddRows="False" HeadersVisibility="Column" RowHeaderWidth="0" SelectionChanged="DeskInventoryProductsDataGrid_SelectionChanged" MaxHeight="360" MinRowHeight="46">
                                         <DataGrid.Columns>
                                             <DataGridTextColumn Header="Código" Binding="{Binding Code}" Width="*" />
@@ -610,7 +609,7 @@
                                     </DataGrid>
                                 </Border>
 
-                                <Border x:Name="DeskInventoryFormCard" Grid.Row="2" Margin="0,0,0,0" Background="#f8fbff" BorderBrush="#d9e4ff" BorderThickness="1" CornerRadius="10" Padding="14" Visibility="Collapsed">
+                                <Border x:Name="DeskInventoryFormCard" Grid.Row="1" Margin="0,0,0,12" Background="#f8fbff" BorderBrush="#d9e4ff" BorderThickness="1" CornerRadius="10" Padding="14" Visibility="Collapsed">
                                     <StackPanel>
                                     <TextBlock x:Name="DeskInventoryFormTitleTextBlock" Text="Crear producto" FontSize="17" FontWeight="SemiBold" Foreground="#1e293b" Margin="0,0,0,10" />
 
@@ -706,7 +705,7 @@
 
                                     <WrapPanel Margin="0,12,0,0">
                                         <Button x:Name="SaveInventoryProductButton" Content="💾 Guardar producto" Width="170" Style="{StaticResource PrimaryButton}" Margin="0" Click="SubmitInventoryProductButton_Click" />
-                                        <Button x:Name="CancelInventoryEditButton" Content="Cancelar" Width="120" Margin="8,0,0,0" Click="CancelInventoryEditButton_Click" />
+                                        <Button x:Name="CancelInventoryEditButton" Content="↩ Volver al listado" Width="150" Margin="8,0,0,0" Click="CancelInventoryEditButton_Click" />
                                     </WrapPanel>
                                     </StackPanel>
                                 </Border>
@@ -777,7 +776,7 @@
 
                                         <WrapPanel>
                                             <Button x:Name="SaveCategoryButton" Content="💾 Guardar categoría" Width="170" Style="{StaticResource PrimaryButton}" Click="SaveCategoryButton_Click" />
-                                            <Button x:Name="CancelCategoryEditButton" Content="Cancelar" Width="110" Margin="8,10,0,0" Click="CancelCategoryEditButton_Click" Visibility="Collapsed" />
+                                            <Button x:Name="CancelCategoryEditButton" Content="↩ Volver al listado" Width="150" Margin="8,10,0,0" Click="CancelCategoryEditButton_Click" />
                                         </WrapPanel>
                                     </StackPanel>
                                 </Border>
@@ -1019,8 +1018,8 @@
                     </Border>
 
                     <Border x:Name="CashRegistersPanel" Visibility="Collapsed" Background="White" CornerRadius="12" Padding="14" BorderBrush="#e2e8f3" BorderThickness="1">
-                        <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
-                            <Grid Margin="10">
+                        <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Auto">
+                            <Grid Margin="10" MinWidth="1120">
                             <Grid.RowDefinitions>
                                 <RowDefinition Height="Auto" />
                                 <RowDefinition Height="*" />

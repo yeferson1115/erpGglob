@@ -367,6 +367,7 @@ namespace Gglob
         private void ShowInventoryForm(bool visible)
         {
             DeskInventoryFormCard.Visibility = visible ? Visibility.Visible : Visibility.Collapsed;
+            DeskInventoryGridCard.Visibility = visible ? Visibility.Collapsed : Visibility.Visible;
         }
 
         private void PopulateInventoryForm(InventoryProductItem selected)
@@ -548,7 +549,7 @@ namespace Gglob
                 CategorySalesPointComboBox.SelectedValue = selected.SalesPointIds[0];
             }
             SaveCategoryButton.Content = "💾 Actualizar categoría";
-            CancelCategoryEditButton.Visibility = Visibility.Visible;
+            CancelCategoryEditButton.Content = "↩ Volver al listado";
             ShowCategoryForm(true);
         }
 
@@ -973,7 +974,12 @@ namespace Gglob
             CategorySalesPointComboBox.SelectedItem = salesPointOptions.FirstOrDefault();
             CategoryActiveCheckBox.IsChecked = true;
             SaveCategoryButton.Content = "💾 Guardar categoría";
-            CancelCategoryEditButton.Visibility = Visibility.Collapsed;
+            CancelCategoryEditButton.Content = "↩ Volver al listado";
+        }
+
+        private void ShowCategoryForm(bool visible)
+        {
+            CategoryFormCard.Visibility = visible ? Visibility.Visible : Visibility.Collapsed;
         }
 
         private void ShowCategoryForm(bool visible)
@@ -1323,6 +1329,19 @@ namespace Gglob
             }
         }
 
+        private async Task<bool> UnassignCashRegisterApi(int cashRegisterId, int cashierId)
+        {
+            try
+            {
+                using var response = await HttpClient.DeleteAsync($"{ApiBaseUrl}/gglob-pay/cash-registers/{cashRegisterId}/users/{cashierId}");
+                return response.IsSuccessStatusCode;
+            }
+            catch
+            {
+                return false;
+            }
+        }
+
         private async void CreateCashRegisterButton_Click(object sender, RoutedEventArgs e)
         {
             if (currentUser is null || !IsOwner(currentUser))
@@ -1475,18 +1494,175 @@ namespace Gglob
             ShowAlert(QrStatusTextBlock.Text);
         }
 
-        private void ViewCashRegisterCashiersButton_Click(object sender, RoutedEventArgs e)
+        private async void ViewCashRegisterCashiersButton_Click(object sender, RoutedEventArgs e)
         {
             if (sender is not Button { Tag: CashRegisterOption selected })
             {
                 return;
             }
 
-            var detail = string.IsNullOrWhiteSpace(selected.AssignedCashiers)
-                ? "No hay cajeros asignados a esta caja."
-                : selected.AssignedCashiers;
+            if (currentUser is null || !IsOwner(currentUser))
+            {
+                ShowAlert("Solo el dueño puede administrar cajeros de la caja.");
+                return;
+            }
 
-            ShowAlert($"Caja: {selected.Name}\nPunto de venta: {selected.SalesPointName}\nAsignados ({selected.AssignedCashiersCount}): {detail}", "Detalle de cajeros");
+            var assignedNames = (selected.AssignedCashiers ?? string.Empty)
+                .Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+                .ToHashSet(StringComparer.OrdinalIgnoreCase);
+
+            var assignedCashiers = new ObservableCollection<BusinessCashierItem>(
+                businessCashiers.Where(cashier => assignedNames.Contains(cashier.FullName)));
+
+            var dialog = new Window
+            {
+                Title = $"Cajeros asignados · {selected.Name}",
+                Width = 560,
+                Height = 420,
+                ResizeMode = ResizeMode.NoResize,
+                WindowStartupLocation = WindowStartupLocation.CenterOwner,
+                Background = Brushes.White
+            };
+
+            var root = new Grid { Margin = new Thickness(16) };
+            root.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
+            root.RowDefinitions.Add(new RowDefinition { Height = new GridLength(1, GridUnitType.Star) });
+            root.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
+
+            root.Children.Add(new Border
+            {
+                Background = new SolidColorBrush(Color.FromRgb(248, 251, 255)),
+                BorderBrush = new SolidColorBrush(Color.FromRgb(217, 228, 255)),
+                BorderThickness = new Thickness(1),
+                CornerRadius = new CornerRadius(10),
+                Padding = new Thickness(12),
+                Child = new StackPanel
+                {
+                    Children =
+                    {
+                        new TextBlock { Text = selected.Name, FontSize = 16, FontWeight = FontWeights.SemiBold, Foreground = new SolidColorBrush(Color.FromRgb(30, 41, 59)) },
+                        new TextBlock { Text = $"Punto de venta: {selected.SalesPointName}", Margin = new Thickness(0, 4, 0, 0), Foreground = new SolidColorBrush(Color.FromRgb(71, 85, 105)) },
+                        new TextBlock { Text = "Puedes remover cajeros específicos de esta caja.", Margin = new Thickness(0, 4, 0, 0), Foreground = new SolidColorBrush(Color.FromRgb(100, 116, 139)) }
+                    }
+                }
+            });
+
+            var listScroll = new ScrollViewer
+            {
+                Margin = new Thickness(0, 12, 0, 12),
+                VerticalScrollBarVisibility = ScrollBarVisibility.Auto
+            };
+            Grid.SetRow(listScroll, 1);
+
+            var listStack = new StackPanel();
+            listScroll.Content = listStack;
+            root.Children.Add(listScroll);
+
+            var closeButton = new Button
+            {
+                Content = "Cerrar",
+                Width = 110,
+                Height = 36,
+                HorizontalAlignment = HorizontalAlignment.Right,
+                Background = new SolidColorBrush(Color.FromRgb(226, 232, 240)),
+                BorderBrush = new SolidColorBrush(Color.FromRgb(203, 213, 225))
+            };
+            Grid.SetRow(closeButton, 2);
+            closeButton.Click += (_, _) => dialog.Close();
+            root.Children.Add(closeButton);
+
+            void RenderAssignedCashiers()
+            {
+                listStack.Children.Clear();
+                if (assignedCashiers.Count == 0)
+                {
+                    listStack.Children.Add(new TextBlock
+                    {
+                        Text = "No hay cajeros asignados a esta caja.",
+                        Foreground = new SolidColorBrush(Color.FromRgb(100, 116, 139)),
+                        Margin = new Thickness(0, 8, 0, 0)
+                    });
+                    return;
+                }
+
+                foreach (var cashier in assignedCashiers)
+                {
+                    var row = new Border
+                    {
+                        Background = Brushes.White,
+                        BorderBrush = new SolidColorBrush(Color.FromRgb(226, 232, 240)),
+                        BorderThickness = new Thickness(1),
+                        CornerRadius = new CornerRadius(10),
+                        Padding = new Thickness(10),
+                        Margin = new Thickness(0, 0, 0, 8)
+                    };
+
+                    var rowGrid = new Grid();
+                    rowGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+                    rowGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
+
+                    var info = new StackPanel();
+                    info.Children.Add(new TextBlock { Text = cashier.FullName, FontWeight = FontWeights.SemiBold, Foreground = new SolidColorBrush(Color.FromRgb(30, 41, 59)) });
+                    info.Children.Add(new TextBlock { Text = cashier.Email, Foreground = new SolidColorBrush(Color.FromRgb(100, 116, 139)), FontSize = 12 });
+                    rowGrid.Children.Add(info);
+
+                    var removeButton = new Button
+                    {
+                        Content = "🗑 Quitar",
+                        Width = 95,
+                        Height = 34,
+                        Margin = new Thickness(10, 0, 0, 0),
+                        Background = new SolidColorBrush(Color.FromRgb(254, 226, 226)),
+                        BorderBrush = new SolidColorBrush(Color.FromRgb(252, 165, 165))
+                    };
+
+                    removeButton.Click += async (_, _) =>
+                    {
+                        var confirm = MessageBox.Show(
+                            $"¿Quitar a {cashier.FullName} de la caja {selected.Name}?",
+                            "Confirmar",
+                            MessageBoxButton.YesNo,
+                            MessageBoxImage.Question);
+
+                        if (confirm != MessageBoxResult.Yes)
+                        {
+                            return;
+                        }
+
+                        removeButton.IsEnabled = false;
+                        SetLoading(true);
+                        var ok = await UnassignCashRegisterApi(selected.Id, cashier.Id);
+                        SetLoading(false);
+                        if (!ok)
+                        {
+                            removeButton.IsEnabled = true;
+                            ShowAlert("No se pudo quitar el cajero de la caja.");
+                            return;
+                        }
+
+                        assignedCashiers.Remove(cashier);
+                        await LoadCashRegistersFromApi("all");
+                        await LoadCashRegistersFromApi("assigned");
+                        QrStatusTextBlock.Text = "Cajero removido correctamente de la caja.";
+                        QrStatusTextBlock.Foreground = Brushes.DarkGreen;
+                        RenderAssignedCashiers();
+                    };
+
+                    Grid.SetColumn(removeButton, 1);
+                    rowGrid.Children.Add(removeButton);
+                    row.Child = rowGrid;
+                    listStack.Children.Add(row);
+                }
+            }
+
+            RenderAssignedCashiers();
+            dialog.Content = root;
+            if (Application.Current?.MainWindow is Window owner && owner != dialog)
+            {
+                dialog.Owner = owner;
+            }
+
+            dialog.ShowDialog();
         }
 
         private async Task<bool> SaveSalesPointApi(string name, string code, string status)
@@ -1628,17 +1804,17 @@ namespace Gglob
             var dialog = new Window
             {
                 Title = title,
-                Width = 420,
-                Height = 300,
+                Width = 450,
+                Height = 340,
                 ResizeMode = ResizeMode.NoResize,
                 WindowStartupLocation = WindowStartupLocation.CenterOwner,
                 Background = Brushes.White
             };
 
             var panel = new StackPanel { Margin = new Thickness(18) };
-            var nameBox = new TextBox { Text = existing?.Name ?? string.Empty, Height = 34, Margin = new Thickness(0, 4, 0, 12) };
-            var codeBox = new TextBox { Text = existing?.Code ?? string.Empty, Height = 34, Margin = new Thickness(0, 4, 0, 12) };
-            var statusCombo = new ComboBox { Height = 34, Margin = new Thickness(0, 4, 0, 12) };
+            var nameBox = new TextBox { Text = existing?.Name ?? string.Empty, Height = 36, Margin = new Thickness(0, 6, 0, 12), Padding = new Thickness(10, 6, 10, 6), Background = new SolidColorBrush(Color.FromRgb(248, 250, 252)), BorderBrush = new SolidColorBrush(Color.FromRgb(203, 213, 225)) };
+            var codeBox = new TextBox { Text = existing?.Code ?? string.Empty, Height = 36, Margin = new Thickness(0, 6, 0, 12), Padding = new Thickness(10, 6, 10, 6), Background = new SolidColorBrush(Color.FromRgb(248, 250, 252)), BorderBrush = new SolidColorBrush(Color.FromRgb(203, 213, 225)) };
+            var statusCombo = new ComboBox { Height = 36, Margin = new Thickness(0, 6, 0, 12), Padding = new Thickness(8, 4, 8, 4), Background = new SolidColorBrush(Color.FromRgb(248, 250, 252)), BorderBrush = new SolidColorBrush(Color.FromRgb(203, 213, 225)) };
             statusCombo.Items.Add("active");
             statusCombo.Items.Add("inactive");
             statusCombo.SelectedItem = existing?.Status ?? "active";
@@ -1650,9 +1826,9 @@ namespace Gglob
             panel.Children.Add(new TextBlock { Text = "Estado", FontWeight = FontWeights.SemiBold });
             panel.Children.Add(statusCombo);
 
-            var buttons = new WrapPanel { HorizontalAlignment = HorizontalAlignment.Right };
-            var cancelButton = new Button { Content = "Cancelar", Width = 100, Margin = new Thickness(0, 0, 8, 0) };
-            var saveButton = new Button { Content = "Guardar", Width = 100 };
+            var buttons = new WrapPanel { HorizontalAlignment = HorizontalAlignment.Right, Margin = new Thickness(0, 6, 0, 0) };
+            var cancelButton = new Button { Content = "Cancelar", Width = 110, Height = 36, Margin = new Thickness(0, 0, 8, 0), Background = new SolidColorBrush(Color.FromRgb(226, 232, 240)), Foreground = new SolidColorBrush(Color.FromRgb(30, 41, 59)), BorderBrush = new SolidColorBrush(Color.FromRgb(203, 213, 225)), Padding = new Thickness(10, 6, 10, 6) };
+            var saveButton = new Button { Content = "Guardar", Width = 120, Height = 36, Background = new SolidColorBrush(Color.FromRgb(37, 99, 235)), Foreground = Brushes.White, BorderBrush = new SolidColorBrush(Color.FromRgb(29, 78, 216)), Padding = new Thickness(12, 6, 12, 6) };
 
             cancelButton.Click += (_, _) => dialog.Close();
             saveButton.Click += (_, _) =>
@@ -1697,10 +1873,10 @@ namespace Gglob
             };
 
             var panel = new StackPanel { Margin = new Thickness(18) };
-            var nameBox = new TextBox { Text = existing?.Name ?? string.Empty, Height = 34, Margin = new Thickness(0, 4, 0, 12) };
-            var codeBox = new TextBox { Text = existing?.Code ?? string.Empty, Height = 34, Margin = new Thickness(0, 4, 0, 12) };
-            var statusCombo = new ComboBox { Height = 34, Margin = new Thickness(0, 4, 0, 12) };
-            var salesPointCombo = new ComboBox { Height = 34, Margin = new Thickness(0, 4, 0, 12), DisplayMemberPath = "Name", ItemsSource = salesPointOptions.ToList() };
+            var nameBox = new TextBox { Text = existing?.Name ?? string.Empty, Height = 36, Margin = new Thickness(0, 6, 0, 12), Padding = new Thickness(10, 6, 10, 6), Background = new SolidColorBrush(Color.FromRgb(248, 250, 252)), BorderBrush = new SolidColorBrush(Color.FromRgb(203, 213, 225)) };
+            var codeBox = new TextBox { Text = existing?.Code ?? string.Empty, Height = 36, Margin = new Thickness(0, 6, 0, 12), Padding = new Thickness(10, 6, 10, 6), Background = new SolidColorBrush(Color.FromRgb(248, 250, 252)), BorderBrush = new SolidColorBrush(Color.FromRgb(203, 213, 225)) };
+            var statusCombo = new ComboBox { Height = 36, Margin = new Thickness(0, 6, 0, 12), Padding = new Thickness(8, 4, 8, 4), Background = new SolidColorBrush(Color.FromRgb(248, 250, 252)), BorderBrush = new SolidColorBrush(Color.FromRgb(203, 213, 225)) };
+            var salesPointCombo = new ComboBox { Height = 36, Margin = new Thickness(0, 6, 0, 12), Padding = new Thickness(8, 4, 8, 4), Background = new SolidColorBrush(Color.FromRgb(248, 250, 252)), BorderBrush = new SolidColorBrush(Color.FromRgb(203, 213, 225)), DisplayMemberPath = "Name", ItemsSource = salesPointOptions.ToList() };
             statusCombo.Items.Add("active");
             statusCombo.Items.Add("inactive");
             statusCombo.SelectedItem = existing?.Status ?? "active";
@@ -1718,7 +1894,7 @@ namespace Gglob
             panel.Children.Add(new TextBlock { Text = "Estado", FontWeight = FontWeights.SemiBold });
             panel.Children.Add(statusCombo);
 
-            var buttonRow = new WrapPanel { HorizontalAlignment = HorizontalAlignment.Right };
+            var buttonRow = new WrapPanel { HorizontalAlignment = HorizontalAlignment.Right, Margin = new Thickness(0, 6, 0, 0) };
             var cancelButton = new Button { Content = "Cancelar", Width = 100, Margin = new Thickness(0, 0, 8, 0), Background = new SolidColorBrush(Color.FromRgb(226, 232, 240)), Foreground = new SolidColorBrush(Color.FromRgb(30, 41, 59)), BorderBrush = new SolidColorBrush(Color.FromRgb(203, 213, 225)), Padding = new Thickness(10, 6, 10, 6) };
             var saveButton = new Button { Content = "Guardar", Width = 100, Background = new SolidColorBrush(Color.FromRgb(37, 99, 235)), Foreground = Brushes.White, BorderBrush = new SolidColorBrush(Color.FromRgb(29, 78, 216)), Padding = new Thickness(12, 6, 12, 6) };
 
