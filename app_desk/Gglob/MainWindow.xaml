@@ -94,6 +94,30 @@
         <Style x:Key="PrimaryButtonSpacious" TargetType="Button" BasedOn="{StaticResource PrimaryButton}">
             <Setter Property="Padding" Value="18,12" />
         </Style>
+
+        <Style x:Key="ToolbarButton" TargetType="Button" BasedOn="{StaticResource {x:Type Button}}">
+            <Setter Property="Height" Value="40" />
+            <Setter Property="Padding" Value="14,8" />
+            <Setter Property="FontSize" Value="14" />
+            <Setter Property="Margin" Value="0,0,8,8" />
+        </Style>
+
+        <Style x:Key="ToolbarPrimaryButton" TargetType="Button" BasedOn="{StaticResource PrimaryButton}">
+            <Setter Property="Height" Value="40" />
+            <Setter Property="Padding" Value="14,0" />
+            <Setter Property="Margin" Value="0,0,0,8" />
+            <Setter Property="FontSize" Value="14" />
+        </Style>
+
+        <Style x:Key="FilterComboBox" TargetType="ComboBox" BasedOn="{StaticResource {x:Type ComboBox}}">
+            <Setter Property="Height" Value="40" />
+            <Setter Property="Width" Value="240" />
+            <Setter Property="Padding" Value="10,4" />
+            <Setter Property="Background" Value="White" />
+            <Setter Property="BorderBrush" Value="#cbd5e1" />
+            <Setter Property="BorderThickness" Value="1" />
+            <Setter Property="Margin" Value="0,4,8,0" />
+        </Style>
         
         <Style x:Key="GglobPayPrimaryButton" TargetType="Button" BasedOn="{StaticResource PrimaryButtonSpacious}">
             <Setter Property="FontSize" Value="16" />
@@ -541,8 +565,7 @@
                             <Grid>
                                 <Grid.RowDefinitions>
                                     <RowDefinition Height="Auto" />
-                                    <RowDefinition Height="Auto" />
-                                    <RowDefinition Height="Auto" />
+                                    <RowDefinition Height="*" />
                                 </Grid.RowDefinitions>
 
                                 <DockPanel Grid.Row="0" Margin="0,0,0,10">
@@ -551,20 +574,20 @@
                                         <TextBlock Text="Consulta, crea, edita y elimina productos desde este módulo dedicado." Foreground="#64748b" Margin="0,3,0,0" />
                                     </StackPanel>
                                     <WrapPanel DockPanel.Dock="Right" HorizontalAlignment="Right" VerticalAlignment="Center">
-                                        <StackPanel Margin="0,0,8,0" VerticalAlignment="Center">
+                                        <StackPanel Margin="0,0,4,0" VerticalAlignment="Center">
                                             <TextBlock Text="Filtrar punto de venta" FontSize="12" FontWeight="SemiBold" />
-                                            <ComboBox x:Name="DeskInventoryFilterSalesPointComboBox" Width="190" Height="34" DisplayMemberPath="Name" SelectedValuePath="Id" SelectionChanged="DeskInventoryFilterSalesPointComboBox_SelectionChanged" />
+                                            <ComboBox x:Name="DeskInventoryFilterSalesPointComboBox" Style="{StaticResource FilterComboBox}" DisplayMemberPath="Name" SelectedValuePath="Id" SelectionChanged="DeskInventoryFilterSalesPointComboBox_SelectionChanged" />
                                         </StackPanel>
-                                        <Button Content="↩ Volver a POS" Margin="0,0,8,0" Click="BackToPosButton_Click" />
-                                        <Button Content="🔄 Recargar" Margin="0,0,8,0" Click="ReloadInventoryProductsButton_Click" />
-                                        <Button x:Name="BulkImportInventoryProductsButton" Content="📥 Carga masiva Excel" Margin="0,0,8,0" Click="BulkImportInventoryProductsButton_Click" />
-                                        <Button Content="🗂️ Categorías" Margin="0,0,8,0" Click="OpenCategoriesButton_Click" />
-                                        <Button x:Name="CreateInventoryProductButton" Content="➕ Crear producto" Style="{StaticResource PrimaryButton}" Width="180" Margin="0" Click="OpenCreateInventoryFormButton_Click" />
+                                        <Button Content="↩ Volver a POS" Style="{StaticResource ToolbarButton}" Click="BackToPosButton_Click" />
+                                        <Button Content="🔄 Recargar" Style="{StaticResource ToolbarButton}" Click="ReloadInventoryProductsButton_Click" />
+                                        <Button x:Name="BulkImportInventoryProductsButton" Content="📥 Carga masiva Excel" Style="{StaticResource ToolbarButton}" Click="BulkImportInventoryProductsButton_Click" />
+                                        <Button Content="🗂️ Categorías" Style="{StaticResource ToolbarButton}" Click="OpenCategoriesButton_Click" />
+                                        <Button x:Name="CreateInventoryProductButton" Content="➕ Crear producto" Style="{StaticResource ToolbarPrimaryButton}" MinWidth="170" Click="OpenCreateInventoryFormButton_Click" />
                                     </WrapPanel>
                                 </DockPanel>
 
-                                <Border Grid.Row="1" Background="White" BorderBrush="#dbe3f0" BorderThickness="1" CornerRadius="10" Padding="8" Margin="0,0,0,12">
-                                    <DataGrid x:Name="DeskInventoryProductsDataGrid" AutoGenerateColumns="False" IsReadOnly="True" CanUserAddRows="False" HeadersVisibility="Column" RowHeaderWidth="0" SelectionChanged="DeskInventoryProductsDataGrid_SelectionChanged" MaxHeight="360">
+                                <Border x:Name="DeskInventoryGridCard" Grid.Row="1" Background="White" BorderBrush="#dbe3f0" BorderThickness="1" CornerRadius="10" Padding="8" Margin="0,0,0,12">
+                                    <DataGrid x:Name="DeskInventoryProductsDataGrid" AutoGenerateColumns="False" IsReadOnly="True" CanUserAddRows="False" HeadersVisibility="Column" RowHeaderWidth="0" SelectionChanged="DeskInventoryProductsDataGrid_SelectionChanged" MaxHeight="360" MinRowHeight="46">
                                         <DataGrid.Columns>
                                             <DataGridTextColumn Header="Código" Binding="{Binding Code}" Width="*" />
                                             <DataGridTextColumn Header="Nombre" Binding="{Binding Name}" Width="2*" />
@@ -572,12 +595,12 @@
                                             <DataGridTextColumn Header="Puntos" Binding="{Binding SalesPointsLabel}" Width="1.6*" />
                                             <DataGridTextColumn Header="Precio" Binding="{Binding PriceLabel}" Width="*" />
                                             <DataGridTextColumn Header="Tipo" Binding="{Binding TypeLabel}" Width="*" />
-                                            <DataGridTemplateColumn x:Name="InventoryActionsColumn" Header="Acciones" Width="190">
+                                            <DataGridTemplateColumn x:Name="InventoryActionsColumn" Header="Acciones" Width="230">
                                                 <DataGridTemplateColumn.CellTemplate>
                                                     <DataTemplate>
-                                                        <WrapPanel>
-                                                            <Button Content="✏️ Editar" Width="82" Height="30" Margin="0,2,6,2" Tag="{Binding}" Click="EditInventoryRowButton_Click" />
-                                                            <Button Content="🗑 Eliminar" Width="90" Height="30" Margin="0,2,0,2" Tag="{Binding}" Click="DeleteInventoryRowButton_Click" />
+                                                        <WrapPanel VerticalAlignment="Center">
+                                                            <Button Content="✏️ Editar" Width="102" Height="34" Margin="0,2,6,2" Padding="10,6" Tag="{Binding}" Click="EditInventoryRowButton_Click" />
+                                                            <Button Content="🗑 Eliminar" Width="108" Height="34" Margin="0,2,0,2" Padding="10,6" Tag="{Binding}" Click="DeleteInventoryRowButton_Click" />
                                                         </WrapPanel>
                                                     </DataTemplate>
                                                 </DataGridTemplateColumn.CellTemplate>
@@ -586,7 +609,7 @@
                                     </DataGrid>
                                 </Border>
 
-                                <Border x:Name="DeskInventoryFormCard" Grid.Row="2" Margin="0,0,0,0" Background="#f8fbff" BorderBrush="#d9e4ff" BorderThickness="1" CornerRadius="10" Padding="14" Visibility="Collapsed">
+                                <Border x:Name="DeskInventoryFormCard" Grid.Row="1" Margin="0,0,0,12" Background="#f8fbff" BorderBrush="#d9e4ff" BorderThickness="1" CornerRadius="10" Padding="14" Visibility="Collapsed">
                                     <StackPanel>
                                     <TextBlock x:Name="DeskInventoryFormTitleTextBlock" Text="Crear producto" FontSize="17" FontWeight="SemiBold" Foreground="#1e293b" Margin="0,0,0,10" />
 
@@ -599,10 +622,6 @@
                                             <TextBlock Text="Nombre del producto" FontWeight="SemiBold" />
                                             <TextBox x:Name="DeskProductNameTextBox" Style="{StaticResource InputText}" />
                                         </StackPanel>
-                                        <StackPanel Margin="0,0,8,8">
-                                            <TextBlock Text="Categoría del producto" FontWeight="SemiBold" />
-                                            <ComboBox x:Name="DeskProductCategoryComboBox" DisplayMemberPath="Name" SelectedValuePath="Id" Height="38" />
-                                        </StackPanel>
                                         <StackPanel Margin="0,0,0,8">
                                             <TextBlock Text="Precio del producto" FontWeight="SemiBold" />
                                             <TextBox x:Name="DeskProductPriceTextBox" Style="{StaticResource InputText}" />
@@ -610,6 +629,10 @@
                                         <StackPanel Margin="0,0,8,8">
                                             <TextBlock Text="Punto de venta" FontWeight="SemiBold" />
                                             <ComboBox x:Name="DeskInventorySalesPointComboBox" DisplayMemberPath="Name" SelectedValuePath="Id" Height="38" SelectionChanged="DeskInventorySalesPointComboBox_SelectionChanged" />
+                                        </StackPanel>
+                                        <StackPanel Margin="0,0,0,8">
+                                            <TextBlock Text="Categoría del producto" FontWeight="SemiBold" />
+                                            <ComboBox x:Name="DeskProductCategoryComboBox" DisplayMemberPath="Name" SelectedValuePath="Id" Height="38" />
                                         </StackPanel>
                                     </UniformGrid>
 
@@ -682,7 +705,7 @@
 
                                     <WrapPanel Margin="0,12,0,0">
                                         <Button x:Name="SaveInventoryProductButton" Content="💾 Guardar producto" Width="170" Style="{StaticResource PrimaryButton}" Margin="0" Click="SubmitInventoryProductButton_Click" />
-                                        <Button x:Name="CancelInventoryEditButton" Content="Cancelar" Width="120" Margin="8,0,0,0" Click="CancelInventoryEditButton_Click" />
+                                        <Button x:Name="CancelInventoryEditButton" Content="↩ Volver al listado" Width="150" Margin="8,0,0,0" Click="CancelInventoryEditButton_Click" />
                                     </WrapPanel>
                                     </StackPanel>
                                 </Border>
@@ -703,22 +726,42 @@
                                     <TextBlock Text="Crea, edita y elimina categorías del negocio actual." Foreground="#6b7280" Margin="0,2,0,0" />
                                 </StackPanel>
                                 <WrapPanel DockPanel.Dock="Right" HorizontalAlignment="Right" VerticalAlignment="Center">
-                                    <StackPanel Margin="0,0,8,0" VerticalAlignment="Center">
+                                    <StackPanel Margin="0,0,4,0" VerticalAlignment="Center">
                                         <TextBlock Text="Filtrar punto de venta" FontSize="12" FontWeight="SemiBold" />
-                                        <ComboBox x:Name="CategoryFilterSalesPointComboBox" Width="190" Height="34" DisplayMemberPath="Name" SelectedValuePath="Id" SelectionChanged="CategoryFilterSalesPointComboBox_SelectionChanged" />
+                                        <ComboBox x:Name="CategoryFilterSalesPointComboBox" Style="{StaticResource FilterComboBox}" DisplayMemberPath="Name" SelectedValuePath="Id" SelectionChanged="CategoryFilterSalesPointComboBox_SelectionChanged" />
                                     </StackPanel>
-                                    <Button Content="↩ Volver a POS" Margin="0,0,8,0" Click="BackToPosButton_Click" />
-                                    <Button Content="🔄 Recargar" Click="ReloadCategoriesButton_Click" />
+                                    <Button Content="↩ Volver a POS" Style="{StaticResource ToolbarButton}" Click="BackToPosButton_Click" />
+                                    <Button Content="🔄 Recargar" Style="{StaticResource ToolbarButton}" Click="ReloadCategoriesButton_Click" />
+                                    <Button x:Name="CreateCategoryButton" Content="➕ Nueva categoría" Style="{StaticResource ToolbarPrimaryButton}" MinWidth="180" Click="OpenCreateCategoryFormButton_Click" />
                                 </WrapPanel>
                             </DockPanel>
 
                             <Grid Grid.Row="1">
-                                <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="1.2*" />
-                                    <ColumnDefinition Width="2*" />
-                                </Grid.ColumnDefinitions>
+                                <Grid.RowDefinitions>
+                                    <RowDefinition Height="*" />
+                                    <RowDefinition Height="Auto" />
+                                </Grid.RowDefinitions>
 
-                                <Border Background="#f8fbff" CornerRadius="10" BorderBrush="#d9e4ff" BorderThickness="1" Padding="12" Margin="0,0,12,0">
+                                <DataGrid x:Name="ProductCategoriesDataGrid" AutoGenerateColumns="False" IsReadOnly="True" CanUserAddRows="False" HeadersVisibility="Column" RowHeaderWidth="0" MinRowHeight="46">
+                                    <DataGrid.Columns>
+                                        <DataGridTextColumn Header="Nombre" Binding="{Binding Name}" Width="2*" />
+                                        <DataGridTextColumn Header="Descripción" Binding="{Binding Description}" Width="3*" />
+                                        <DataGridTextColumn Header="Puntos" Binding="{Binding SalesPointsLabel}" Width="2*" />
+                                        <DataGridTextColumn Header="Estado" Binding="{Binding StatusLabel}" Width="*" />
+                                        <DataGridTemplateColumn x:Name="CategoryActionsColumn" Header="Acciones" Width="230">
+                                            <DataGridTemplateColumn.CellTemplate>
+                                                <DataTemplate>
+                                                    <WrapPanel VerticalAlignment="Center">
+                                                        <Button Content="✏️ Editar" Tag="{Binding}" Margin="0,2,8,2" Width="102" Height="34" Padding="10,6" Background="#e0ecff" BorderBrush="#bdd3ff" Click="EditCategoryRowButton_Click" />
+                                                        <Button Content="🗑 Eliminar" Tag="{Binding}" Width="108" Height="34" Padding="10,6" Margin="0,2,0,2" Background="#ffe2e2" BorderBrush="#ffc6c6" Click="DeleteCategoryRowButton_Click" />
+                                                    </WrapPanel>
+                                                </DataTemplate>
+                                            </DataGridTemplateColumn.CellTemplate>
+                                        </DataGridTemplateColumn>
+                                    </DataGrid.Columns>
+                                </DataGrid>
+
+                                <Border x:Name="CategoryFormCard" Grid.Row="1" Background="#f8fbff" CornerRadius="10" BorderBrush="#d9e4ff" BorderThickness="1" Padding="12" Margin="0,12,0,0" Visibility="Collapsed">
                                     <StackPanel>
                                         <TextBlock x:Name="CategoryFormTitleTextBlock" Text="Nueva categoría" FontWeight="SemiBold" FontSize="16" />
                                         <TextBlock Text="Nombre" FontWeight="SemiBold" Margin="0,10,0,0" />
@@ -733,29 +776,10 @@
 
                                         <WrapPanel>
                                             <Button x:Name="SaveCategoryButton" Content="💾 Guardar categoría" Width="170" Style="{StaticResource PrimaryButton}" Click="SaveCategoryButton_Click" />
-                                            <Button x:Name="CancelCategoryEditButton" Content="Cancelar" Width="110" Margin="8,10,0,0" Click="CancelCategoryEditButton_Click" Visibility="Collapsed" />
+                                            <Button x:Name="CancelCategoryEditButton" Content="↩ Volver al listado" Width="150" Margin="8,10,0,0" Click="CancelCategoryEditButton_Click" />
                                         </WrapPanel>
                                     </StackPanel>
                                 </Border>
-
-                                <DataGrid Grid.Column="1" x:Name="ProductCategoriesDataGrid" AutoGenerateColumns="False" IsReadOnly="True" CanUserAddRows="False" HeadersVisibility="Column" RowHeaderWidth="0">
-                                    <DataGrid.Columns>
-                                        <DataGridTextColumn Header="Nombre" Binding="{Binding Name}" Width="2*" />
-                                        <DataGridTextColumn Header="Descripción" Binding="{Binding Description}" Width="3*" />
-                                        <DataGridTextColumn Header="Puntos" Binding="{Binding SalesPointsLabel}" Width="2*" />
-                                        <DataGridTextColumn Header="Estado" Binding="{Binding StatusLabel}" Width="*" />
-                                        <DataGridTemplateColumn x:Name="CategoryActionsColumn" Header="Acciones" Width="2*">
-                                            <DataGridTemplateColumn.CellTemplate>
-                                                <DataTemplate>
-                                                    <StackPanel Orientation="Horizontal">
-                                                        <Button Content="✏️ Editar" Tag="{Binding}" Margin="0,0,8,0" MinWidth="90" Height="34" Padding="12,6" Background="#e0ecff" BorderBrush="#bdd3ff" Click="EditCategoryRowButton_Click" />
-                                                        <Button Content="🗑 Eliminar" Tag="{Binding}" MinWidth="90" Height="34" Padding="12,6" Background="#ffe2e2" BorderBrush="#ffc6c6" Click="DeleteCategoryRowButton_Click" />
-                                                    </StackPanel>
-                                                </DataTemplate>
-                                            </DataGridTemplateColumn.CellTemplate>
-                                        </DataGridTemplateColumn>
-                                    </DataGrid.Columns>
-                                </DataGrid>
                             </Grid>
                         </Grid>
                     </Border>
@@ -994,8 +1018,8 @@
                     </Border>
 
                     <Border x:Name="CashRegistersPanel" Visibility="Collapsed" Background="White" CornerRadius="12" Padding="14" BorderBrush="#e2e8f3" BorderThickness="1">
-                        <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
-                            <Grid Margin="10">
+                        <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Auto">
+                            <Grid Margin="10" MinWidth="1120">
                             <Grid.RowDefinitions>
                                 <RowDefinition Height="Auto" />
                                 <RowDefinition Height="*" />
