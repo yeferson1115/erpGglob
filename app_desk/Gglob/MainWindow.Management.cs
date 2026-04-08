@@ -982,6 +982,11 @@ namespace Gglob
             CategoryFormCard.Visibility = visible ? Visibility.Visible : Visibility.Collapsed;
         }
 
+        private void ShowCategoryForm(bool visible)
+        {
+            CategoryFormCard.Visibility = visible ? Visibility.Visible : Visibility.Collapsed;
+        }
+
         private static JsonSerializerOptions JsonOptions() => new()
         {
             PropertyNameCaseInsensitive = true,
