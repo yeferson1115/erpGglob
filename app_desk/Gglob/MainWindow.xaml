@@ -105,7 +105,7 @@
         <Style x:Key="ToolbarPrimaryButton" TargetType="Button" BasedOn="{StaticResource PrimaryButton}">
             <Setter Property="Height" Value="40" />
             <Setter Property="Padding" Value="14,0" />
-            <Setter Property="Margin" Value="0,0,0,8" />
+            <Setter Property="Margin" Value="0,4,0,8" />
             <Setter Property="FontSize" Value="14" />
         </Style>
 
@@ -1033,7 +1033,7 @@
                                 <Button x:Name="CreateCashRegisterButton" DockPanel.Dock="Right" Content="+ Crear" Width="130" Height="40" Style="{StaticResource PrimaryButton}" Click="CreateCashRegisterButton_Click" />
                             </DockPanel>
 
-                            <DataGrid x:Name="CashRegistersDataGrid" Grid.Row="1" AutoGenerateColumns="False" IsReadOnly="True" CanUserAddRows="False" HeadersVisibility="Column" RowHeaderWidth="0">
+                            <DataGrid x:Name="CashRegistersDataGrid" Grid.Row="1" AutoGenerateColumns="False" IsReadOnly="True" CanUserAddRows="False" HeadersVisibility="Column" RowHeaderWidth="0" ScrollViewer.HorizontalScrollBarVisibility="Auto" MinWidth="1040">
                                 <DataGrid.Resources>
                                     <Style x:Key="CashRegisterEditButtonStyle" TargetType="Button">
                                         <Setter Property="Foreground" Value="White" />
@@ -1111,10 +1111,10 @@
                                     </Style>
                                 </DataGrid.Resources>
                                 <DataGrid.Columns>
-                                    <DataGridTextColumn Header="Nombre" Binding="{Binding Name}" Width="2*" />
-                                    <DataGridTextColumn Header="Código" Binding="{Binding Code}" Width="*" />
-                                    <DataGridTextColumn Header="Estado" Binding="{Binding StatusLabel}" Width="*" />
-                                    <DataGridTemplateColumn Header="Acciones" Width="2.6*">
+                                    <DataGridTextColumn Header="Nombre" Binding="{Binding Name}" Width="220" />
+                                    <DataGridTextColumn Header="Código" Binding="{Binding Code}" Width="130" />
+                                    <DataGridTextColumn Header="Estado" Binding="{Binding StatusLabel}" Width="120" />
+                                    <DataGridTemplateColumn Header="Acciones" Width="540">
                                         <DataGridTemplateColumn.CellTemplate>
                                             <DataTemplate>
                                                 <StackPanel Orientation="Horizontal">
