@@ -249,6 +249,17 @@ namespace Gglob
             ShowInventoryForm(true);
         }
 
+        private void OpenCreateCategoryFormButton_Click(object sender, RoutedEventArgs e)
+        {
+            if (!EnsureOwnerForCatalogAction("Solo el dueño puede crear categorías."))
+            {
+                return;
+            }
+
+            ResetCategoryForm();
+            ShowCategoryForm(true);
+        }
+
         private async void DeleteInventoryProductButton_Click(object sender, RoutedEventArgs e)
         {
             if (!EnsureOwnerForCatalogAction("Solo el dueño puede eliminar productos."))
@@ -493,6 +504,7 @@ namespace Gglob
                 var wasEditing = editingCategoryId.HasValue;
                 await LoadProductCategoriesFromApi();
                 ResetCategoryForm();
+                ShowCategoryForm(false);
                 QrStatusTextBlock.Text = wasEditing
                     ? "Categoría actualizada correctamente."
                     : "Categoría creada correctamente.";
@@ -511,6 +523,7 @@ namespace Gglob
         private void CancelCategoryEditButton_Click(object sender, RoutedEventArgs e)
         {
             ResetCategoryForm();
+            ShowCategoryForm(false);
         }
 
         private void EditCategoryRowButton_Click(object sender, RoutedEventArgs e)
@@ -536,6 +549,7 @@ namespace Gglob
             }
             SaveCategoryButton.Content = "💾 Actualizar categoría";
             CancelCategoryEditButton.Visibility = Visibility.Visible;
+            ShowCategoryForm(true);
         }
 
         private async void DeleteCategoryRowButton_Click(object sender, RoutedEventArgs e)
@@ -573,6 +587,7 @@ namespace Gglob
 
                 await LoadProductCategoriesFromApi();
                 ResetCategoryForm();
+                ShowCategoryForm(false);
                 QrStatusTextBlock.Text = "Categoría eliminada correctamente.";
                 QrStatusTextBlock.Foreground = Brushes.DarkGreen;
             }
@@ -961,6 +976,11 @@ namespace Gglob
             CancelCategoryEditButton.Visibility = Visibility.Collapsed;
         }
 
+        private void ShowCategoryForm(bool visible)
+        {
+            CategoryFormCard.Visibility = visible ? Visibility.Visible : Visibility.Collapsed;
+        }
+
         private static JsonSerializerOptions JsonOptions() => new()
         {
             PropertyNameCaseInsensitive = true,
@@ -1069,6 +1089,7 @@ namespace Gglob
             SaveBancolombiaDestinationButton.IsEnabled = isOwner;
             CreateCashRegisterButton.IsEnabled = isOwner;
             CreateInventoryProductButton.Visibility = canManageCatalog ? Visibility.Visible : Visibility.Collapsed;
+            CreateCategoryButton.Visibility = canManageCatalog ? Visibility.Visible : Visibility.Collapsed;
             BulkImportInventoryProductsButton.Visibility = canManageCatalog ? Visibility.Visible : Visibility.Collapsed;
             SaveInventoryProductButton.Visibility = canManageCatalog ? Visibility.Visible : Visibility.Collapsed;
             CancelInventoryEditButton.Visibility = canManageCatalog ? Visibility.Visible : Visibility.Collapsed;
@@ -1085,6 +1106,7 @@ namespace Gglob
             if (!canManageCatalog)
             {
                 DeskInventoryFormCard.Visibility = Visibility.Collapsed;
+                CategoryFormCard.Visibility = Visibility.Collapsed;
             }
 
             WompiConfigTab.Visibility = isOwner ? Visibility.Visible : Visibility.Collapsed;
