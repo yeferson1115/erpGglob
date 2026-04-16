@@ -25,6 +25,11 @@ class GglobPayController extends Controller
         return strtolower((string) $request->user()->business_role) === 'owner';
     }
 
+    private function isAdminUser(User $user): bool
+    {
+        return $user->hasRole('admin') || $user->hasRole('Administrador');
+    }
+
     private function normalizePaymentStatus(?string $status): string
     {
         return match (strtoupper((string) $status)) {
@@ -134,6 +139,115 @@ class GglobPayController extends Controller
             ->get();
 
         return response()->json(['data' => $rows]);
+    }
+
+    public function ensureCurrentUserCashRegister(Request $request)
+    {
+        $user = $request->user();
+        $companyId = (int) $user->company_id;
+        $isOwner = $this->isOwner($request);
+        $isAdmin = $this->isAdminUser($user);
+        $isCashier = strtolower((string) $user->business_role) === 'cashier';
+
+        if (!$isOwner && !$isAdmin && !$isCashier) {
+            return response()->json(['message' => 'Solo dueño, administrador o cajero pueden preparar caja automática.'], 403);
+        }
+
+        $existingRegister = DB::table('cash_register_user as cru')
+            ->join('cash_registers as cr', 'cr.id', '=', 'cru.cash_register_id')
+            ->where('cr.company_id', $companyId)
+            ->where('cru.user_id', $user->id)
+            ->select('cr.id', 'cr.name', 'cr.code', 'cr.status', 'cr.sales_point_id')
+            ->orderByDesc('cru.is_primary')
+            ->orderBy('cr.id')
+            ->first();
+
+        if ($existingRegister) {
+            if (strtolower((string) $existingRegister->status) !== 'active') {
+                DB::table('cash_registers')
+                    ->where('id', $existingRegister->id)
+                    ->update(['status' => 'active', 'updated_at' => now()]);
+            }
+
+            DB::table('cash_register_user')
+                ->where('user_id', $user->id)
+                ->update(['is_primary' => false, 'updated_at' => now()]);
+
+            DB::table('cash_register_user')->updateOrInsert(
+                ['cash_register_id' => $existingRegister->id, 'user_id' => $user->id],
+                [
+                    'assigned_by' => $user->id,
+                    'assigned_at' => now(),
+                    'is_primary' => true,
+                    'updated_at' => now(),
+                    'created_at' => now(),
+                ]
+            );
+
+            return response()->json([
+                'message' => 'Caja existente disponible para el usuario.',
+                'created' => false,
+                'data' => $existingRegister,
+            ]);
+        }
+
+        $allowedSalesPointIds = $this->allowedSalesPointIdsForUser($companyId, $user->id, $isOwner);
+        $salesPointId = count($allowedSalesPointIds) > 0 ? (int) $allowedSalesPointIds[0] : null;
+        if (!$salesPointId) {
+            $salesPointId = DB::table('sales_points')
+                ->where('company_id', $companyId)
+                ->where('status', 'active')
+                ->orderBy('id')
+                ->value('id');
+        }
+
+        if (!$salesPointId) {
+            return response()->json(['message' => 'No hay puntos de venta activos para crear una caja automática.'], 422);
+        }
+
+        $baseCode = 'AUTO-U' . $user->id . '-';
+        $suffix = 1;
+        do {
+            $candidateCode = strtoupper($baseCode . str_pad((string) $suffix, 2, '0', STR_PAD_LEFT));
+            $codeExists = DB::table('cash_registers')
+                ->where('company_id', $companyId)
+                ->whereRaw('LOWER(code) = ?', [strtolower($candidateCode)])
+                ->exists();
+            $suffix++;
+        } while ($codeExists);
+
+        $registerId = DB::table('cash_registers')->insertGetId([
+            'company_id' => $companyId,
+            'sales_point_id' => $salesPointId,
+            'name' => 'Caja ' . trim((string) ($user->name ?? 'Usuario')),
+            'code' => $candidateCode,
+            'status' => 'active',
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+
+        DB::table('cash_register_user')
+            ->where('user_id', $user->id)
+            ->update(['is_primary' => false, 'updated_at' => now()]);
+
+        DB::table('cash_register_user')->updateOrInsert(
+            ['cash_register_id' => $registerId, 'user_id' => $user->id],
+            [
+                'assigned_by' => $user->id,
+                'assigned_at' => now(),
+                'is_primary' => true,
+                'updated_at' => now(),
+                'created_at' => now(),
+            ]
+        );
+
+        $register = DB::table('cash_registers')->where('id', $registerId)->first();
+
+        return response()->json([
+            'message' => 'Caja automática creada y asignada al usuario.',
+            'created' => true,
+            'data' => $register,
+        ], 201);
     }
 
 

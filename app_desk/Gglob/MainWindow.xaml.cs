@@ -393,7 +393,6 @@ namespace Gglob
             _ = LoadGglobPayDataFromApi();
             _ = LoadProviderSettingsFromApi();
             SetSelectedModule(null);
-            PromptShiftOpeningOnLoginIfNeeded();
 
             ShowStatus(statusMessage, isError: false);
         }
@@ -888,6 +887,11 @@ namespace Gglob
 
         private async Task LoadGglobPayDataFromApi()
         {
+            if (currentUser is not null && (IsAdmin(currentUser) || string.Equals(currentUser.BusinessRole, "cashier", StringComparison.OrdinalIgnoreCase)))
+            {
+                await EnsureCurrentUserCashRegisterAsync();
+            }
+
             await LoadSalesPointsFromApi();
             await LoadCashRegistersFromApi("assigned");
             await LoadCashRegistersFromApi("all");
@@ -908,11 +912,32 @@ namespace Gglob
                 SeedVerifiedPayments();
                 ApplyVerifiedFilterLocal();
                 GenerateReportLocal();
+                PromptShiftOpeningOnLoginIfNeeded();
                 return;
             }
 
             await LoadVerifiedPaymentsFromApi();
             await GenerateReportFromApi();
+            PromptShiftOpeningOnLoginIfNeeded();
+        }
+
+        private async Task EnsureCurrentUserCashRegisterAsync()
+        {
+            try
+            {
+                using var content = new StringContent("{}", Encoding.UTF8, "application/json");
+                using var response = await HttpClient.PostAsync($"{ApiBaseUrl}/gglob-pay/cash-registers/ensure-current-user", content);
+                if (!response.IsSuccessStatusCode)
+                {
+                    QrStatusTextBlock.Text = "No se pudo verificar/crear la caja automática del usuario.";
+                    QrStatusTextBlock.Foreground = Brushes.DarkOrange;
+                }
+            }
+            catch
+            {
+                QrStatusTextBlock.Text = "Error de conexión verificando la caja automática del usuario.";
+                QrStatusTextBlock.Foreground = Brushes.DarkOrange;
+            }
         }
 
         private async Task<bool> LoadCashRegistersFromApi(string scope)

@@ -99,6 +99,7 @@ Route::middleware(['auth:api'])->group(function () {
     Route::delete('gglob-pay/cash-registers/{cashRegister}', [GglobPayController::class, 'destroyCashRegister']);
     Route::post('gglob-pay/cash-registers', [GglobPayController::class, 'storeCashRegister']);
     Route::put('gglob-pay/cash-registers/{cashRegister}', [GglobPayController::class, 'updateCashRegister']);
+    Route::post('gglob-pay/cash-registers/ensure-current-user', [GglobPayController::class, 'ensureCurrentUserCashRegister']);
     Route::get('gglob-pay/sales-points', [GglobPayController::class, 'salesPoints']);
     Route::post('gglob-pay/sales-points', [GglobPayController::class, 'storeSalesPoint']);
     Route::put('gglob-pay/sales-points/{salesPoint}', [GglobPayController::class, 'updateSalesPoint']);
