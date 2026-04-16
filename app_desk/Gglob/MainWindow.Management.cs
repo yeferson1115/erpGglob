@@ -2183,9 +2183,22 @@ namespace Gglob
                 return;
             }
 
+            if (editingCashierId is null && CashierSalesPointComboBox.SelectedItem is not SalesPointOption selectedSalesPoint)
+            {
+                ShowAlert("Debes seleccionar el punto de venta para el cajero.");
+                return;
+            }
+
             SetLoading(true);
             var ok = editingCashierId is null
-                ? await CreateCashierApi(name, CashierLastNameTextBox.Text.Trim(), email, CashierPhoneTextBox.Text.Trim(), password)
+                ? await CreateCashierApi(
+                    name,
+                    CashierLastNameTextBox.Text.Trim(),
+                    email,
+                    CashierPhoneTextBox.Text.Trim(),
+                    password,
+                    ((SalesPointOption)CashierSalesPointComboBox.SelectedItem).Id,
+                    selectedCashierPermissions.ToList())
                 : await UpdateCashierApi(editingCashierId.Value, name, CashierLastNameTextBox.Text.Trim(), email, CashierPhoneTextBox.Text.Trim(), password);
             SetLoading(false);
 
@@ -2206,7 +2219,7 @@ namespace Gglob
             ResetCashierForm();
         }
 
-        private async Task<bool> CreateCashierApi(string name, string lastName, string email, string phone, string password)
+        private async Task<bool> CreateCashierApi(string name, string lastName, string email, string phone, string password, int salesPointId, IReadOnlyCollection<string> permissions)
         {
             try
             {
@@ -2217,6 +2230,8 @@ namespace Gglob
                     email,
                     phone,
                     password,
+                    sales_point_id = salesPointId,
+                    permissions,
                 });
 
                 using var content = new StringContent(payload, Encoding.UTF8, "application/json");
@@ -2281,6 +2296,9 @@ namespace Gglob
             CashierPasswordLabel.Text = "Contraseña (opcional para actualizar)";
             SaveCashierButton.Content = "💾 Actualizar cajero";
             ClearCashierFormButton.Content = "↩ Cancelar edición";
+            CashierSalesPointComboBox.IsEnabled = false;
+            SelectCashierPermissionsButton.IsEnabled = false;
+            CashierPermissionsSummaryTextBlock.Text = "Permisos se gestionan desde la tabla de cajeros.";
         }
 
         private async void DeleteCashierRowButton_Click(object sender, RoutedEventArgs e)
@@ -2457,6 +2475,120 @@ namespace Gglob
             ResetCashierForm();
         }
 
+        private async void SelectCashierPermissionsButton_Click(object sender, RoutedEventArgs e)
+        {
+            if (editingCashierId is not null)
+            {
+                ShowAlert("Para edición usa el botón 'Permisos' de cada cajero en la tabla.");
+                return;
+            }
+
+            if (cashierPermissionsCatalog.Count == 0)
+            {
+                await LoadCashierPermissionsCatalogFromApi();
+            }
+
+            if (cashierPermissionsCatalog.Count == 0)
+            {
+                ShowAlert("No se encontró el catálogo de permisos para cajeros.");
+                return;
+            }
+
+            var selected = new HashSet<string>(selectedCashierPermissions, StringComparer.OrdinalIgnoreCase);
+            var dialog = new Window
+            {
+                Title = "Permisos para nuevo cajero",
+                Width = 520,
+                Height = 520,
+                ResizeMode = ResizeMode.NoResize,
+                WindowStartupLocation = WindowStartupLocation.CenterOwner,
+                Background = Brushes.White
+            };
+
+            var root = new Grid { Margin = new Thickness(16) };
+            root.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
+            root.RowDefinitions.Add(new RowDefinition { Height = new GridLength(1, GridUnitType.Star) });
+            root.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
+
+            root.Children.Add(new TextBlock
+            {
+                Text = "Selecciona los permisos para el nuevo cajero.",
+                Foreground = new SolidColorBrush(Color.FromRgb(71, 85, 105)),
+                Margin = new Thickness(0, 0, 0, 10),
+            });
+
+            var scroll = new ScrollViewer { VerticalScrollBarVisibility = ScrollBarVisibility.Auto };
+            Grid.SetRow(scroll, 1);
+            root.Children.Add(scroll);
+
+            var stack = new StackPanel();
+            scroll.Content = stack;
+
+            foreach (var permission in cashierPermissionsCatalog)
+            {
+                var check = new CheckBox
+                {
+                    Content = permission,
+                    IsChecked = selected.Contains(permission),
+                    Margin = new Thickness(0, 0, 0, 6),
+                };
+
+                check.Checked += (_, _) => selected.Add(permission);
+                check.Unchecked += (_, _) => selected.Remove(permission);
+                stack.Children.Add(check);
+            }
+
+            var actions = new StackPanel
+            {
+                Orientation = Orientation.Horizontal,
+                HorizontalAlignment = HorizontalAlignment.Right,
+                Margin = new Thickness(0, 10, 0, 0),
+            };
+            Grid.SetRow(actions, 2);
+            root.Children.Add(actions);
+
+            var cancelButton = new Button
+            {
+                Content = "Cancelar",
+                Width = 110,
+                Height = 36,
+                Margin = new Thickness(0, 0, 8, 0),
+            };
+            cancelButton.Click += (_, _) => dialog.Close();
+            actions.Children.Add(cancelButton);
+
+            var saveButton = new Button
+            {
+                Content = "Aplicar",
+                Width = 120,
+                Height = 36,
+                Background = new SolidColorBrush(Color.FromRgb(37, 99, 235)),
+                Foreground = Brushes.White,
+                BorderBrush = new SolidColorBrush(Color.FromRgb(29, 78, 216)),
+            };
+            saveButton.Click += (_, _) =>
+            {
+                selectedCashierPermissions.Clear();
+                foreach (var permission in selected)
+                {
+                    selectedCashierPermissions.Add(permission);
+                }
+
+                UpdateCashierCreatePermissionsSummary();
+                dialog.DialogResult = true;
+                dialog.Close();
+            };
+            actions.Children.Add(saveButton);
+
+            dialog.Content = root;
+            if (Application.Current?.MainWindow is Window owner && owner != dialog)
+            {
+                dialog.Owner = owner;
+            }
+
+            dialog.ShowDialog();
+        }
+
         private void ResetCashierForm()
         {
             editingCashierId = null;
@@ -2468,6 +2600,18 @@ namespace Gglob
             CashierPasswordLabel.Text = "Contraseña";
             SaveCashierButton.Content = "👤 Crear cajero";
             ClearCashierFormButton.Content = "🧹 Limpiar";
+            CashierSalesPointComboBox.IsEnabled = true;
+            SelectCashierPermissionsButton.IsEnabled = true;
+            CashierSalesPointComboBox.SelectedItem = salesPointOptions.FirstOrDefault();
+            selectedCashierPermissions.Clear();
+            UpdateCashierCreatePermissionsSummary();
+        }
+
+        private void UpdateCashierCreatePermissionsSummary()
+        {
+            CashierPermissionsSummaryTextBlock.Text = selectedCashierPermissions.Count == 0
+                ? "Sin permisos seleccionados"
+                : $"{selectedCashierPermissions.Count} permiso(s) seleccionado(s)";
         }
 
         private async Task<ApiQrIntentResponse?> CreateQrIntentApi(string sourceChannel, decimal amount, int cashRegisterId, int? destinationAccountId)
