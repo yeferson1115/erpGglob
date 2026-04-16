@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\API;
 
 use App\Http\Controllers\Controller;
+use App\Support\BusinessPermissionCatalog;
 use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Crypt;
@@ -10,6 +11,8 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Str;
+use Illuminate\Validation\Rule;
+use Spatie\Permission\Models\Permission;
 use Spatie\Permission\Models\Role;
 
 class GglobPayController extends Controller
@@ -473,14 +476,45 @@ class GglobPayController extends Controller
             return response()->json(['message' => 'Solo el dueño puede gestionar cajas y cajeros.'], 403);
         }
 
-        $rows = DB::table('users')
+        $rows = User::query()
+            ->with('permissions:id,name')
             ->where('company_id', $user->company_id)
             ->where('business_role', 'cashier')
-            ->select('id', 'name', 'last_name', 'email', 'phone')
             ->orderBy('name')
-            ->get();
+            ->get(['id', 'name', 'last_name', 'email', 'phone'])
+            ->map(fn (User $cashier) => [
+                'id' => $cashier->id,
+                'name' => $cashier->name,
+                'last_name' => $cashier->last_name,
+                'email' => $cashier->email,
+                'phone' => $cashier->phone,
+                'permission_names' => $cashier->permissions
+                    ->pluck('name')
+                    ->map(fn ($name) => strtolower((string) $name))
+                    ->sort()
+                    ->values()
+                    ->all(),
+            ])
+            ->values();
 
         return response()->json(['data' => $rows]);
+    }
+
+    public function cashierPermissionsCatalog(Request $request)
+    {
+        if (!$this->isOwner($request)) {
+            return response()->json(['message' => 'Solo el dueño puede gestionar permisos de cajeros.'], 403);
+        }
+
+        $permissions = Permission::query()
+            ->whereIn('name', BusinessPermissionCatalog::all())
+            ->orderBy('name')
+            ->pluck('name')
+            ->map(fn ($name) => strtolower((string) $name))
+            ->values()
+            ->all();
+
+        return response()->json(['data' => $permissions]);
     }
 
     public function storeCashier(Request $request)
@@ -592,6 +626,37 @@ class GglobPayController extends Controller
         $cashierUser->delete();
 
         return response()->json(['message' => 'Usuario cajero eliminado correctamente.']);
+    }
+
+    public function updateCashierPermissions(Request $request, int $cashier)
+    {
+        $user = $request->user();
+        if (!$this->isOwner($request)) {
+            return response()->json(['message' => 'Solo el dueño puede gestionar permisos de cajeros.'], 403);
+        }
+
+        $cashierUser = User::where('id', $cashier)
+            ->where('company_id', $user->company_id)
+            ->where('business_role', 'cashier')
+            ->first();
+
+        if (!$cashierUser) {
+            return response()->json(['message' => 'Cajero no encontrado para la empresa.'], 404);
+        }
+
+        $allowed = Permission::query()
+            ->whereIn('name', BusinessPermissionCatalog::all())
+            ->pluck('name')
+            ->all();
+
+        $validated = $request->validate([
+            'permissions' => ['nullable', 'array'],
+            'permissions.*' => ['string', Rule::in($allowed)],
+        ]);
+
+        $cashierUser->syncPermissions($validated['permissions'] ?? []);
+
+        return response()->json(['message' => 'Permisos del cajero actualizados correctamente.']);
     }
 
     public function assignCashRegisterToCashier(Request $request, int $cashRegister)
