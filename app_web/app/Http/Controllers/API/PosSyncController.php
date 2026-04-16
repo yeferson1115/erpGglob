@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\PosCashMovement;
 use App\Models\PosSale;
 use App\Models\PosShift;
+use App\Support\BusinessPermissionCatalog;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
@@ -88,6 +89,7 @@ class PosSyncController extends Controller
     public function syncSale(Request $request)
     {
         $user = $request->user();
+        BusinessPermissionCatalog::ensure($user, BusinessPermissionCatalog::CREATE_SALE);
 
         $validated = $request->validate([
             'ticket_code' => ['required', 'string', 'max:80'],

@@ -11,6 +11,7 @@ use Illuminate\Validation\Rule;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\View\View;
+use App\Support\BusinessPermissionCatalog;
 use Spatie\Permission\Models\Permission;
 use Spatie\Permission\Models\Role;
 
@@ -111,7 +112,10 @@ class CompanyController extends Controller
         $company->load(['owners', 'cashiers', 'users']);
         $availableUsers = User::whereNull('company_id')->orderBy('name')->get();
         $plans = Plan::orderBy('name')->get();
-        $cashierPermissions = Permission::orderBy('name')->get();
+        $cashierPermissions = Permission::query()
+            ->whereIn('name', BusinessPermissionCatalog::all())
+            ->orderBy('name')
+            ->get();
         $currentUser = Auth::user();
 
         return view('admin.companies.edit', compact('company', 'availableUsers', 'plans', 'cashierPermissions', 'currentUser'));
@@ -284,7 +288,10 @@ class CompanyController extends Controller
         abort_unless($user->company_id === $company->id, 404);
         abort_unless($user->business_role === 'cashier', 403);
 
-        $permissionNames = Permission::pluck('name')->all();
+        $permissionNames = Permission::query()
+            ->whereIn('name', BusinessPermissionCatalog::all())
+            ->pluck('name')
+            ->all();
         $data = $request->validate([
             'permissions' => ['nullable', 'array'],
             'permissions.*' => ['string', Rule::in($permissionNames)],
