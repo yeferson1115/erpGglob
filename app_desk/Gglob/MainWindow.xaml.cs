@@ -38,6 +38,7 @@ namespace Gglob
         private readonly ObservableCollection<InventoryProductItem> inventoryProductsForCombo = [];
         private readonly List<ServiceItem> settingsServices = [];
         private readonly HashSet<string> grantedBusinessPermissions = new(StringComparer.OrdinalIgnoreCase);
+        private readonly HashSet<string> selectedCashierPermissions = new(StringComparer.OrdinalIgnoreCase);
         private int? editingCashierId;
         private int? editingCategoryId;
         private int? editingInventoryProductId;
@@ -98,6 +99,7 @@ namespace Gglob
             CashRegistersDataGrid.ItemsSource = cashRegisterManagementOptions;
             SalesPointsDataGrid.ItemsSource = salesPointOptions;
             CashiersManagementDataGrid.ItemsSource = businessCashiers;
+            CashierSalesPointComboBox.ItemsSource = salesPointOptions;
             ProductCategoriesDataGrid.ItemsSource = productCategories;
             DeskInventoryProductsDataGrid.ItemsSource = inventoryProducts;
             DeskProductCategoryComboBox.ItemsSource = productCategories;
@@ -1041,6 +1043,11 @@ namespace Gglob
                 if (CategoryFilterSalesPointComboBox.SelectedItem is null)
                 {
                     CategoryFilterSalesPointComboBox.SelectedIndex = -1;
+                }
+
+                if (CashierSalesPointComboBox.SelectedItem is null)
+                {
+                    CashierSalesPointComboBox.SelectedItem = salesPointOptions.FirstOrDefault();
                 }
 
                 SalesPointsDataGrid.ItemsSource = null;

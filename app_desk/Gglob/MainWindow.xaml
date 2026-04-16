@@ -1158,6 +1158,7 @@
                                             <RowDefinition Height="Auto" />
                                             <RowDefinition Height="Auto" />
                                             <RowDefinition Height="Auto" />
+                                            <RowDefinition Height="Auto" />
                                         </Grid.RowDefinitions>
 
                                         <StackPanel Grid.Row="0" Grid.Column="0" Margin="0,0,8,0">
@@ -1183,6 +1184,27 @@
                                             <PasswordBox x:Name="CashierPasswordBox" Style="{StaticResource InputPassword}" />
                                         </StackPanel>
                                         <StackPanel Grid.Row="2" Grid.Column="1" Margin="8,0,0,0" VerticalAlignment="Bottom">
+                                            <TextBlock Text="Punto de venta asignado" FontWeight="SemiBold" />
+                                            <ComboBox x:Name="CashierSalesPointComboBox"
+                                                      Height="36"
+                                                      Margin="0,0,0,4"
+                                                      DisplayMemberPath="Name"
+                                                      SelectedValuePath="Id" />
+                                            <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                                                <Button x:Name="SelectCashierPermissionsButton"
+                                                        Content="🔐 Seleccionar permisos"
+                                                        Height="30"
+                                                        Padding="10,4"
+                                                        Margin="0,0,8,0"
+                                                        Click="SelectCashierPermissionsButton_Click" />
+                                                <TextBlock x:Name="CashierPermissionsSummaryTextBlock"
+                                                           VerticalAlignment="Center"
+                                                           Foreground="#475569"
+                                                           FontSize="12"
+                                                           Text="Sin permisos seleccionados" />
+                                            </StackPanel>
+                                        </StackPanel>
+                                        <StackPanel Grid.Row="3" Grid.Column="1" Margin="8,0,0,0" VerticalAlignment="Bottom">
                                             <WrapPanel HorizontalAlignment="Right" Margin="0,12,0,0">
                                                 <Button x:Name="ClearCashierFormButton" Content="🧹 Limpiar" Width="120" Height="36" Margin="0,0,8,0" Click="ClearCashierFormButton_Click" />
                                                 <Button x:Name="SaveCashierButton" Content="👤 Crear" Width="150" Height="40" Style="{StaticResource PrimaryButton}" Click="SaveCashierButton_Click" />
