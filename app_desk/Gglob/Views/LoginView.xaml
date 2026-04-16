@@ -6,7 +6,8 @@
              mc:Ignorable="d"
              d:DesignHeight="500"
              d:DesignWidth="900">
-    <Grid x:Name="LoginRoot">
+    <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Auto">
+    <Grid x:Name="LoginRoot" MinWidth="760" MinHeight="480">
         <Grid.ColumnDefinitions>
             <ColumnDefinition Width="2*" />
             <ColumnDefinition Width="3*" />
@@ -37,7 +38,7 @@
                         <RowDefinition Height="Auto" />
                     </Grid.RowDefinitions>
 
-                    <ScrollViewer Grid.Row="0" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+                    <ScrollViewer Grid.Row="0" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Auto">
                         <StackPanel>
                             <StackPanel x:Name="LoginPanel">
                                 <TextBlock Text="Correo" FontWeight="SemiBold" />
@@ -106,4 +107,5 @@
             </Grid>
         </Border>
     </Grid>
+    </ScrollViewer>
 </UserControl>
