@@ -587,7 +587,7 @@ namespace Gglob
                             },
                             new TextBlock
                             {
-                                Text = "Puntos de venta, productos, categorías y cajeros",
+                                Text = "Negocio y catálogo POS",
                                 Foreground = Brushes.White,
                                 Opacity = 0.9,
                                 FontSize = 12
@@ -603,10 +603,54 @@ namespace Gglob
         private void RenderSettingsActions()
         {
             SettingsActionsPanel.Children.Clear();
-            foreach (var service in settingsServices)
+
+            var businessConfigServices = settingsServices
+                .Where(service => service.Key is "sales_point_management" or "cashier_management")
+                .ToList();
+            var catalogConfigServices = settingsServices
+                .Where(service => service.Key is "products_management" or "product_categories")
+                .ToList();
+
+            AddSettingsSection("Configuración del negocio", "Cajeros y puntos de venta.", businessConfigServices);
+            AddSettingsSection("Configuración de productos", "Productos y categorías para operación POS.", catalogConfigServices);
+        }
+
+        private void AddSettingsSection(string title, string subtitle, List<ServiceItem> sectionServices)
+        {
+            if (sectionServices.Count == 0)
             {
-                SettingsActionsPanel.Children.Add(CreateSettingsActionButton(service));
+                return;
             }
+
+            var sectionWrapper = new StackPanel
+            {
+                Margin = new Thickness(0, 0, 0, 14)
+            };
+
+            sectionWrapper.Children.Add(new TextBlock
+            {
+                Text = title,
+                Foreground = new SolidColorBrush(Color.FromRgb(30, 41, 59)),
+                FontWeight = FontWeights.SemiBold,
+                FontSize = 15
+            });
+
+            sectionWrapper.Children.Add(new TextBlock
+            {
+                Text = subtitle,
+                Foreground = new SolidColorBrush(Color.FromRgb(100, 116, 139)),
+                FontSize = 12,
+                Margin = new Thickness(0, 2, 0, 8)
+            });
+
+            var actionsPanel = new WrapPanel();
+            foreach (var service in sectionServices)
+            {
+                actionsPanel.Children.Add(CreateSettingsActionButton(service));
+            }
+
+            sectionWrapper.Children.Add(actionsPanel);
+            SettingsActionsPanel.Children.Add(sectionWrapper);
         }
 
         private Button CreateSettingsActionButton(ServiceItem service)
