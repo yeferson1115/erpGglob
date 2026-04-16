@@ -10,12 +10,19 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Validation\Rule;
 use Illuminate\View\View;
+use App\Support\BusinessPermissionCatalog;
 
 class InventoryController extends Controller
 {
     public function index(): View
     {
         $user = $this->ensureBusinessUser();
+        BusinessPermissionCatalog::ensureAny($user, [
+            BusinessPermissionCatalog::CREATE_PRODUCTS,
+            BusinessPermissionCatalog::EDIT_PRODUCTS,
+            BusinessPermissionCatalog::DELETE_PRODUCTS,
+        ]);
+
         $allowedSalesPointIds = $this->allowedSalesPointIds($user->id, (int) $user->company_id);
         $selectedSalesPointId = $this->resolveSelectedSalesPointId(request()->integer('sales_point_id'), $allowedSalesPointIds);
         $salesPoints = SalesPoint::query()
@@ -51,6 +58,7 @@ class InventoryController extends Controller
     public function edit(InventoryProduct $inventory): View
     {
         $user = $this->ensureBusinessUser();
+        BusinessPermissionCatalog::ensure($user, BusinessPermissionCatalog::EDIT_PRODUCTS);
         $allowedSalesPointIds = $this->allowedSalesPointIds($user->id, (int) $user->company_id);
         abort_unless((int) $inventory->company_id === (int) $user->company_id, 403);
         abort_unless(
@@ -92,6 +100,7 @@ class InventoryController extends Controller
     public function store(Request $request): RedirectResponse
     {
         $user = $this->ensureBusinessUser();
+        BusinessPermissionCatalog::ensure($user, BusinessPermissionCatalog::CREATE_PRODUCTS);
         $allowedSalesPointIds = $this->allowedSalesPointIds($user->id, (int) $user->company_id);
 
         $data = $this->validatedData($request, (int) $user->company_id, $allowedSalesPointIds);
@@ -106,6 +115,7 @@ class InventoryController extends Controller
     public function update(Request $request, InventoryProduct $inventory): RedirectResponse
     {
         $user = $this->ensureBusinessUser();
+        BusinessPermissionCatalog::ensure($user, BusinessPermissionCatalog::EDIT_PRODUCTS);
         $allowedSalesPointIds = $this->allowedSalesPointIds($user->id, (int) $user->company_id);
         abort_unless((int) $inventory->company_id === (int) $user->company_id, 403);
         abort_unless(

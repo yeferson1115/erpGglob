@@ -91,7 +91,7 @@ namespace Gglob
 
         private async void BulkImportInventoryProductsButton_Click(object sender, RoutedEventArgs e)
         {
-            if (!EnsureOwnerForCatalogAction("Solo el dueño puede crear productos."))
+            if (!EnsurePermissionForCatalogAction(BusinessPermissionNames.CreateProducts, "No tienes permisos para crear productos."))
             {
                 return;
             }
@@ -184,7 +184,9 @@ namespace Gglob
 
         private async void SubmitInventoryProductButton_Click(object sender, RoutedEventArgs e)
         {
-            if (!EnsureOwnerForCatalogAction("Solo el dueño puede crear o editar productos."))
+            if (!EnsurePermissionForCatalogAction(
+                    editingInventoryProductId.HasValue ? BusinessPermissionNames.EditProducts : BusinessPermissionNames.CreateProducts,
+                    "No tienes permisos para guardar productos."))
             {
                 return;
             }
@@ -240,7 +242,7 @@ namespace Gglob
 
         private void OpenCreateInventoryFormButton_Click(object sender, RoutedEventArgs e)
         {
-            if (!EnsureOwnerForCatalogAction("Solo el dueño puede crear productos."))
+            if (!EnsurePermissionForCatalogAction(BusinessPermissionNames.CreateProducts, "No tienes permisos para crear productos."))
             {
                 return;
             }
@@ -251,7 +253,7 @@ namespace Gglob
 
         private void OpenCreateCategoryFormButton_Click(object sender, RoutedEventArgs e)
         {
-            if (!EnsureOwnerForCatalogAction("Solo el dueño puede crear categorías."))
+            if (!EnsurePermissionForCatalogAction(BusinessPermissionNames.CreateCategories, "No tienes permisos para crear categorías."))
             {
                 return;
             }
@@ -262,7 +264,7 @@ namespace Gglob
 
         private async void DeleteInventoryProductButton_Click(object sender, RoutedEventArgs e)
         {
-            if (!EnsureOwnerForCatalogAction("Solo el dueño puede eliminar productos."))
+            if (!EnsurePermissionForCatalogAction(BusinessPermissionNames.DeleteProducts, "No tienes permisos para eliminar productos."))
             {
                 return;
             }
@@ -291,7 +293,7 @@ namespace Gglob
 
         private void EditInventoryRowButton_Click(object sender, RoutedEventArgs e)
         {
-            if (!EnsureOwnerForCatalogAction("Solo el dueño puede editar productos."))
+            if (!EnsurePermissionForCatalogAction(BusinessPermissionNames.EditProducts, "No tienes permisos para editar productos."))
             {
                 return;
             }
@@ -307,7 +309,7 @@ namespace Gglob
 
         private async void DeleteInventoryRowButton_Click(object sender, RoutedEventArgs e)
         {
-            if (!EnsureOwnerForCatalogAction("Solo el dueño puede eliminar productos."))
+            if (!EnsurePermissionForCatalogAction(BusinessPermissionNames.DeleteProducts, "No tienes permisos para eliminar productos."))
             {
                 return;
             }
@@ -462,7 +464,9 @@ namespace Gglob
 
         private async void SaveCategoryButton_Click(object sender, RoutedEventArgs e)
         {
-            if (!EnsureOwnerForCatalogAction("Solo el dueño puede crear o editar categorías."))
+            if (!EnsurePermissionForCatalogAction(
+                    editingCategoryId.HasValue ? BusinessPermissionNames.EditCategories : BusinessPermissionNames.CreateCategories,
+                    "No tienes permisos para guardar categorías."))
             {
                 return;
             }
@@ -529,7 +533,7 @@ namespace Gglob
 
         private void EditCategoryRowButton_Click(object sender, RoutedEventArgs e)
         {
-            if (!EnsureOwnerForCatalogAction("Solo el dueño puede editar categorías."))
+            if (!EnsurePermissionForCatalogAction(BusinessPermissionNames.EditCategories, "No tienes permisos para editar categorías."))
             {
                 return;
             }
@@ -555,7 +559,7 @@ namespace Gglob
 
         private async void DeleteCategoryRowButton_Click(object sender, RoutedEventArgs e)
         {
-            if (!EnsureOwnerForCatalogAction("Solo el dueño puede eliminar categorías."))
+            if (!EnsurePermissionForCatalogAction(BusinessPermissionNames.DeleteCategories, "No tienes permisos para eliminar categorías."))
             {
                 return;
             }
@@ -604,6 +608,12 @@ namespace Gglob
 
         private async Task LoadProductCategoriesFromApi(int? forcedSalesPointId = null)
         {
+            if (!HasBusinessPermission(BusinessPermissionNames.ViewCategories))
+            {
+                productCategories.Clear();
+                return;
+            }
+
             try
             {
                 var salesPointId = forcedSalesPointId ?? ResolveCatalogSalesPointId("categories");
@@ -649,6 +659,12 @@ namespace Gglob
 
         private async Task LoadInventoryProductsFromApi()
         {
+            if (!HasAnyBusinessPermission(BusinessPermissionNames.CreateProducts, BusinessPermissionNames.EditProducts, BusinessPermissionNames.DeleteProducts, BusinessPermissionNames.CreateSale))
+            {
+                inventoryProducts.Clear();
+                return;
+            }
+
             try
             {
                 var salesPointId = ResolveCatalogSalesPointId("products");
@@ -1084,25 +1100,31 @@ namespace Gglob
         private void ApplyConfigurationAccess(ApiUser user)
         {
             var isOwner = IsOwner(user);
-            var canManageCatalog = isOwner;
+            var canCreateProducts = HasBusinessPermission(BusinessPermissionNames.CreateProducts);
+            var canEditProducts = HasBusinessPermission(BusinessPermissionNames.EditProducts);
+            var canDeleteProducts = HasBusinessPermission(BusinessPermissionNames.DeleteProducts);
+            var canCreateCategories = HasBusinessPermission(BusinessPermissionNames.CreateCategories);
+            var canEditCategories = HasBusinessPermission(BusinessPermissionNames.EditCategories);
+            var canDeleteCategories = HasBusinessPermission(BusinessPermissionNames.DeleteCategories);
+            var canManageCatalog = canCreateProducts || canEditProducts || canDeleteProducts || canCreateCategories || canEditCategories || canDeleteCategories;
             SaveWompiSettingsButton.IsEnabled = isOwner;
             SaveBancolombiaSettingsButton.IsEnabled = isOwner;
             SaveBancolombiaDestinationButton.IsEnabled = isOwner;
             CreateCashRegisterButton.IsEnabled = isOwner;
-            CreateInventoryProductButton.Visibility = canManageCatalog ? Visibility.Visible : Visibility.Collapsed;
-            CreateCategoryButton.Visibility = canManageCatalog ? Visibility.Visible : Visibility.Collapsed;
-            BulkImportInventoryProductsButton.Visibility = canManageCatalog ? Visibility.Visible : Visibility.Collapsed;
-            SaveInventoryProductButton.Visibility = canManageCatalog ? Visibility.Visible : Visibility.Collapsed;
-            CancelInventoryEditButton.Visibility = canManageCatalog ? Visibility.Visible : Visibility.Collapsed;
-            InventoryActionsColumn.Visibility = canManageCatalog ? Visibility.Visible : Visibility.Collapsed;
-            SaveCategoryButton.Visibility = canManageCatalog ? Visibility.Visible : Visibility.Collapsed;
-            CancelCategoryEditButton.Visibility = canManageCatalog ? Visibility.Visible : Visibility.Collapsed;
-            CategoryActionsColumn.Visibility = canManageCatalog ? Visibility.Visible : Visibility.Collapsed;
-            CategoryNameTextBox.IsEnabled = canManageCatalog;
-            CategoryDescriptionTextBox.IsEnabled = canManageCatalog;
-            CategorySalesPointComboBox.IsEnabled = canManageCatalog;
-            CategoryActiveCheckBox.IsEnabled = canManageCatalog;
-            DeskInventorySalesPointComboBox.IsEnabled = canManageCatalog;
+            CreateInventoryProductButton.Visibility = canCreateProducts ? Visibility.Visible : Visibility.Collapsed;
+            CreateCategoryButton.Visibility = canCreateCategories ? Visibility.Visible : Visibility.Collapsed;
+            BulkImportInventoryProductsButton.Visibility = canCreateProducts ? Visibility.Visible : Visibility.Collapsed;
+            SaveInventoryProductButton.Visibility = (canCreateProducts || canEditProducts) ? Visibility.Visible : Visibility.Collapsed;
+            CancelInventoryEditButton.Visibility = (canCreateProducts || canEditProducts) ? Visibility.Visible : Visibility.Collapsed;
+            InventoryActionsColumn.Visibility = (canEditProducts || canDeleteProducts) ? Visibility.Visible : Visibility.Collapsed;
+            SaveCategoryButton.Visibility = (canCreateCategories || canEditCategories) ? Visibility.Visible : Visibility.Collapsed;
+            CancelCategoryEditButton.Visibility = (canCreateCategories || canEditCategories) ? Visibility.Visible : Visibility.Collapsed;
+            CategoryActionsColumn.Visibility = (canEditCategories || canDeleteCategories) ? Visibility.Visible : Visibility.Collapsed;
+            CategoryNameTextBox.IsEnabled = canCreateCategories || canEditCategories;
+            CategoryDescriptionTextBox.IsEnabled = canCreateCategories || canEditCategories;
+            CategorySalesPointComboBox.IsEnabled = canCreateCategories || canEditCategories;
+            CategoryActiveCheckBox.IsEnabled = canCreateCategories || canEditCategories;
+            DeskInventorySalesPointComboBox.IsEnabled = canCreateProducts || canEditProducts;
 
             if (!canManageCatalog)
             {
@@ -1114,9 +1136,9 @@ namespace Gglob
             BancolombiaConfigTab.Visibility = isOwner ? Visibility.Visible : Visibility.Collapsed;
         }
 
-        private bool EnsureOwnerForCatalogAction(string message)
+        private bool EnsurePermissionForCatalogAction(string permissionName, string message)
         {
-            if (currentUser is not null && IsOwner(currentUser))
+            if (HasBusinessPermission(permissionName))
             {
                 return true;
             }
@@ -2043,6 +2065,7 @@ namespace Gglob
         {
             try
             {
+                await LoadCashierPermissionsCatalogFromApi();
                 using var response = await HttpClient.GetAsync($"{ApiBaseUrl}/gglob-pay/cashiers");
                 if (!response.IsSuccessStatusCode)
                 {
@@ -2069,13 +2092,63 @@ namespace Gglob
                         cashier.Name ?? "Cajero",
                         cashier.LastName ?? string.Empty,
                         cashier.Email ?? string.Empty,
-                        cashier.Phone ?? string.Empty));
+                        cashier.Phone ?? string.Empty,
+                        cashier.PermissionNames?.OrderBy(x => x).ToList()));
                 }
 
                 await LoadCashiersFromApi();
             }
             catch
             {
+            }
+        }
+
+        private async Task LoadCashierPermissionsCatalogFromApi()
+        {
+            if (currentUser is null || !IsOwner(currentUser))
+            {
+                cashierPermissionsCatalog.Clear();
+                return;
+            }
+
+            try
+            {
+                using var response = await HttpClient.GetAsync($"{ApiBaseUrl}/gglob-pay/cashier-permissions");
+                if (!response.IsSuccessStatusCode)
+                {
+                    return;
+                }
+
+                var content = await response.Content.ReadAsStringAsync();
+                var result = JsonSerializer.Deserialize<ApiListResponse<string>>(content, JsonOptions());
+                if (result?.Data is null)
+                {
+                    return;
+                }
+
+                cashierPermissionsCatalog.Clear();
+                foreach (var permission in result.Data.Where(x => !string.IsNullOrWhiteSpace(x)).OrderBy(x => x))
+                {
+                    cashierPermissionsCatalog.Add(permission);
+                }
+            }
+            catch
+            {
+            }
+        }
+
+        private async Task<bool> UpdateCashierPermissionsApi(int cashierId, IReadOnlyCollection<string> permissions)
+        {
+            try
+            {
+                var payload = JsonSerializer.Serialize(new { permissions });
+                using var content = new StringContent(payload, Encoding.UTF8, "application/json");
+                using var response = await HttpClient.PutAsync($"{ApiBaseUrl}/gglob-pay/cashiers/{cashierId}/permissions", content);
+                return response.IsSuccessStatusCode;
+            }
+            catch
+            {
+                return false;
             }
         }
 
@@ -2249,6 +2322,134 @@ namespace Gglob
             {
                 ResetCashierForm();
             }
+        }
+
+        private async void ManageCashierPermissionsRowButton_Click(object sender, RoutedEventArgs e)
+        {
+            if (sender is not Button { Tag: BusinessCashierItem cashier })
+            {
+                return;
+            }
+
+            if (currentUser is null || !IsOwner(currentUser))
+            {
+                QrStatusTextBlock.Text = "Solo el dueño puede gestionar permisos de cajeros.";
+                QrStatusTextBlock.Foreground = Brushes.DarkRed;
+                return;
+            }
+
+            if (cashierPermissionsCatalog.Count == 0)
+            {
+                await LoadCashierPermissionsCatalogFromApi();
+            }
+
+            if (cashierPermissionsCatalog.Count == 0)
+            {
+                ShowAlert("No se encontró el catálogo de permisos para cajeros.");
+                return;
+            }
+
+            var selected = new HashSet<string>(cashier.PermissionNames, StringComparer.OrdinalIgnoreCase);
+            var dialog = new Window
+            {
+                Title = $"Permisos · {cashier.FullName}",
+                Width = 520,
+                Height = 520,
+                ResizeMode = ResizeMode.NoResize,
+                WindowStartupLocation = WindowStartupLocation.CenterOwner,
+                Background = Brushes.White
+            };
+
+            var root = new Grid { Margin = new Thickness(16) };
+            root.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
+            root.RowDefinitions.Add(new RowDefinition { Height = new GridLength(1, GridUnitType.Star) });
+            root.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
+
+            root.Children.Add(new TextBlock
+            {
+                Text = "Selecciona los permisos habilitados para este cajero.",
+                Foreground = new SolidColorBrush(Color.FromRgb(71, 85, 105)),
+                Margin = new Thickness(0, 0, 0, 10),
+            });
+
+            var scroll = new ScrollViewer { VerticalScrollBarVisibility = ScrollBarVisibility.Auto };
+            Grid.SetRow(scroll, 1);
+            root.Children.Add(scroll);
+
+            var stack = new StackPanel();
+            scroll.Content = stack;
+
+            foreach (var permission in cashierPermissionsCatalog)
+            {
+                var check = new CheckBox
+                {
+                    Content = permission,
+                    IsChecked = selected.Contains(permission),
+                    Margin = new Thickness(0, 0, 0, 6),
+                };
+
+                check.Checked += (_, _) => selected.Add(permission);
+                check.Unchecked += (_, _) => selected.Remove(permission);
+                stack.Children.Add(check);
+            }
+
+            var actions = new StackPanel
+            {
+                Orientation = Orientation.Horizontal,
+                HorizontalAlignment = HorizontalAlignment.Right,
+                Margin = new Thickness(0, 10, 0, 0),
+            };
+            Grid.SetRow(actions, 2);
+            root.Children.Add(actions);
+
+            var cancelButton = new Button
+            {
+                Content = "Cancelar",
+                Width = 110,
+                Height = 36,
+                Margin = new Thickness(0, 0, 8, 0),
+            };
+            cancelButton.Click += (_, _) => dialog.Close();
+            actions.Children.Add(cancelButton);
+
+            var saveButton = new Button
+            {
+                Content = "Guardar permisos",
+                Width = 150,
+                Height = 36,
+                Background = new SolidColorBrush(Color.FromRgb(37, 99, 235)),
+                Foreground = Brushes.White,
+                BorderBrush = new SolidColorBrush(Color.FromRgb(29, 78, 216)),
+            };
+            saveButton.Click += async (_, _) =>
+            {
+                saveButton.IsEnabled = false;
+                SetLoading(true);
+                var ok = await UpdateCashierPermissionsApi(cashier.Id, selected.ToList());
+                SetLoading(false);
+                saveButton.IsEnabled = true;
+
+                if (!ok)
+                {
+                    ShowAlert("No se pudieron actualizar los permisos del cajero.");
+                    return;
+                }
+
+                await LoadBusinessCashiersFromApi();
+                QrStatusTextBlock.Text = "Permisos de cajero actualizados correctamente.";
+                QrStatusTextBlock.Foreground = Brushes.DarkGreen;
+                dialog.DialogResult = true;
+                dialog.Close();
+            };
+            actions.Children.Add(saveButton);
+
+            dialog.Content = root;
+            if (Application.Current?.MainWindow is Window owner && owner != dialog)
+            {
+                dialog.Owner = owner;
+            }
+
+            dialog.ShowDialog();
         }
 
         private void ClearCashierFormButton_Click(object sender, RoutedEventArgs e)

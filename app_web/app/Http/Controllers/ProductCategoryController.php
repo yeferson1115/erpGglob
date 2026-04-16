@@ -9,12 +9,14 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Validation\Rule;
 use Illuminate\View\View;
+use App\Support\BusinessPermissionCatalog;
 
 class ProductCategoryController extends Controller
 {
     public function index(): View
     {
         $user = $this->ensureBusinessUser();
+        BusinessPermissionCatalog::ensure($user, BusinessPermissionCatalog::VIEW_CATEGORIES);
         $allowedSalesPointIds = $this->allowedSalesPointIds($user->id, (int) $user->company_id);
         $selectedSalesPointId = $this->resolveSelectedSalesPointId(request()->integer('sales_point_id'), $allowedSalesPointIds);
         $salesPoints = SalesPoint::query()
@@ -41,6 +43,7 @@ class ProductCategoryController extends Controller
     public function edit(ProductCategory $productCategory): View
     {
         $user = $this->ensureBusinessUser();
+        BusinessPermissionCatalog::ensure($user, BusinessPermissionCatalog::EDIT_CATEGORIES);
         $allowedSalesPointIds = $this->allowedSalesPointIds($user->id, (int) $user->company_id);
         $selectedSalesPointId = $this->resolveSelectedSalesPointId(request()->integer('sales_point_id'), $allowedSalesPointIds);
         $salesPoints = SalesPoint::query()
@@ -73,6 +76,7 @@ class ProductCategoryController extends Controller
     public function store(Request $request): RedirectResponse
     {
         $user = $this->ensureBusinessUser();
+        BusinessPermissionCatalog::ensure($user, BusinessPermissionCatalog::CREATE_CATEGORIES);
         $allowedSalesPointIds = $this->allowedSalesPointIds($user->id, (int) $user->company_id);
         $data = $this->validatedData($request, (int) $user->company_id, $allowedSalesPointIds);
         $salesPointId = (int) $data['sales_point_id'];
@@ -90,6 +94,7 @@ class ProductCategoryController extends Controller
     public function update(Request $request, ProductCategory $productCategory): RedirectResponse
     {
         $user = $this->ensureBusinessUser();
+        BusinessPermissionCatalog::ensure($user, BusinessPermissionCatalog::EDIT_CATEGORIES);
         $allowedSalesPointIds = $this->allowedSalesPointIds($user->id, (int) $user->company_id);
         abort_unless((int) $productCategory->company_id === (int) $user->company_id, 403);
         abort_unless(
@@ -110,6 +115,7 @@ class ProductCategoryController extends Controller
     public function destroy(ProductCategory $productCategory): RedirectResponse
     {
         $user = $this->ensureBusinessUser();
+        BusinessPermissionCatalog::ensure($user, BusinessPermissionCatalog::DELETE_CATEGORIES);
         $allowedSalesPointIds = $this->allowedSalesPointIds($user->id, (int) $user->company_id);
         abort_unless((int) $productCategory->company_id === (int) $user->company_id, 403);
         abort_unless(

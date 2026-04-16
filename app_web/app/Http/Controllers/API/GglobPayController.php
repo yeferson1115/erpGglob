@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\API;
 
 use App\Http\Controllers\Controller;
+use App\Support\BusinessPermissionCatalog;
 use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Crypt;
@@ -10,7 +11,12 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Str;
+use Illuminate\Validation\Rule;
+use Spatie\Permission\Guard;
+use Spatie\Permission\Models\Permission;
+use Spatie\Permission\PermissionRegistrar;
 use Spatie\Permission\Models\Role;
+use Throwable;
 
 class GglobPayController extends Controller
 {
@@ -473,14 +479,52 @@ class GglobPayController extends Controller
             return response()->json(['message' => 'Solo el dueño puede gestionar cajas y cajeros.'], 403);
         }
 
-        $rows = DB::table('users')
+        $rows = User::query()
+            ->with('permissions:id,name')
             ->where('company_id', $user->company_id)
             ->where('business_role', 'cashier')
-            ->select('id', 'name', 'last_name', 'email', 'phone')
             ->orderBy('name')
-            ->get();
+            ->get(['id', 'name', 'last_name', 'email', 'phone'])
+            ->map(fn (User $cashier) => [
+                'id' => $cashier->id,
+                'name' => $cashier->name,
+                'last_name' => $cashier->last_name,
+                'email' => $cashier->email,
+                'phone' => $cashier->phone,
+                'permission_names' => $cashier->permissions
+                    ->pluck('name')
+                    ->map(fn ($name) => strtolower((string) $name))
+                    ->sort()
+                    ->values()
+                    ->all(),
+            ])
+            ->values();
 
         return response()->json(['data' => $rows]);
+    }
+
+    public function cashierPermissionsCatalog(Request $request)
+    {
+        if (!$this->isOwner($request)) {
+            return response()->json(['message' => 'Solo el dueño puede gestionar permisos de cajeros.'], 403);
+        }
+
+        $guardName = Guard::getDefaultName(User::class);
+        foreach (BusinessPermissionCatalog::all() as $permission) {
+            Permission::findOrCreate($permission, $guardName);
+        }
+        app(PermissionRegistrar::class)->forgetCachedPermissions();
+
+        $permissions = Permission::query()
+            ->whereIn('name', BusinessPermissionCatalog::all())
+            ->where('guard_name', $guardName)
+            ->orderBy('name')
+            ->pluck('name')
+            ->map(fn ($name) => strtolower((string) $name))
+            ->values()
+            ->all();
+
+        return response()->json(['data' => $permissions]);
     }
 
     public function storeCashier(Request $request)
@@ -592,6 +636,66 @@ class GglobPayController extends Controller
         $cashierUser->delete();
 
         return response()->json(['message' => 'Usuario cajero eliminado correctamente.']);
+    }
+
+    public function updateCashierPermissions(Request $request, int $cashier)
+    {
+        $user = $request->user();
+        if (!$this->isOwner($request)) {
+            return response()->json(['message' => 'Solo el dueño puede gestionar permisos de cajeros.'], 403);
+        }
+
+        $cashierUser = User::where('id', $cashier)
+            ->where('company_id', $user->company_id)
+            ->where('business_role', 'cashier')
+            ->first();
+
+        if (!$cashierUser) {
+            return response()->json(['message' => 'Cajero no encontrado para la empresa.'], 404);
+        }
+
+        $guardName = Guard::getDefaultName(User::class);
+        foreach (BusinessPermissionCatalog::all() as $permission) {
+            Permission::findOrCreate($permission, $guardName);
+        }
+        app(PermissionRegistrar::class)->forgetCachedPermissions();
+
+        $allowed = Permission::query()
+            ->whereIn('name', BusinessPermissionCatalog::all())
+            ->where('guard_name', $guardName)
+            ->orderBy('name')
+            ->pluck('name')
+            ->all();
+
+        $normalizedPermissions = collect($request->input('permissions', []))
+            ->map(fn ($permission) => strtolower(trim((string) $permission)))
+            ->filter()
+            ->values()
+            ->all();
+        $request->merge(['permissions' => $normalizedPermissions]);
+
+        $validated = $request->validate([
+            'permissions' => ['nullable', 'array'],
+            'permissions.*' => ['string', Rule::in($allowed)],
+        ]);
+
+        try {
+            $cashierUser->syncPermissions($normalizedPermissions);
+            app(PermissionRegistrar::class)->forgetCachedPermissions();
+        } catch (Throwable $exception) {
+            return response()->json([
+                'message' => 'No se pudieron actualizar los permisos del cajero.',
+                'error' => $exception->getMessage(),
+            ], 422);
+        }
+
+        return response()->json([
+            'message' => 'Permisos del cajero actualizados correctamente.',
+            'data' => [
+                'cashier_id' => $cashierUser->id,
+                'permission_names' => $cashierUser->fresh()->permissions()->pluck('name')->values()->all(),
+            ],
+        ]);
     }
 
     public function assignCashRegisterToCashier(Request $request, int $cashRegister)
