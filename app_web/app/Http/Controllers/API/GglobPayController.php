@@ -13,7 +13,9 @@ use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
 use Spatie\Permission\Models\Permission;
+use Spatie\Permission\PermissionRegistrar;
 use Spatie\Permission\Models\Role;
+use Throwable;
 
 class GglobPayController extends Controller
 {
@@ -506,6 +508,11 @@ class GglobPayController extends Controller
             return response()->json(['message' => 'Solo el dueño puede gestionar permisos de cajeros.'], 403);
         }
 
+        foreach (BusinessPermissionCatalog::all() as $permission) {
+            Permission::findOrCreate($permission, 'web');
+        }
+        app(PermissionRegistrar::class)->forgetCachedPermissions();
+
         $permissions = Permission::query()
             ->whereIn('name', BusinessPermissionCatalog::all())
             ->orderBy('name')
@@ -644,8 +651,14 @@ class GglobPayController extends Controller
             return response()->json(['message' => 'Cajero no encontrado para la empresa.'], 404);
         }
 
+        foreach (BusinessPermissionCatalog::all() as $permission) {
+            Permission::findOrCreate($permission, 'web');
+        }
+        app(PermissionRegistrar::class)->forgetCachedPermissions();
+
         $allowed = Permission::query()
             ->whereIn('name', BusinessPermissionCatalog::all())
+            ->orderBy('name')
             ->pluck('name')
             ->all();
 
@@ -654,9 +667,23 @@ class GglobPayController extends Controller
             'permissions.*' => ['string', Rule::in($allowed)],
         ]);
 
-        $cashierUser->syncPermissions($validated['permissions'] ?? []);
+        try {
+            $cashierUser->syncPermissions($validated['permissions'] ?? []);
+            app(PermissionRegistrar::class)->forgetCachedPermissions();
+        } catch (Throwable $exception) {
+            return response()->json([
+                'message' => 'No se pudieron actualizar los permisos del cajero.',
+                'error' => $exception->getMessage(),
+            ], 422);
+        }
 
-        return response()->json(['message' => 'Permisos del cajero actualizados correctamente.']);
+        return response()->json([
+            'message' => 'Permisos del cajero actualizados correctamente.',
+            'data' => [
+                'cashier_id' => $cashierUser->id,
+                'permission_names' => $cashierUser->fresh()->permissions()->pluck('name')->values()->all(),
+            ],
+        ]);
     }
 
     public function assignCashRegisterToCashier(Request $request, int $cashRegister)
