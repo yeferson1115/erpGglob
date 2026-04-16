@@ -508,13 +508,15 @@ class GglobPayController extends Controller
             return response()->json(['message' => 'Solo el dueño puede gestionar permisos de cajeros.'], 403);
         }
 
+        $guardName = $request->user()->getDefaultGuardName();
         foreach (BusinessPermissionCatalog::all() as $permission) {
-            Permission::findOrCreate($permission, 'web');
+            Permission::findOrCreate($permission, $guardName);
         }
         app(PermissionRegistrar::class)->forgetCachedPermissions();
 
         $permissions = Permission::query()
             ->whereIn('name', BusinessPermissionCatalog::all())
+            ->where('guard_name', $guardName)
             ->orderBy('name')
             ->pluck('name')
             ->map(fn ($name) => strtolower((string) $name))
@@ -651,16 +653,25 @@ class GglobPayController extends Controller
             return response()->json(['message' => 'Cajero no encontrado para la empresa.'], 404);
         }
 
+        $guardName = $cashierUser->getDefaultGuardName();
         foreach (BusinessPermissionCatalog::all() as $permission) {
-            Permission::findOrCreate($permission, 'web');
+            Permission::findOrCreate($permission, $guardName);
         }
         app(PermissionRegistrar::class)->forgetCachedPermissions();
 
         $allowed = Permission::query()
             ->whereIn('name', BusinessPermissionCatalog::all())
+            ->where('guard_name', $guardName)
             ->orderBy('name')
             ->pluck('name')
             ->all();
+
+        $normalizedPermissions = collect($request->input('permissions', []))
+            ->map(fn ($permission) => strtolower(trim((string) $permission)))
+            ->filter()
+            ->values()
+            ->all();
+        $request->merge(['permissions' => $normalizedPermissions]);
 
         $validated = $request->validate([
             'permissions' => ['nullable', 'array'],
@@ -668,7 +679,7 @@ class GglobPayController extends Controller
         ]);
 
         try {
-            $cashierUser->syncPermissions($validated['permissions'] ?? []);
+            $cashierUser->syncPermissions($normalizedPermissions);
             app(PermissionRegistrar::class)->forgetCachedPermissions();
         } catch (Throwable $exception) {
             return response()->json([
