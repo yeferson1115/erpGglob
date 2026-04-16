@@ -534,12 +534,39 @@ class GglobPayController extends Controller
             return response()->json(['message' => 'Solo el dueño puede crear usuarios cajeros.'], 403);
         }
 
+        $guardName = Guard::getDefaultName(User::class);
+        foreach (BusinessPermissionCatalog::all() as $permission) {
+            Permission::findOrCreate($permission, $guardName);
+        }
+        app(PermissionRegistrar::class)->forgetCachedPermissions();
+
+        $allowedPermissions = Permission::query()
+            ->whereIn('name', BusinessPermissionCatalog::all())
+            ->where('guard_name', $guardName)
+            ->orderBy('name')
+            ->pluck('name')
+            ->all();
+
+        $normalizedPermissions = collect($request->input('permissions', []))
+            ->map(fn ($permission) => strtolower(trim((string) $permission)))
+            ->filter()
+            ->values()
+            ->all();
+        $request->merge(['permissions' => $normalizedPermissions]);
+
         $validated = $request->validate([
             'name' => ['required', 'string', 'max:255'],
             'last_name' => ['nullable', 'string', 'max:255'],
             'email' => ['required', 'email', 'max:255', 'unique:users,email'],
             'phone' => ['nullable', 'string', 'max:30'],
             'password' => ['required', 'string', 'min:8'],
+            'sales_point_id' => [
+                'required',
+                'integer',
+                Rule::exists('sales_points', 'id')->where(fn ($query) => $query->where('company_id', $user->company_id)),
+            ],
+            'permissions' => ['nullable', 'array'],
+            'permissions.*' => ['string', Rule::in($allowedPermissions)],
         ]);
 
         $cashier = User::create([
@@ -556,12 +583,28 @@ class GglobPayController extends Controller
             $cashier->assignRole('user');
         }
 
+        $cashier->syncPermissions($normalizedPermissions);
+
+        DB::table('sales_point_user')->updateOrInsert(
+            ['sales_point_id' => (int) $validated['sales_point_id'], 'user_id' => $cashier->id],
+            [
+                'company_id' => $user->company_id,
+                'assigned_by' => $user->id,
+                'assigned_at' => now(),
+                'is_active' => true,
+                'updated_at' => now(),
+                'created_at' => now(),
+            ]
+        );
+
         return response()->json([
             'message' => 'Usuario cajero creado correctamente.',
             'data' => [
                 'id' => $cashier->id,
                 'name' => $cashier->name,
                 'email' => $cashier->email,
+                'sales_point_id' => (int) $validated['sales_point_id'],
+                'permission_names' => $cashier->fresh()->permissions()->pluck('name')->values()->all(),
             ],
         ], 201);
     }
