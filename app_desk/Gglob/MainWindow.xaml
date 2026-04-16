@@ -1189,8 +1189,7 @@
                                                       Height="36"
                                                       Margin="0,0,0,4"
                                                       DisplayMemberPath="Name"
-                                                      SelectedValuePath="Id"
-                                                      Style="{StaticResource InputCombo}" />
+                                                      SelectedValuePath="Id" />
                                             <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
                                                 <Button x:Name="SelectCashierPermissionsButton"
                                                         Content="🔐 Seleccionar permisos"
