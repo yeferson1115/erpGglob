@@ -31,69 +31,78 @@
 
                 <TextBlock Text="🔐 Ingreso al sistema" FontSize="26" FontWeight="SemiBold" Foreground="#212529" />
 
-                <StackPanel Grid.Row="1" Margin="0,18,0,0">
-                    <StackPanel x:Name="LoginPanel">
-                        <TextBlock Text="Correo" FontWeight="SemiBold" />
-                        <TextBox x:Name="EmailTextBox" Style="{DynamicResource InputText}" />
+                <Grid Grid.Row="1" Margin="0,18,0,0">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="*" />
+                        <RowDefinition Height="Auto" />
+                    </Grid.RowDefinitions>
 
-                        <TextBlock Text="Contraseña" FontWeight="SemiBold" />
-                        <PasswordBox x:Name="PasswordBox" Style="{DynamicResource InputPassword}" />
+                    <ScrollViewer Grid.Row="0" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+                        <StackPanel>
+                            <StackPanel x:Name="LoginPanel">
+                                <TextBlock Text="Correo" FontWeight="SemiBold" />
+                                <TextBox x:Name="EmailTextBox" Style="{DynamicResource InputText}" />
 
-                        <Button x:Name="LoginButton" Style="{DynamicResource PrimaryButton}" Click="LoginButton_Click" Content="Ingresar" HorizontalAlignment="Stretch" MinHeight="44" />
+                                <TextBlock Text="Contraseña" FontWeight="SemiBold" />
+                                <PasswordBox x:Name="PasswordBox" Style="{DynamicResource InputPassword}" />
 
-                        <TextBlock Margin="0,14,0,0" FontSize="14">
-                            <Run Text="¿No tienes cuenta? " />
-                            <Hyperlink Click="ShowRegisterHyperlink_Click" Foreground="#0d6efd">
-                                <Run Text="Regístrate aquí" />
-                            </Hyperlink>
-                        </TextBlock>
-                    </StackPanel>
+                                <Button x:Name="LoginButton" Style="{DynamicResource PrimaryButton}" Click="LoginButton_Click" Content="Ingresar" HorizontalAlignment="Stretch" MinHeight="44" />
 
-                    <StackPanel x:Name="RegisterPanel" Visibility="Collapsed">
-                        <TextBlock Text="Registro de negocio" FontSize="18" FontWeight="SemiBold" Margin="0,0,0,10" />
+                                <TextBlock Margin="0,14,0,0" FontSize="14">
+                                    <Run Text="¿No tienes cuenta? " />
+                                    <Hyperlink Click="ShowRegisterHyperlink_Click" Foreground="#0d6efd">
+                                        <Run Text="Regístrate aquí" />
+                                    </Hyperlink>
+                                </TextBlock>
+                            </StackPanel>
 
-                        <TextBlock Text="Nombre del negocio" FontWeight="SemiBold" />
-                        <TextBox x:Name="CompanyNameTextBox" Style="{DynamicResource InputText}" />
+                            <StackPanel x:Name="RegisterPanel" Visibility="Collapsed">
+                                <TextBlock Text="Registro de negocio" FontSize="18" FontWeight="SemiBold" Margin="0,0,0,10" />
 
-                        <TextBlock Text="NIT" FontWeight="SemiBold" />
-                        <TextBox x:Name="NitTextBox" Style="{DynamicResource InputText}" />
+                                <TextBlock Text="Nombre del negocio" FontWeight="SemiBold" />
+                                <TextBox x:Name="CompanyNameTextBox" Style="{DynamicResource InputText}" />
 
-                        <TextBlock Text="Correo del negocio" FontWeight="SemiBold" />
-                        <TextBox x:Name="CompanyEmailTextBox" Style="{DynamicResource InputText}" />
+                                <TextBlock Text="NIT" FontWeight="SemiBold" />
+                                <TextBox x:Name="NitTextBox" Style="{DynamicResource InputText}" />
 
-                        <TextBlock Text="Dirección" FontWeight="SemiBold" />
-                        <TextBox x:Name="AddressTextBox" Style="{DynamicResource InputText}" />
+                                <TextBlock Text="Correo del negocio" FontWeight="SemiBold" />
+                                <TextBox x:Name="CompanyEmailTextBox" Style="{DynamicResource InputText}" />
 
-                        <TextBlock Text="Nombre del dueño" FontWeight="SemiBold" />
-                        <TextBox x:Name="OwnerNameTextBox" Style="{DynamicResource InputText}" />
+                                <TextBlock Text="Dirección" FontWeight="SemiBold" />
+                                <TextBox x:Name="AddressTextBox" Style="{DynamicResource InputText}" />
 
-                        <TextBlock Text="Apellido del dueño" FontWeight="SemiBold" />
-                        <TextBox x:Name="OwnerLastNameTextBox" Style="{DynamicResource InputText}" />
+                                <TextBlock Text="Nombre del dueño" FontWeight="SemiBold" />
+                                <TextBox x:Name="OwnerNameTextBox" Style="{DynamicResource InputText}" />
 
-                        <TextBlock Text="Teléfono (opcional)" FontWeight="SemiBold" />
-                        <TextBox x:Name="OwnerPhoneTextBox" Style="{DynamicResource InputText}" />
+                                <TextBlock Text="Apellido del dueño" FontWeight="SemiBold" />
+                                <TextBox x:Name="OwnerLastNameTextBox" Style="{DynamicResource InputText}" />
 
-                        <TextBlock Text="Correo del dueño" FontWeight="SemiBold" />
-                        <TextBox x:Name="OwnerEmailTextBox" Style="{DynamicResource InputText}" />
+                                <TextBlock Text="Teléfono (opcional)" FontWeight="SemiBold" />
+                                <TextBox x:Name="OwnerPhoneTextBox" Style="{DynamicResource InputText}" />
 
-                        <TextBlock Text="Contraseña" FontWeight="SemiBold" />
-                        <PasswordBox x:Name="RegisterPasswordBox" Style="{DynamicResource InputPassword}" />
+                                <TextBlock Text="Correo del dueño" FontWeight="SemiBold" />
+                                <TextBox x:Name="OwnerEmailTextBox" Style="{DynamicResource InputText}" />
 
-                        <TextBlock Text="Confirmar contraseña" FontWeight="SemiBold" />
-                        <PasswordBox x:Name="RegisterPasswordConfirmBox" Style="{DynamicResource InputPassword}" />
+                                <TextBlock Text="Contraseña" FontWeight="SemiBold" />
+                                <PasswordBox x:Name="RegisterPasswordBox" Style="{DynamicResource InputPassword}" />
 
-                        <Button x:Name="RegisterButton" Style="{DynamicResource PrimaryButton}" Click="RegisterButton_Click" Content="Crear negocio" HorizontalAlignment="Stretch" MinHeight="44" />
+                                <TextBlock Text="Confirmar contraseña" FontWeight="SemiBold" />
+                                <PasswordBox x:Name="RegisterPasswordConfirmBox" Style="{DynamicResource InputPassword}" />
 
-                        <TextBlock Margin="0,14,0,0" FontSize="14">
-                            <Run Text="¿Ya tienes cuenta? " />
-                            <Hyperlink Click="ShowLoginHyperlink_Click" Foreground="#0d6efd">
-                                <Run Text="Inicia sesión" />
-                            </Hyperlink>
-                        </TextBlock>
-                    </StackPanel>
+                                <Button x:Name="RegisterButton" Style="{DynamicResource PrimaryButton}" Click="RegisterButton_Click" Content="Crear negocio" HorizontalAlignment="Stretch" MinHeight="44" />
 
-                    <TextBlock x:Name="StatusTextBlock" Margin="0,12,0,4" Foreground="#495057" TextWrapping="Wrap" />
-                </StackPanel>
+                                <TextBlock Margin="0,14,0,0" FontSize="14">
+                                    <Run Text="¿Ya tienes cuenta? " />
+                                    <Hyperlink Click="ShowLoginHyperlink_Click" Foreground="#0d6efd">
+                                        <Run Text="Inicia sesión" />
+                                    </Hyperlink>
+                                </TextBlock>
+                            </StackPanel>
+                        </StackPanel>
+                    </ScrollViewer>
+
+                    <TextBlock Grid.Row="1" x:Name="StatusTextBlock" Margin="0,12,0,4" Foreground="#495057" TextWrapping="Wrap" />
+                </Grid>
             </Grid>
         </Border>
     </Grid>
