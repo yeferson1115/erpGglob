@@ -350,12 +350,12 @@
                                             <StackPanel>
                                                 <TextBlock Text="Control de turno con biometría" FontWeight="SemiBold" FontSize="16" Foreground="#1f2937" />
                                                 <TextBlock Text="Se requiere evidencia biométrica en vivo para abrir y cerrar turno." Foreground="#64748b" TextWrapping="Wrap" Margin="0,4,0,10" />
-                                                <TextBlock Text="Punto de venta (asignado)" FontWeight="SemiBold" />
+                                                <TextBlock Text="Punto de venta" FontWeight="SemiBold" />
                                                 <ComboBox x:Name="PosSalesPointComboBox" Height="34" DisplayMemberPath="Name" SelectionChanged="PosSalesPointComboBox_SelectionChanged" />
 
-                                                <TextBlock Text="Caja (asignada)" FontWeight="SemiBold" />
+                                                <TextBlock Text="Caja (propia o asignada)" FontWeight="SemiBold" />
                                                 <ComboBox x:Name="PosCashRegisterComboBox" Height="34" DisplayMemberPath="Name" />
-                                                <Button Content="🔄 Refrescar asignaciones" Margin="0,0,0,8" Click="RefreshPosContextButton_Click" />
+                                                <Button Content="🔄 Refrescar contexto" Margin="0,0,0,8" Click="RefreshPosContextButton_Click" />
 
                                                 <TextBlock Text="Método biométrico" FontWeight="SemiBold" />
                                                 <ComboBox x:Name="ShiftBiometricMethodComboBox" Height="34">
