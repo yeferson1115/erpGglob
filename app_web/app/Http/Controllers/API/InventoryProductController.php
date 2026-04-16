@@ -4,6 +4,7 @@ namespace App\Http\Controllers\API;
 
 use App\Http\Controllers\Controller;
 use App\Models\InventoryProduct;
+use App\Support\BusinessPermissionCatalog;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -15,6 +16,11 @@ class InventoryProductController extends Controller
     public function index(): JsonResponse
     {
         $user = $this->ensureBusinessUser();
+        BusinessPermissionCatalog::ensureAny($user, [
+            BusinessPermissionCatalog::CREATE_PRODUCTS,
+            BusinessPermissionCatalog::EDIT_PRODUCTS,
+            BusinessPermissionCatalog::DELETE_PRODUCTS,
+        ]);
         $salesPointId = request()->integer('sales_point_id');
         $allowedSalesPointIds = $this->resolveAllowedSalesPointIds($user->id, $user->company_id);
 
@@ -45,7 +51,8 @@ class InventoryProductController extends Controller
 
     public function store(Request $request): JsonResponse
     {
-        $user = $this->ensureOwner();
+        $user = $this->ensureBusinessUser();
+        BusinessPermissionCatalog::ensure($user, BusinessPermissionCatalog::CREATE_PRODUCTS);
 
         $data = $this->validatedData($request, $user->company_id);
         $salesPointIds = $data['sales_point_ids'];
@@ -61,7 +68,8 @@ class InventoryProductController extends Controller
 
     public function update(Request $request, InventoryProduct $inventoryProduct): JsonResponse
     {
-        $user = $this->ensureOwner();
+        $user = $this->ensureBusinessUser();
+        BusinessPermissionCatalog::ensure($user, BusinessPermissionCatalog::EDIT_PRODUCTS);
         abort_unless((int) $inventoryProduct->company_id === (int) $user->company_id, 403);
 
         $data = $this->validatedData($request, $user->company_id, $inventoryProduct->id);
@@ -78,7 +86,8 @@ class InventoryProductController extends Controller
 
     public function destroy(InventoryProduct $inventoryProduct): JsonResponse
     {
-        $user = $this->ensureOwner();
+        $user = $this->ensureBusinessUser();
+        BusinessPermissionCatalog::ensure($user, BusinessPermissionCatalog::DELETE_PRODUCTS);
         abort_unless((int) $inventoryProduct->company_id === (int) $user->company_id, 403);
 
         $inventoryProduct->delete();
@@ -140,17 +149,6 @@ class InventoryProductController extends Controller
             'combo_product_codes' => $isCombo ? $comboCodes : null,
             'sales_point_ids' => array_values(array_unique(array_map('intval', $data['sales_point_ids'] ?? []))),
         ];
-    }
-
-    private function ensureOwner()
-    {
-        $user = $this->ensureBusinessUser();
-        abort_unless(
-            strtolower((string) $user->business_role) === 'owner',
-            403
-        );
-
-        return $user;
     }
 
     private function ensureBusinessUser()

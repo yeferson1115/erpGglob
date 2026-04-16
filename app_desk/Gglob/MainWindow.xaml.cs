@@ -32,10 +32,12 @@ namespace Gglob
         private readonly ObservableCollection<SalesPointOption> salesPointOptions = [];
         private readonly ObservableCollection<CashierOption> cashierOptions = [];
         private readonly ObservableCollection<BusinessCashierItem> businessCashiers = [];
+        private readonly ObservableCollection<string> cashierPermissionsCatalog = [];
         private readonly ObservableCollection<ProductCategoryItem> productCategories = [];
         private readonly ObservableCollection<InventoryProductItem> inventoryProducts = [];
         private readonly ObservableCollection<InventoryProductItem> inventoryProductsForCombo = [];
         private readonly List<ServiceItem> settingsServices = [];
+        private readonly HashSet<string> grantedBusinessPermissions = new(StringComparer.OrdinalIgnoreCase);
         private int? editingCashierId;
         private int? editingCategoryId;
         private int? editingInventoryProductId;
@@ -409,6 +411,11 @@ namespace Gglob
 
         private void SetSelectedModule(string? moduleKey)
         {
+            if (!EnsureModuleAccess(moduleKey))
+            {
+                return;
+            }
+
             ApplyModulesVisibilityByRole(moduleKey);
             DefaultPanel.Visibility = Visibility.Visible;
             GglobPosPanel.Visibility = Visibility.Collapsed;
@@ -758,8 +765,15 @@ namespace Gglob
         {
             var permissions = permissionsList?.Select(p => p.Name)
                 .Where(x => !string.IsNullOrWhiteSpace(x))
+                .Select(x => x!.Trim().ToLowerInvariant())
                 .Distinct()
                 .ToList() ?? [];
+
+            grantedBusinessPermissions.Clear();
+            foreach (var permission in permissions)
+            {
+                grantedBusinessPermissions.Add(permission);
+            }
 
             if (permissions.Count == 0)
             {
@@ -767,6 +781,74 @@ namespace Gglob
             }
 
             QrStatusTextBlock.Text += $" Permisos detectados: {string.Join(", ", permissions)}.";
+        }
+
+        private bool EnsureModuleAccess(string? moduleKey)
+        {
+            if (string.IsNullOrWhiteSpace(moduleKey))
+            {
+                return true;
+            }
+
+            if (moduleKey == "products_management" &&
+                !HasAnyBusinessPermission(BusinessPermissionNames.CreateProducts, BusinessPermissionNames.EditProducts, BusinessPermissionNames.DeleteProducts))
+            {
+                QrStatusTextBlock.Text = "No tienes permisos para gestionar productos.";
+                QrStatusTextBlock.Foreground = Brushes.DarkOrange;
+                return false;
+            }
+
+            if (moduleKey == "product_categories" &&
+                !HasBusinessPermission(BusinessPermissionNames.ViewCategories))
+            {
+                QrStatusTextBlock.Text = "No tienes permisos para ver categorías.";
+                QrStatusTextBlock.Foreground = Brushes.DarkOrange;
+                return false;
+            }
+
+            if (moduleKey == "gglob_pos" &&
+                !HasAnyBusinessPermission(BusinessPermissionNames.CreateSale, BusinessPermissionNames.EditSale, BusinessPermissionNames.DeleteSale))
+            {
+                QrStatusTextBlock.Text = "No tienes permisos para usar el módulo de ventas POS.";
+                QrStatusTextBlock.Foreground = Brushes.DarkOrange;
+                return false;
+            }
+
+            return true;
+        }
+
+        private bool HasBusinessPermission(string permissionName)
+        {
+            if (currentUser is null)
+            {
+                return false;
+            }
+
+            if (IsOwner(currentUser) || IsAdmin(currentUser))
+            {
+                return true;
+            }
+
+            return grantedBusinessPermissions.Contains(permissionName);
+        }
+
+        private bool HasAnyBusinessPermission(params string[] permissionNames)
+        {
+            return permissionNames.Any(HasBusinessPermission);
+        }
+
+        private static class BusinessPermissionNames
+        {
+            public const string CreateSale = "crear venta";
+            public const string EditSale = "editar venta";
+            public const string DeleteSale = "eliminar venta";
+            public const string CreateProducts = "crear productos";
+            public const string EditProducts = "editar productos";
+            public const string DeleteProducts = "eliminar productos";
+            public const string CreateCategories = "crear categorias";
+            public const string ViewCategories = "ver categorias";
+            public const string EditCategories = "editar categorias";
+            public const string DeleteCategories = "eliminar categorias";
         }
 
         private async Task LoadGglobPayDataFromApi()
