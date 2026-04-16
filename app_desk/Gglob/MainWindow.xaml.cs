@@ -491,20 +491,6 @@ namespace Gglob
                 return;
             }
 
-            if (moduleKey == "cash_register_management")
-            {
-                if (currentUser is null || !IsOwner(currentUser))
-                {
-                    QrStatusTextBlock.Text = "Solo el dueño del negocio puede acceder a gestión de cajas.";
-                    QrStatusTextBlock.Foreground = Brushes.DarkOrange;
-                    return;
-                }
-
-                DefaultPanel.Visibility = Visibility.Collapsed;
-                CashRegistersPanel.Visibility = Visibility.Visible;
-                return;
-            }
-
             if (moduleKey == "sales_point_management")
             {
                 if (currentUser is null || !IsOwner(currentUser))
@@ -546,7 +532,7 @@ namespace Gglob
 
             var role = currentUser.BusinessRole?.Trim().ToLowerInvariant();
             var hideByRole = role is "cashier";
-            var hideByModule = moduleKey is "gglob_pay" or "gglob_pos" or "gglob_pos_blueprint" or "products_management" or "product_categories" or "cash_register_management" or "cashier_management" or "sales_point_management" or "settings_hub";
+            var hideByModule = moduleKey is "gglob_pay" or "gglob_pos" or "gglob_pos_blueprint" or "products_management" or "product_categories" or "cashier_management" or "sales_point_management" or "settings_hub";
             AvailableModulesPanel.Visibility = (hideByRole || hideByModule) ? Visibility.Collapsed : Visibility.Visible;
         }
 
@@ -557,9 +543,10 @@ namespace Gglob
 
             var adminKeys = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
             {
-                "cash_register_management",
                 "cashier_management",
-                "sales_point_management"
+                "sales_point_management",
+                "products_management",
+                "product_categories"
             };
 
             var standardServices = services.Where(service => !adminKeys.Contains(service.Key)).ToList();
@@ -600,7 +587,7 @@ namespace Gglob
                             },
                             new TextBlock
                             {
-                                Text = "Caja, puntos de venta y cajeros",
+                                Text = "Puntos de venta, productos, categorías y cajeros",
                                 Foreground = Brushes.White,
                                 Opacity = 0.9,
                                 FontSize = 12
