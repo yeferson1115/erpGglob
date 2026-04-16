@@ -12,6 +12,8 @@ namespace Gglob
 {
     public partial class MainWindow
     {
+        private const string PersonalCashRegisterCodePrefix = "AUTO-USER-";
+
         private string GetPosAuditCachePath()
         {
             var companyId = currentUser?.CompanyId ?? 0;
@@ -184,6 +186,10 @@ namespace Gglob
                 .Where(register => !salesPointId.HasValue || register.SalesPointId == salesPointId)
                 .ToList();
 
+            var salesPointName = salesPointOptions.FirstOrDefault(point => point.Id == salesPointId)?.Name
+                ?? "Sin punto de venta";
+            posShiftRegisterOptions.Add(BuildSelfManagedCashRegister(salesPointId, salesPointName));
+
             foreach (var register in source)
             {
                 posShiftRegisterOptions.Add(register);
@@ -199,6 +205,28 @@ namespace Gglob
                 PosCashRegisterComboBox.SelectedIndex = -1;
             }
         }
+
+        private CashRegisterOption BuildSelfManagedCashRegister(int? salesPointId, string salesPointName)
+        {
+            var userId = currentUser?.Id ?? 0;
+            var userName = string.IsNullOrWhiteSpace(currentUser?.Name) ? "Usuario" : currentUser!.Name!;
+            return new CashRegisterOption(
+                -(Math.Abs(userId) + 1),
+                $"Caja de {userName}",
+                $"{PersonalCashRegisterCodePrefix}{Math.Abs(userId)}",
+                "active",
+                true,
+                salesPointId,
+                salesPointName,
+                userName,
+                1);
+        }
+
+        private static bool IsSelfManagedCashRegister(CashRegisterOption register)
+            => register.Code.StartsWith(PersonalCashRegisterCodePrefix, StringComparison.OrdinalIgnoreCase);
+
+        private static int? ResolveCashRegisterIdForShift(CashRegisterOption register)
+            => IsSelfManagedCashRegister(register) ? null : register.Id;
 
         private async void PosSalesPointComboBox_SelectionChanged(object sender, SelectionChangedEventArgs e)
         {
@@ -240,7 +268,19 @@ namespace Gglob
             }
 
             CurrentShiftSummaryTextBlock.Text =
-                $"Cajero: {activeShift.Cashier}\nPunto: {activeShift.SalesPointName}\nCaja: {activeShift.CashRegisterName}\nInicio: {activeShift.OpenedAt:yyyy-MM-dd HH:mm}\nFondo: {activeShift.OpeningFund.ToString("C0", CultureInfo.GetCultureInfo("es-CO"))}";
+                $"Cajero: {activeShift.Cashier}\nPunto: {activeShift.SalesPointName}\nCaja: {activeShift.CashRegisterName}\nInicio: {activeShift.OpenedAt:yyyy-MM-dd HH:mm}\nFondo: {activeShift.OpeningFund.ToString("C0", CultureInfo.GetCultureInfo("es-CO"))}\nDisponible en caja: {GetCurrentCashInRegister().ToString("C0", CultureInfo.GetCultureInfo("es-CO"))}";
+        }
+
+        private decimal GetCurrentCashInRegister()
+        {
+            if (activeShift is null)
+            {
+                return 0m;
+            }
+
+            var totalCashSales = cashMovements.Where(m => m.Type == "VENTA_EFECTIVO").Sum(m => m.Amount);
+            var totalChange = cashMovements.Where(m => m.Type == "CAMBIO").Sum(m => m.Amount);
+            return activeShift.OpeningFund + totalCashSales + totalChange;
         }
 
         private decimal ParseMoney(string? raw)
@@ -290,12 +330,13 @@ namespace Gglob
             var cashRegister = PosCashRegisterComboBox.SelectedItem as CashRegisterOption;
             if (cashRegister is null)
             {
-                ShiftStatusTextBlock.Text = "Debes seleccionar una caja asignada para abrir turno.";
+                ShiftStatusTextBlock.Text = "Debes seleccionar una caja para abrir turno.";
                 ShiftStatusTextBlock.Foreground = System.Windows.Media.Brushes.DarkRed;
                 return;
             }
 
-            if (activeShift is not null && activeShift.CashRegisterId == cashRegister.Id)
+            var resolvedCashRegisterId = ResolveCashRegisterIdForShift(cashRegister);
+            if (activeShift is not null && activeShift.CashRegisterId == resolvedCashRegisterId)
             {
                 ShiftStatusTextBlock.Text = "La caja seleccionada ya tiene un turno activo. Debes cerrarlo antes de abrir uno nuevo.";
                 ShiftStatusTextBlock.Foreground = System.Windows.Media.Brushes.DarkOrange;
@@ -322,7 +363,7 @@ namespace Gglob
                 0m,
                 selectedPoint?.Id ?? cashRegister.SalesPointId,
                 selectedPoint?.Name ?? cashRegister.SalesPointName,
-                cashRegister.Id,
+                resolvedCashRegisterId,
                 null);
 
             RegisterCashMovement(new CashMovementRecord("APERTURA", "Fondo inicial de caja", openingFund, cashierName, DateTime.Now));
@@ -331,7 +372,7 @@ namespace Gglob
                 EventType = "open",
                 Cashier = cashierName,
                 SalesPointId = selectedPoint?.Id ?? cashRegister.SalesPointId,
-                CashRegisterId = cashRegister.Id,
+                CashRegisterId = resolvedCashRegisterId,
                 CashRegisterName = cashRegister.Name,
                 At = DateTime.Now,
                 OpeningFund = openingFund,
@@ -340,7 +381,7 @@ namespace Gglob
                 BiometricPhotoPath = photoPath,
                 BiometricPhotoBase64 = ResolveBiometricPhotoBase64(photoPath)
             });
-            ShiftStatusTextBlock.Text = "Turno abierto correctamente con evidencia biométrica.";
+            ShiftStatusTextBlock.Text = $"Turno abierto correctamente con evidencia biométrica. Disponible inicial en caja: {openingFund.ToString("C0", CultureInfo.GetCultureInfo("es-CO"))}.";
             ShiftStatusTextBlock.Foreground = System.Windows.Media.Brushes.DarkGreen;
             RefreshShiftSummary();
             SavePosAuditToDisk();
@@ -544,7 +585,8 @@ namespace Gglob
             }
 
             var cashRegister = PosCashRegisterComboBox.SelectedItem as CashRegisterOption;
-            if (activeShift is null || cashRegister is null || activeShift.CashRegisterId != cashRegister.Id)
+            var selectedCashRegisterId = cashRegister is null ? null : ResolveCashRegisterIdForShift(cashRegister);
+            if (activeShift is null || cashRegister is null || activeShift.CashRegisterId != selectedCashRegisterId)
             {
                 PosStatusTextBlock.Text = "Debes abrir turno en la caja seleccionada antes de cobrar ventas.";
                 PosStatusTextBlock.Foreground = System.Windows.Media.Brushes.DarkRed;
