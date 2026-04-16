@@ -12,6 +12,7 @@ use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
+use Spatie\Permission\Guard;
 use Spatie\Permission\Models\Permission;
 use Spatie\Permission\PermissionRegistrar;
 use Spatie\Permission\Models\Role;
@@ -508,7 +509,7 @@ class GglobPayController extends Controller
             return response()->json(['message' => 'Solo el dueño puede gestionar permisos de cajeros.'], 403);
         }
 
-        $guardName = $request->user()->getDefaultGuardName();
+        $guardName = Guard::getDefaultName(User::class);
         foreach (BusinessPermissionCatalog::all() as $permission) {
             Permission::findOrCreate($permission, $guardName);
         }
@@ -653,7 +654,7 @@ class GglobPayController extends Controller
             return response()->json(['message' => 'Cajero no encontrado para la empresa.'], 404);
         }
 
-        $guardName = $cashierUser->getDefaultGuardName();
+        $guardName = Guard::getDefaultName(User::class);
         foreach (BusinessPermissionCatalog::all() as $permission) {
             Permission::findOrCreate($permission, $guardName);
         }
