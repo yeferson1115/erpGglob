@@ -35,6 +35,7 @@ namespace Gglob
         private readonly ObservableCollection<ProductCategoryItem> productCategories = [];
         private readonly ObservableCollection<InventoryProductItem> inventoryProducts = [];
         private readonly ObservableCollection<InventoryProductItem> inventoryProductsForCombo = [];
+        private readonly List<ServiceItem> settingsServices = [];
         private int? editingCashierId;
         private int? editingCategoryId;
         private int? editingInventoryProductId;
@@ -418,6 +419,7 @@ namespace Gglob
             CashiersManagementPanel.Visibility = Visibility.Collapsed;
             SalesPointsPanel.Visibility = Visibility.Collapsed;
             PosBlueprintPanel.Visibility = Visibility.Collapsed;
+            SettingsPanel.Visibility = Visibility.Collapsed;
 
             if (moduleKey == "gglob_pos")
             {
@@ -462,6 +464,21 @@ namespace Gglob
 
                 DefaultPanel.Visibility = Visibility.Collapsed;
                 GglobPayPanel.Visibility = Visibility.Visible;
+                return;
+            }
+
+            if (moduleKey == "settings_hub")
+            {
+                if (currentUser is null || !IsOwner(currentUser))
+                {
+                    QrStatusTextBlock.Text = "Solo el dueño del negocio puede acceder a configuración.";
+                    QrStatusTextBlock.Foreground = Brushes.DarkOrange;
+                    return;
+                }
+
+                DefaultPanel.Visibility = Visibility.Collapsed;
+                SettingsPanel.Visibility = Visibility.Visible;
+                RenderSettingsActions();
                 return;
             }
 
@@ -520,13 +537,14 @@ namespace Gglob
 
             var role = currentUser.BusinessRole?.Trim().ToLowerInvariant();
             var hideByRole = role is "cashier";
-            var hideByModule = moduleKey is "gglob_pay" or "gglob_pos" or "gglob_pos_blueprint" or "products_management" or "product_categories" or "cash_register_management" or "cashier_management" or "sales_point_management";
+            var hideByModule = moduleKey is "gglob_pay" or "gglob_pos" or "gglob_pos_blueprint" or "products_management" or "product_categories" or "cash_register_management" or "cashier_management" or "sales_point_management" or "settings_hub";
             AvailableModulesPanel.Visibility = (hideByRole || hideByModule) ? Visibility.Collapsed : Visibility.Visible;
         }
 
         private void RenderServicesMenu(List<ServiceItem> services)
         {
             ServicesMenuPanel.Children.Clear();
+            settingsServices.Clear();
 
             var adminKeys = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
             {
@@ -546,46 +564,93 @@ namespace Gglob
                 var adminServices = services.Where(service => adminKeys.Contains(service.Key)).ToList();
                 if (adminServices.Count > 0)
                 {
-                    var adminItemsPanel = new StackPanel { Margin = new Thickness(0, 6, 0, 6) };
-                    foreach (var service in adminServices)
-                    {
-                        var childButton = CreateServiceMenuButton(service);
-                        childButton.Margin = new Thickness(0, 0, 0, 8);
-                        adminItemsPanel.Children.Add(childButton);
-                    }
+                    settingsServices.Clear();
+                    settingsServices.AddRange(adminServices);
 
-                    var adminExpander = new Expander
+                    var settingsButton = new Button
                     {
-                        Foreground = Brushes.White,
-                        Background = new SolidColorBrush(Color.FromRgb(59, 100, 180)),
-                        BorderBrush = Brushes.Transparent,
-                        BorderThickness = new Thickness(0),
-                        IsExpanded = false,
-                        HorizontalContentAlignment = HorizontalAlignment.Stretch,
-                        Content = adminItemsPanel,
-                        Header = new TextBlock
-                        {
-                            Text = "Administración",
-                            Foreground = Brushes.White,
-                            FontWeight = FontWeights.SemiBold,
-                            Margin = new Thickness(10, 8, 10, 8),
-                            TextAlignment = TextAlignment.Left
-                        }
-                    };
-
-                    var adminContainer = new Border
-                    {
-                        CornerRadius = new CornerRadius(10),
-                        Margin = new Thickness(0, 0, 0, 8),
                         Background = new SolidColorBrush(Color.FromRgb(59, 100, 180)),
                         BorderBrush = new SolidColorBrush(Color.FromArgb(90, 255, 255, 255)),
                         BorderThickness = new Thickness(1),
-                        Child = adminExpander
+                        Margin = new Thickness(0, 0, 0, 8),
+                        Padding = new Thickness(14, 10, 10, 10),
+                        Tag = "settings_hub",
+                        Cursor = System.Windows.Input.Cursors.Hand,
+                        HorizontalContentAlignment = HorizontalAlignment.Left
+                    };
+                    settingsButton.Click += OnServiceMenuClick;
+                    settingsButton.Content = new StackPanel
+                    {
+                        Children =
+                        {
+                            new TextBlock
+                            {
+                                Text = "Configuración",
+                                Foreground = Brushes.White,
+                                FontWeight = FontWeights.SemiBold
+                            },
+                            new TextBlock
+                            {
+                                Text = "Caja, puntos de venta y cajeros",
+                                Foreground = Brushes.White,
+                                Opacity = 0.9,
+                                FontSize = 12
+                            }
+                        }
                     };
 
-                    ServicesMenuPanel.Children.Add(adminContainer);
+                    ServicesMenuPanel.Children.Add(settingsButton);
                 }
             }
+        }
+
+        private void RenderSettingsActions()
+        {
+            SettingsActionsPanel.Children.Clear();
+            foreach (var service in settingsServices)
+            {
+                SettingsActionsPanel.Children.Add(CreateSettingsActionButton(service));
+            }
+        }
+
+        private Button CreateSettingsActionButton(ServiceItem service)
+        {
+            var button = new Button
+            {
+                Width = 250,
+                Margin = new Thickness(0, 0, 10, 10),
+                Padding = new Thickness(14, 12, 14, 12),
+                Background = Brushes.White,
+                BorderBrush = new SolidColorBrush(Color.FromRgb(217, 228, 255)),
+                BorderThickness = new Thickness(1),
+                Tag = service.Key,
+                Cursor = System.Windows.Input.Cursors.Hand,
+                HorizontalContentAlignment = HorizontalAlignment.Left
+            };
+            button.Click += OnServiceMenuClick;
+
+            button.Content = new StackPanel
+            {
+                Children =
+                {
+                    new TextBlock
+                    {
+                        Text = service.Name,
+                        Foreground = new SolidColorBrush(Color.FromRgb(31, 41, 55)),
+                        FontWeight = FontWeights.SemiBold
+                    },
+                    new TextBlock
+                    {
+                        Text = service.Description,
+                        Foreground = new SolidColorBrush(Color.FromRgb(107, 114, 128)),
+                        FontSize = 12,
+                        Margin = new Thickness(0, 4, 0, 0),
+                        TextWrapping = TextWrapping.Wrap
+                    }
+                }
+            };
+
+            return button;
         }
 
         private Button CreateServiceMenuButton(ServiceItem service)

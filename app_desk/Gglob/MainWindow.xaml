@@ -308,6 +308,14 @@
                         </StackPanel>
                     </Border>
 
+                    <Border x:Name="SettingsPanel" Visibility="Collapsed" Background="White" CornerRadius="12" Padding="16" BorderBrush="#d9e4ff" BorderThickness="1">
+                        <StackPanel>
+                            <TextBlock Text="⚙️ Configuración" FontSize="20" FontWeight="SemiBold" Foreground="#1f2937" />
+                            <TextBlock Text="Administra la operación del negocio desde este centro de configuración." Foreground="#6b7280" Margin="0,4,0,14" TextWrapping="Wrap" />
+                            <WrapPanel x:Name="SettingsActionsPanel" />
+                        </StackPanel>
+                    </Border>
+
 
 
                     <Border x:Name="GglobPosPanel" Visibility="Collapsed" Background="White" CornerRadius="12" Padding="14" BorderBrush="#e2e8f3" BorderThickness="1">
