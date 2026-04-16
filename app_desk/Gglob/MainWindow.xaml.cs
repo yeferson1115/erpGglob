@@ -491,20 +491,6 @@ namespace Gglob
                 return;
             }
 
-            if (moduleKey == "cash_register_management")
-            {
-                if (currentUser is null || !IsOwner(currentUser))
-                {
-                    QrStatusTextBlock.Text = "Solo el dueño del negocio puede acceder a gestión de cajas.";
-                    QrStatusTextBlock.Foreground = Brushes.DarkOrange;
-                    return;
-                }
-
-                DefaultPanel.Visibility = Visibility.Collapsed;
-                CashRegistersPanel.Visibility = Visibility.Visible;
-                return;
-            }
-
             if (moduleKey == "sales_point_management")
             {
                 if (currentUser is null || !IsOwner(currentUser))
@@ -546,7 +532,7 @@ namespace Gglob
 
             var role = currentUser.BusinessRole?.Trim().ToLowerInvariant();
             var hideByRole = role is "cashier";
-            var hideByModule = moduleKey is "gglob_pay" or "gglob_pos" or "gglob_pos_blueprint" or "products_management" or "product_categories" or "cash_register_management" or "cashier_management" or "sales_point_management" or "settings_hub";
+            var hideByModule = moduleKey is "gglob_pay" or "gglob_pos" or "gglob_pos_blueprint" or "products_management" or "product_categories" or "cashier_management" or "sales_point_management" or "settings_hub";
             AvailableModulesPanel.Visibility = (hideByRole || hideByModule) ? Visibility.Collapsed : Visibility.Visible;
         }
 
@@ -557,9 +543,10 @@ namespace Gglob
 
             var adminKeys = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
             {
-                "cash_register_management",
                 "cashier_management",
-                "sales_point_management"
+                "sales_point_management",
+                "products_management",
+                "product_categories"
             };
 
             var standardServices = services.Where(service => !adminKeys.Contains(service.Key)).ToList();
@@ -600,7 +587,7 @@ namespace Gglob
                             },
                             new TextBlock
                             {
-                                Text = "Caja, puntos de venta y cajeros",
+                                Text = "Negocio y catálogo POS",
                                 Foreground = Brushes.White,
                                 Opacity = 0.9,
                                 FontSize = 12
@@ -616,10 +603,54 @@ namespace Gglob
         private void RenderSettingsActions()
         {
             SettingsActionsPanel.Children.Clear();
-            foreach (var service in settingsServices)
+
+            var businessConfigServices = settingsServices
+                .Where(service => service.Key is "sales_point_management" or "cashier_management")
+                .ToList();
+            var catalogConfigServices = settingsServices
+                .Where(service => service.Key is "products_management" or "product_categories")
+                .ToList();
+
+            AddSettingsSection("Configuración del negocio", "Cajeros y puntos de venta.", businessConfigServices);
+            AddSettingsSection("Configuración de productos", "Productos y categorías para operación POS.", catalogConfigServices);
+        }
+
+        private void AddSettingsSection(string title, string subtitle, List<ServiceItem> sectionServices)
+        {
+            if (sectionServices.Count == 0)
             {
-                SettingsActionsPanel.Children.Add(CreateSettingsActionButton(service));
+                return;
             }
+
+            var sectionWrapper = new StackPanel
+            {
+                Margin = new Thickness(0, 0, 0, 14)
+            };
+
+            sectionWrapper.Children.Add(new TextBlock
+            {
+                Text = title,
+                Foreground = new SolidColorBrush(Color.FromRgb(30, 41, 59)),
+                FontWeight = FontWeights.SemiBold,
+                FontSize = 15
+            });
+
+            sectionWrapper.Children.Add(new TextBlock
+            {
+                Text = subtitle,
+                Foreground = new SolidColorBrush(Color.FromRgb(100, 116, 139)),
+                FontSize = 12,
+                Margin = new Thickness(0, 2, 0, 8)
+            });
+
+            var actionsPanel = new WrapPanel();
+            foreach (var service in sectionServices)
+            {
+                actionsPanel.Children.Add(CreateSettingsActionButton(service));
+            }
+
+            sectionWrapper.Children.Add(actionsPanel);
+            SettingsActionsPanel.Children.Add(sectionWrapper);
         }
 
         private Button CreateSettingsActionButton(ServiceItem service)

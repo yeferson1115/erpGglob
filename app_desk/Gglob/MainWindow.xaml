@@ -164,6 +164,9 @@
             <Setter Property="HeadersVisibility" Value="Column" />
             <Setter Property="BorderBrush" Value="{StaticResource BorderBrushSoft}" />
             <Setter Property="BorderThickness" Value="1" />
+            <Setter Property="ScrollViewer.HorizontalScrollBarVisibility" Value="Auto" />
+            <Setter Property="ScrollViewer.VerticalScrollBarVisibility" Value="Auto" />
+            <Setter Property="ScrollViewer.CanContentScroll" Value="True" />
             <Setter Property="ColumnHeaderStyle">
                 <Setter.Value>
                     <Style TargetType="DataGridColumnHeader">
@@ -311,8 +314,9 @@
                     <Border x:Name="SettingsPanel" Visibility="Collapsed" Background="White" CornerRadius="12" Padding="16" BorderBrush="#d9e4ff" BorderThickness="1">
                         <StackPanel>
                             <TextBlock Text="⚙️ Configuración" FontSize="20" FontWeight="SemiBold" Foreground="#1f2937" />
-                            <TextBlock Text="Administra la operación del negocio desde este centro de configuración." Foreground="#6b7280" Margin="0,4,0,14" TextWrapping="Wrap" />
-                            <WrapPanel x:Name="SettingsActionsPanel" />
+                            <TextBlock Text="Administra la operación del negocio desde este centro de configuración." Foreground="#6b7280" Margin="0,4,0,4" TextWrapping="Wrap" />
+                            <TextBlock Text="Opciones" Foreground="#1f2937" FontWeight="SemiBold" Margin="0,0,0,10" />
+                            <StackPanel x:Name="SettingsActionsPanel" />
                         </StackPanel>
                     </Border>
 
@@ -576,26 +580,67 @@
                                     <RowDefinition Height="*" />
                                 </Grid.RowDefinitions>
 
-                                <StackPanel Grid.Row="0" Margin="0,0,0,10">
-                                    <StackPanel>
-                                        <TextBlock Text="Gestión de productos" FontSize="20" FontWeight="SemiBold" Foreground="#1e293b" />
-                                        <TextBlock Text="Consulta, crea, edita y elimina productos desde este módulo dedicado." Foreground="#64748b" Margin="0,3,0,0" />
-                                    </StackPanel>
-                                    <WrapPanel Margin="0,10,0,0" VerticalAlignment="Center">
-                                        <StackPanel Margin="0,0,4,0" VerticalAlignment="Center">
-                                            <TextBlock Text="Filtrar punto de venta" FontSize="12" FontWeight="SemiBold" />
-                                            <ComboBox x:Name="DeskInventoryFilterSalesPointComboBox" Style="{StaticResource FilterComboBox}" DisplayMemberPath="Name" SelectedValuePath="Id" SelectionChanged="DeskInventoryFilterSalesPointComboBox_SelectionChanged" />
+                                <Grid Grid.Row="0" Margin="0,0,0,10">
+                                    <Grid.RowDefinitions>
+                                        <RowDefinition Height="Auto" />
+                                        <RowDefinition Height="Auto" />
+                                    </Grid.RowDefinitions>
+
+                                    <Grid Grid.Row="0">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*" />
+                                            <ColumnDefinition Width="Auto" />
+                                        </Grid.ColumnDefinitions>
+                                        <StackPanel Grid.Column="0">
+                                            <WrapPanel VerticalAlignment="Center">
+                                                <TextBlock Text="Gestión de productos" FontSize="20" FontWeight="SemiBold" Foreground="#1e293b" Margin="0,0,8,0" VerticalAlignment="Center" />
+                                                <Button Content="↩ Volver a POS" Style="{StaticResource ToolbarButton}" Click="BackToPosButton_Click" />
+                                            </WrapPanel>
+                                            <TextBlock Text="Consulta, crea, edita y elimina productos desde este módulo dedicado." Foreground="#64748b" Margin="0,3,0,0" />
                                         </StackPanel>
-                                        <Button Content="↩ Volver a POS" Style="{StaticResource ToolbarButton}" Click="BackToPosButton_Click" />
-                                        <Button Content="🔄 Recargar" Style="{StaticResource ToolbarButton}" Click="ReloadInventoryProductsButton_Click" />
-                                        <Button x:Name="BulkImportInventoryProductsButton" Content="📥 Carga masiva Excel" Style="{StaticResource ToolbarButton}" Click="BulkImportInventoryProductsButton_Click" />
-                                        <Button Content="🗂️ Categorías" Style="{StaticResource ToolbarButton}" Click="OpenCategoriesButton_Click" />
-                                        <Button x:Name="CreateInventoryProductButton" Content="➕ Crear producto" Style="{StaticResource ToolbarPrimaryButton}" MinWidth="170" Click="OpenCreateInventoryFormButton_Click" />
-                                    </WrapPanel>
-                                </StackPanel>
+                                        <Button x:Name="CreateInventoryProductButton"
+                                                Grid.Column="1"
+                                                Content="➕ Crear producto"
+                                                Style="{StaticResource ToolbarPrimaryButton}"
+                                                MinWidth="190"
+                                                Margin="12,0,0,0"
+                                                VerticalAlignment="Top"
+                                                Click="OpenCreateInventoryFormButton_Click" />
+                                    </Grid>
+
+                                    <Grid Grid.Row="1" Margin="0,10,0,0">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="300" />
+                                            <ColumnDefinition Width="*" />
+                                        </Grid.ColumnDefinitions>
+
+                                        <StackPanel Grid.Column="0" Margin="0,0,12,0">
+                                            <TextBlock Text="Filtrar punto de venta" FontSize="12" FontWeight="SemiBold" />
+                                            <ComboBox x:Name="DeskInventoryFilterSalesPointComboBox"
+                                                      Style="{StaticResource FilterComboBox}"
+                                                      Width="300"
+                                                      DisplayMemberPath="Name"
+                                                      SelectedValuePath="Id"
+                                                      Margin="0,4,0,0"
+                                                      SelectionChanged="DeskInventoryFilterSalesPointComboBox_SelectionChanged" />
+                                        </StackPanel>
+
+                                        <WrapPanel Grid.Column="1" VerticalAlignment="Bottom">
+                                            <Button x:Name="BulkImportInventoryProductsButton"
+                                                    Content="📥 Carga masiva Excel"
+                                                    Style="{StaticResource ToolbarButton}"
+                                                    MinWidth="170"
+                                                    Click="BulkImportInventoryProductsButton_Click" />
+                                            <Button Content="🗂️ Categorías"
+                                                    Style="{StaticResource ToolbarButton}"
+                                                    MinWidth="130"
+                                                    Click="OpenCategoriesButton_Click" />
+                                        </WrapPanel>
+                                    </Grid>
+                                </Grid>
 
                                 <Border x:Name="DeskInventoryGridCard" Grid.Row="1" Background="White" BorderBrush="#dbe3f0" BorderThickness="1" CornerRadius="10" Padding="8" Margin="0,0,0,12">
-                                    <DataGrid x:Name="DeskInventoryProductsDataGrid" AutoGenerateColumns="False" IsReadOnly="True" CanUserAddRows="False" HeadersVisibility="Column" RowHeaderWidth="0" SelectionChanged="DeskInventoryProductsDataGrid_SelectionChanged" MaxHeight="360" MinRowHeight="46">
+                                    <DataGrid x:Name="DeskInventoryProductsDataGrid" AutoGenerateColumns="False" IsReadOnly="True" CanUserAddRows="False" HeadersVisibility="Column" RowHeaderWidth="0" SelectionChanged="DeskInventoryProductsDataGrid_SelectionChanged" MaxHeight="360" MinRowHeight="46" ScrollViewer.HorizontalScrollBarVisibility="Auto" ScrollViewer.VerticalScrollBarVisibility="Auto">
                                         <DataGrid.Columns>
                                             <DataGridTextColumn Header="Código" Binding="{Binding Code}" Width="*" />
                                             <DataGridTextColumn Header="Nombre" Binding="{Binding Name}" Width="2*" />
@@ -739,7 +784,6 @@
                                         <ComboBox x:Name="CategoryFilterSalesPointComboBox" Style="{StaticResource FilterComboBox}" DisplayMemberPath="Name" SelectedValuePath="Id" SelectionChanged="CategoryFilterSalesPointComboBox_SelectionChanged" />
                                     </StackPanel>
                                     <Button Content="↩ Volver a POS" Style="{StaticResource ToolbarButton}" Click="BackToPosButton_Click" />
-                                    <Button Content="🔄 Recargar" Style="{StaticResource ToolbarButton}" Click="ReloadCategoriesButton_Click" />
                                     <Button x:Name="CreateCategoryButton" Content="➕ Nueva categoría" Style="{StaticResource ToolbarPrimaryButton}" MinWidth="180" Click="OpenCreateCategoryFormButton_Click" />
                                 </WrapPanel>
                             </DockPanel>
@@ -750,7 +794,7 @@
                                     <RowDefinition Height="Auto" />
                                 </Grid.RowDefinitions>
 
-                                <DataGrid x:Name="ProductCategoriesDataGrid" AutoGenerateColumns="False" IsReadOnly="True" CanUserAddRows="False" HeadersVisibility="Column" RowHeaderWidth="0" MinRowHeight="46">
+                                <DataGrid x:Name="ProductCategoriesDataGrid" AutoGenerateColumns="False" IsReadOnly="True" CanUserAddRows="False" HeadersVisibility="Column" RowHeaderWidth="0" MinRowHeight="46" ScrollViewer.HorizontalScrollBarVisibility="Auto" ScrollViewer.VerticalScrollBarVisibility="Auto">
                                     <DataGrid.Columns>
                                         <DataGridTextColumn Header="Nombre" Binding="{Binding Name}" Width="2*" />
                                         <DataGridTextColumn Header="Descripción" Binding="{Binding Description}" Width="3*" />
@@ -793,7 +837,7 @@
                     </Border>
 
                     <Border x:Name="GglobPayPanel" Visibility="Collapsed" Background="White" CornerRadius="12" Padding="14" BorderBrush="#e2e8f3" BorderThickness="1">
-                        <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+                        <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Auto">
                             <TabControl x:Name="GglobPayTabControl">
                         <TabItem x:Name="WompiConfigTab" Header="💳 Wompi">
                             <Grid Margin="10">
@@ -1143,7 +1187,7 @@
 
 
                     <Border x:Name="CashiersManagementPanel" Visibility="Collapsed" Background="White" CornerRadius="12" Padding="14" BorderBrush="#e2e8f3" BorderThickness="1">
-                        <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+                        <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Auto">
                             <StackPanel Margin="10">
                                 <TextBlock Text="Usuarios cajeros" FontWeight="SemiBold" FontSize="18" Foreground="#1f2937" />
                                 <TextBlock Text="Crea, edita o elimina los usuarios cajeros del negocio." Foreground="#6b7280" FontSize="12" Margin="0,0,0,12" />

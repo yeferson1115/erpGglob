@@ -2889,9 +2889,10 @@ namespace Gglob
             [
                 new ServiceItem("gglob_cloud", "Gglob Cloud", "Gestión principal en la nube.", company?.GglobCloudEnabled ?? false),
                 new ServiceItem("gglob_pay", "Gglob Pay", "Cobros y movimientos de pago.", company?.GglobPayEnabled ?? false),
-                new ServiceItem("gglob_pos", "Gglob POS", "Punto de venta y cajas.", company?.GglobPosEnabled ?? false),
+                new ServiceItem("gglob_pos", "Gglob POS", "Punto de venta y ventas.", company?.GglobPosEnabled ?? false),
                 new ServiceItem("sales_point_management", "Configuración · Puntos de venta", "Crear y administrar puntos de venta.", (company?.GglobPayEnabled ?? false) || (company?.GglobPosEnabled ?? false)),
-                new ServiceItem("cash_register_management", "Gestión de Cajas", "Asignación de cajas y cajeros.", (company?.GglobPayEnabled ?? false) || (company?.GglobPosEnabled ?? false)),
+                new ServiceItem("products_management", "Configuración · Productos", "Gestión de productos del catálogo POS.", company?.GglobPosEnabled ?? false),
+                new ServiceItem("product_categories", "Configuración · Categorías", "Gestión de categorías para productos POS.", company?.GglobPosEnabled ?? false),
                 new ServiceItem("cashier_management", "Usuarios Cajeros", "Crear usuarios cajeros del negocio.", (company?.GglobPayEnabled ?? false) || (company?.GglobPosEnabled ?? false)),
                 new ServiceItem("gglob_accounting", "Gglob Contable", "Módulo de contabilidad.", company?.GglobAccountingEnabled ?? false),
             ];
