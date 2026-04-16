@@ -375,7 +375,6 @@
                                                 <Button Content="📷 Probar cámara automática" Margin="0,0,0,8" Click="LaunchBiometricCameraButton_Click" />
 
                                                 <TextBox x:Name="ShiftOpeningFundTextBox" Visibility="Collapsed" />
-                                                <TextBox x:Name="ShiftClosingCountedCashTextBox" Visibility="Collapsed" />
 
                                                 <WrapPanel Margin="0,8,0,0">
                                                     <Button Content="▶ Apertura de turno" Style="{StaticResource PrimaryButton}" Margin="0,0,8,0" Click="OpenShiftButton_Click" />
@@ -1031,7 +1030,8 @@
                     </Border>
 
                     <Border x:Name="SalesPointsPanel" Visibility="Collapsed" Background="White" CornerRadius="12" Padding="14" BorderBrush="#e2e8f3" BorderThickness="1">
-                        <Grid Margin="10">
+                        <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Auto">
+                        <Grid Margin="10" MinWidth="980">
                             <Grid.RowDefinitions>
                                 <RowDefinition Height="Auto" />
                                 <RowDefinition Height="*" />
@@ -1063,6 +1063,7 @@
                                 </DataGrid.Columns>
                             </DataGrid>
                         </Grid>
+                        </ScrollViewer>
                     </Border>
 
                     <Border x:Name="CashRegistersPanel" Visibility="Collapsed" Background="White" CornerRadius="12" Padding="14" BorderBrush="#e2e8f3" BorderThickness="1">

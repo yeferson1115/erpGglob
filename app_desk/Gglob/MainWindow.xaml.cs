@@ -393,7 +393,6 @@ namespace Gglob
             _ = LoadGglobPayDataFromApi();
             _ = LoadProviderSettingsFromApi();
             SetSelectedModule(null);
-            PromptShiftOpeningOnLoginIfNeeded();
 
             ShowStatus(statusMessage, isError: false);
         }
@@ -908,11 +907,13 @@ namespace Gglob
                 SeedVerifiedPayments();
                 ApplyVerifiedFilterLocal();
                 GenerateReportLocal();
+                PromptShiftOpeningOnLoginIfNeeded();
                 return;
             }
 
             await LoadVerifiedPaymentsFromApi();
             await GenerateReportFromApi();
+            PromptShiftOpeningOnLoginIfNeeded();
         }
 
         private async Task<bool> LoadCashRegistersFromApi(string scope)

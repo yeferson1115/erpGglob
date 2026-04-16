@@ -29,6 +29,7 @@ namespace Gglob
         private readonly ObservableCollection<CashMovementRecord> cashMovements = [];
         private readonly ObservableCollection<PosSaleAuditRecord> posSalesAudit = [];
         private readonly ObservableCollection<InventoryProductItem> filteredInventoryProducts = [];
+        private readonly ObservableCollection<SalesPointOption> posSalesPointOptions = [];
         private readonly ObservableCollection<CashRegisterOption> posShiftRegisterOptions = [];
         private readonly ObservableCollection<ProductCategoryItem> posCategoryFilterOptions = [];
         private readonly List<ShiftSyncEvent> pendingShiftEvents = [];
@@ -46,7 +47,7 @@ namespace Gglob
             CashMovementsDataGrid.ItemsSource = cashMovements;
             PosSalesAuditDataGrid.ItemsSource = posSalesAudit;
             PosProductResultsListBox.ItemsSource = filteredInventoryProducts;
-            PosSalesPointComboBox.ItemsSource = salesPointOptions;
+            PosSalesPointComboBox.ItemsSource = posSalesPointOptions;
             PosCashRegisterComboBox.ItemsSource = posShiftRegisterOptions;
             PosProductCategoryFilterComboBox.ItemsSource = posCategoryFilterOptions;
             PosProductCategoryFilterComboBox.DisplayMemberPath = "Name";
@@ -164,27 +165,46 @@ namespace Gglob
                 return;
             }
 
-            var restrictToAssignedPoint = currentUser is not null && !IsOwner(currentUser) && !IsAdmin(currentUser);
-            PosSalesPointComboBox.IsEnabled = !restrictToAssignedPoint;
+            var isRestrictedCashier = currentUser is not null && !IsOwner(currentUser) && !IsAdmin(currentUser);
+            PosSalesPointComboBox.IsEnabled = !isRestrictedCashier;
+            PosCashRegisterComboBox.IsEnabled = !isRestrictedCashier;
 
-            PosSalesPointComboBox.ItemsSource = null;
-            PosSalesPointComboBox.ItemsSource = salesPointOptions;
+            var availableSalesPoints = salesPointOptions.AsEnumerable();
+            if (isRestrictedCashier)
+            {
+                var allowedPointIds = cashRegisterOptions
+                    .Where(register => register.SalesPointId.HasValue)
+                    .Select(register => register.SalesPointId!.Value)
+                    .Distinct()
+                    .ToHashSet();
 
-            if (restrictToAssignedPoint)
-            {
-                PosSalesPointComboBox.SelectedItem = salesPointOptions.FirstOrDefault();
-            }
-            else if (PosSalesPointComboBox.SelectedItem is not SalesPointOption)
-            {
-                PosSalesPointComboBox.SelectedItem = salesPointOptions.FirstOrDefault();
-            }
-
-            if (PosSalesPointComboBox.SelectedItem is not SalesPointOption currentPoint)
-            {
-                currentPoint = null;
+                availableSalesPoints = salesPointOptions.Where(point => allowedPointIds.Contains(point.Id));
             }
 
+            posSalesPointOptions.Clear();
+            foreach (var point in availableSalesPoints.OrderBy(point => point.Name, StringComparer.OrdinalIgnoreCase))
+            {
+                posSalesPointOptions.Add(point);
+            }
+
+            var preferredRegister = cashRegisterOptions.FirstOrDefault(register => register.IsPrimary) ?? cashRegisterOptions.FirstOrDefault();
+            var preferredPointId = preferredRegister?.SalesPointId;
+            var selectedPoint = preferredPointId.HasValue
+                ? posSalesPointOptions.FirstOrDefault(point => point.Id == preferredPointId.Value)
+                : null;
+
+            PosSalesPointComboBox.SelectedItem = selectedPoint
+                ?? (PosSalesPointComboBox.SelectedItem as SalesPointOption)
+                ?? posSalesPointOptions.FirstOrDefault();
+
+            var currentPoint = PosSalesPointComboBox.SelectedItem as SalesPointOption;
             LoadRegistersForSalesPoint(currentPoint?.Id);
+            if (isRestrictedCashier && preferredRegister is not null)
+            {
+                PosCashRegisterComboBox.SelectedItem = posShiftRegisterOptions.FirstOrDefault(register => register.Id == preferredRegister.Id)
+                    ?? posShiftRegisterOptions.FirstOrDefault();
+            }
+
             _ = LoadProductCategoriesFromApi(currentPoint?.Id);
             _ = LoadInventoryProductsFromApi();
         }
@@ -389,7 +409,7 @@ namespace Gglob
                 return;
             }
 
-            var counted = ParseMoney(ShiftClosingCountedCashTextBox.Text);
+            var counted = GetCurrentCashInRegister();
             var totalSales = posSalesAudit.Sum(sale => sale.Total);
             var totalCash = cashMovements.Where(m => m.Type == "VENTA_EFECTIVO").Sum(m => m.Amount);
             var totalTransfer = cashMovements.Where(m => m.Type == "VENTA_TRANSFERENCIA").Sum(m => m.Amount);
@@ -693,6 +713,13 @@ namespace Gglob
         {
             if (openingFundPromptShownThisSession || activeShift is not null || currentUser is null)
             {
+                return;
+            }
+
+            if (currentUser is not null && !IsOwner(currentUser) && !IsAdmin(currentUser) && posShiftRegisterOptions.Count == 0)
+            {
+                ShiftStatusTextBlock.Text = "No tienes una caja asignada. Solicita al dueño que te asigne una caja y punto de venta.";
+                ShiftStatusTextBlock.Foreground = System.Windows.Media.Brushes.DarkRed;
                 return;
             }
 
