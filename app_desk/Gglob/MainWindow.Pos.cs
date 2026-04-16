@@ -37,6 +37,7 @@ namespace Gglob
         private readonly List<MovementSnapshot> pendingMovements = [];
         private bool legacyBackfillCompleted;
         private bool openingFundPromptShownThisSession;
+        private bool isChangingPosTabProgrammatically;
         private int posTicketSequence = 1;
         private ShiftAuditRecord? activeShift;
 
@@ -65,6 +66,8 @@ namespace Gglob
             RefreshShiftSummary();
             RefreshPosBindings();
             RefreshPosContextSelectors();
+            RefreshPosTodaySalesCards();
+            EnsurePosDefaultTab();
             _ = SyncPendingDataAsync();
         }
 
@@ -264,6 +267,43 @@ namespace Gglob
                 ? "Total ticket: $0"
                 : $"Total ticket: {selected.Total.ToString("C0", CultureInfo.GetCultureInfo("es-CO"))}";
             PosTicketsListBox.Items.Refresh();
+            RefreshPosTodaySalesCards();
+        }
+
+        private void RefreshPosTodaySalesCards()
+        {
+            if (PosTodayTotalTextBlock is null || PosTodayCashTextBlock is null || PosTodayTransferTextBlock is null)
+            {
+                return;
+            }
+
+            var today = DateTime.Today;
+            var totalToday = posSalesAudit.Where(sale => sale.SoldAt.Date == today).Sum(sale => sale.Total);
+            var cashToday = cashMovements.Where(movement => movement.At.Date == today && movement.Type == "VENTA_EFECTIVO").Sum(movement => movement.Amount);
+            var transferToday = cashMovements.Where(movement => movement.At.Date == today && movement.Type == "VENTA_TRANSFERENCIA").Sum(movement => movement.Amount);
+            var culture = CultureInfo.GetCultureInfo("es-CO");
+
+            PosTodayTotalTextBlock.Text = totalToday.ToString("C0", culture);
+            PosTodayCashTextBlock.Text = cashToday.ToString("C0", culture);
+            PosTodayTransferTextBlock.Text = transferToday.ToString("C0", culture);
+        }
+
+        private void EnsurePosDefaultTab()
+        {
+            if (PosMainTabControl is null)
+            {
+                return;
+            }
+
+            var targetTab = activeShift is null ? PosTurnsTabItem : PosSalesTabItem;
+            if (targetTab is null || PosMainTabControl.SelectedItem == targetTab)
+            {
+                return;
+            }
+
+            isChangingPosTabProgrammatically = true;
+            PosMainTabControl.SelectedItem = targetTab;
+            isChangingPosTabProgrammatically = false;
         }
 
         private void RefreshShiftSummary()
@@ -391,6 +431,7 @@ namespace Gglob
             ShiftStatusTextBlock.Text = $"Turno abierto correctamente con evidencia biométrica. Disponible inicial en caja: {openingFund.ToString("C0", CultureInfo.GetCultureInfo("es-CO"))}.";
             ShiftStatusTextBlock.Foreground = System.Windows.Media.Brushes.DarkGreen;
             RefreshShiftSummary();
+            EnsurePosDefaultTab();
             SavePosAuditToDisk();
             _ = SyncPendingDataAsync();
         }
@@ -448,6 +489,7 @@ namespace Gglob
             ShiftStatusTextBlock.Text = "Turno cerrado y registrado en auditoría local.";
             ShiftStatusTextBlock.Foreground = System.Windows.Media.Brushes.DarkGreen;
             RefreshShiftSummary();
+            EnsurePosDefaultTab();
             ShiftHistoryDataGrid.Items.Refresh();
             SavePosAuditToDisk();
             _ = SyncPendingDataAsync();
@@ -689,6 +731,7 @@ namespace Gglob
             PosMixedCashTextBox.Text = string.Empty;
             PosMixedTransferTextBox.Text = string.Empty;
             PosCashReceivedTextBox.Text = string.Empty;
+            RefreshPosTodaySalesCards();
             _ = SyncPendingDataAsync();
         }
 
@@ -707,6 +750,8 @@ namespace Gglob
             ShiftHistoryDataGrid.Items.Refresh();
             CashMovementsDataGrid.Items.Refresh();
             PosSalesAuditDataGrid.Items.Refresh();
+            RefreshPosTodaySalesCards();
+            EnsurePosDefaultTab();
         }
 
         private void PromptShiftOpeningOnLoginIfNeeded()
@@ -805,6 +850,7 @@ namespace Gglob
         {
             cashMovements.Insert(0, movement);
             CashMovementsDataGrid.Items.Refresh();
+            RefreshPosTodaySalesCards();
             pendingMovements.Add(new MovementSnapshot
             {
                 Type = movement.Type,
@@ -906,10 +952,34 @@ namespace Gglob
                 pendingMovements.AddRange(payload.PendingMovements ?? []);
                 legacyBackfillCompleted = payload.LegacyBackfillCompleted;
                 BackfillLegacyRecordsIfNeeded(payload);
+                EnsurePosDefaultTab();
+                RefreshPosTodaySalesCards();
             }
             catch
             {
                 // Carga local best-effort.
+            }
+        }
+
+        private void PosMainTabControl_SelectionChanged(object sender, SelectionChangedEventArgs e)
+        {
+            if (isChangingPosTabProgrammatically || PosMainTabControl is null)
+            {
+                return;
+            }
+
+            if (PosMainTabControl.SelectedItem == PosSalesTabItem && activeShift is null)
+            {
+                MessageBox.Show(
+                    this,
+                    "Debes abrir un turno para ingresar a Ventas.",
+                    "Turno requerido",
+                    MessageBoxButton.OK,
+                    MessageBoxImage.Warning);
+
+                isChangingPosTabProgrammatically = true;
+                PosMainTabControl.SelectedItem = PosTurnsTabItem;
+                isChangingPosTabProgrammatically = false;
             }
         }
 
