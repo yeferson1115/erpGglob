@@ -191,6 +191,9 @@ namespace Gglob
 
         [JsonPropertyName("phone")]
         public string? Phone { get; set; }
+
+        [JsonPropertyName("permission_names")]
+        public List<string>? PermissionNames { get; set; }
     }
 
     public class CashierOption(int id, string name, string email)
@@ -202,13 +205,15 @@ namespace Gglob
         public override string ToString() => DisplayName;
     }
 
-    public class BusinessCashierItem(int id, string name, string lastName, string email, string phone)
+    public class BusinessCashierItem(int id, string name, string lastName, string email, string phone, IReadOnlyList<string>? permissionNames = null)
     {
         public int Id { get; } = id;
         public string Name { get; } = name;
         public string LastName { get; } = lastName;
         public string Email { get; } = email;
         public string Phone { get; } = phone;
+        public IReadOnlyList<string> PermissionNames { get; } = permissionNames ?? [];
+        public string PermissionSummary => PermissionNames.Count == 0 ? "Sin permisos" : string.Join(", ", PermissionNames);
         public string FullName => string.IsNullOrWhiteSpace(LastName) ? Name : $"{Name} {LastName}";
     }
 

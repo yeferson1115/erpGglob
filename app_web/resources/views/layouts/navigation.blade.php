@@ -4,6 +4,12 @@
                 <ul class="menu-inner">
                   @php
                     $currentUser = auth()->user();
+                    $canManageInventory = \App\Support\BusinessPermissionCatalog::canAny($currentUser, [
+                      \App\Support\BusinessPermissionCatalog::CREATE_PRODUCTS,
+                      \App\Support\BusinessPermissionCatalog::EDIT_PRODUCTS,
+                      \App\Support\BusinessPermissionCatalog::DELETE_PRODUCTS,
+                    ]);
+                    $canViewCategories = \App\Support\BusinessPermissionCatalog::can($currentUser, \App\Support\BusinessPermissionCatalog::VIEW_CATEGORIES);
                   @endphp
                   <!-- Dashboards -->
                   <li class="menu-item">
@@ -89,7 +95,7 @@
                   </li>
                   @endif
 
-                  @if($currentUser?->hasRole('admin'))
+                  @if($currentUser?->hasRole('admin') || ($currentUser?->company_id && $canManageInventory))
                   <li class="menu-item">
                     <a href="{{ route('inventories.index') }}" class="menu-link">
                       <i class="menu-icon fa-solid fa-boxes-stacked"></i>
@@ -98,7 +104,7 @@
                   </li>
                   @endif
 
-                  @if($currentUser?->company_id)
+                  @if($currentUser?->company_id && $canViewCategories)
                   <li class="menu-item">
                     <a href="{{ route('product-categories.index') }}" class="menu-link">
                       <i class="menu-icon fa-solid fa-tags"></i>

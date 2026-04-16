@@ -530,6 +530,13 @@ namespace Gglob
 
         private void ChargeTicketButton_Click(object sender, RoutedEventArgs e)
         {
+            if (!HasBusinessPermission(BusinessPermissionNames.CreateSale))
+            {
+                PosStatusTextBlock.Text = "No tienes permisos para crear ventas.";
+                PosStatusTextBlock.Foreground = System.Windows.Media.Brushes.DarkRed;
+                return;
+            }
+
             var ticket = GetSelectedTicket();
             if (ticket is null)
             {

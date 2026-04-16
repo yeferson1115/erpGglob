@@ -4,6 +4,7 @@ namespace App\Http\Controllers\API;
 
 use App\Http\Controllers\Controller;
 use App\Models\ProductCategory;
+use App\Support\BusinessPermissionCatalog;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -15,6 +16,7 @@ class ProductCategoryController extends Controller
     public function index(): JsonResponse
     {
         $user = $this->ensureBusinessUser();
+        BusinessPermissionCatalog::ensure($user, BusinessPermissionCatalog::VIEW_CATEGORIES);
         $salesPointId = request()->integer('sales_point_id');
         $allowedSalesPointIds = $this->resolveAllowedSalesPointIds($user->id, $user->company_id);
 
@@ -39,7 +41,8 @@ class ProductCategoryController extends Controller
 
     public function store(Request $request): JsonResponse
     {
-        $user = $this->ensureOwner();
+        $user = $this->ensureBusinessUser();
+        BusinessPermissionCatalog::ensure($user, BusinessPermissionCatalog::CREATE_CATEGORIES);
         $data = $this->validatedData($request, $user->company_id);
 
         $category = ProductCategory::create([
@@ -58,7 +61,8 @@ class ProductCategoryController extends Controller
 
     public function update(Request $request, ProductCategory $productCategory): JsonResponse
     {
-        $user = $this->ensureOwner();
+        $user = $this->ensureBusinessUser();
+        BusinessPermissionCatalog::ensure($user, BusinessPermissionCatalog::EDIT_CATEGORIES);
         abort_unless((int) $productCategory->company_id === (int) $user->company_id, 403);
 
         $data = $this->validatedData($request, $user->company_id, $productCategory->id);
@@ -77,7 +81,8 @@ class ProductCategoryController extends Controller
 
     public function destroy(ProductCategory $productCategory): JsonResponse
     {
-        $user = $this->ensureOwner();
+        $user = $this->ensureBusinessUser();
+        BusinessPermissionCatalog::ensure($user, BusinessPermissionCatalog::DELETE_CATEGORIES);
         abort_unless((int) $productCategory->company_id === (int) $user->company_id, 403);
 
         $productCategory->delete();
@@ -107,14 +112,6 @@ class ProductCategoryController extends Controller
     {
         $user = Auth::user();
         abort_unless($user !== null && $user->company_id, 403);
-
-        return $user;
-    }
-
-    private function ensureOwner()
-    {
-        $user = $this->ensureBusinessUser();
-        abort_unless(strtolower((string) $user->business_role) === 'owner', 403);
 
         return $user;
     }
