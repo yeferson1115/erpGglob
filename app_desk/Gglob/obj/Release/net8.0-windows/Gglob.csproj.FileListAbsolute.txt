@@ -25,3 +25,11 @@ D:\develoment\cursos\UniServerZ\www\erpGglob\app_desk\Gglob\obj\Release\net8.0-w
 D:\develoment\cursos\UniServerZ\www\erpGglob\app_desk\Gglob\obj\Release\net8.0-windows\Views\LoginView.g.cs
 D:\develoment\cursos\UniServerZ\www\erpGglob\app_desk\Gglob\obj\Release\net8.0-windows\GeneratedInternalTypeHelper.g.cs
 D:\develoment\cursos\UniServerZ\www\erpGglob\app_desk\Gglob\obj\Release\net8.0-windows\Gglob_MarkupCompile.lref
+D:\develoment\cursos\UniServerZ\www\erpGglob\app_desk\Gglob\bin\Release\net8.0-windows\ClosedXML.dll
+D:\develoment\cursos\UniServerZ\www\erpGglob\app_desk\Gglob\bin\Release\net8.0-windows\ClosedXML.Parser.dll
+D:\develoment\cursos\UniServerZ\www\erpGglob\app_desk\Gglob\bin\Release\net8.0-windows\DocumentFormat.OpenXml.dll
+D:\develoment\cursos\UniServerZ\www\erpGglob\app_desk\Gglob\bin\Release\net8.0-windows\DocumentFormat.OpenXml.Framework.dll
+D:\develoment\cursos\UniServerZ\www\erpGglob\app_desk\Gglob\bin\Release\net8.0-windows\ExcelNumberFormat.dll
+D:\develoment\cursos\UniServerZ\www\erpGglob\app_desk\Gglob\bin\Release\net8.0-windows\RBush.dll
+D:\develoment\cursos\UniServerZ\www\erpGglob\app_desk\Gglob\bin\Release\net8.0-windows\SixLabors.Fonts.dll
+D:\develoment\cursos\UniServerZ\www\erpGglob\app_desk\Gglob\bin\Release\net8.0-windows\System.IO.Packaging.dll

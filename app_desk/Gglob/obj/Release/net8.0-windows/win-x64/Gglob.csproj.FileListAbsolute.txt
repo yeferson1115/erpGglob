@@ -25,3 +25,11 @@ D:\develoment\cursos\UniServerZ\www\erpGglob\app_desk\Gglob\obj\Release\net8.0-w
 D:\develoment\cursos\UniServerZ\www\erpGglob\app_desk\Gglob\obj\Release\net8.0-windows\win-x64\Gglob.pdb
 D:\develoment\cursos\UniServerZ\www\erpGglob\app_desk\Gglob\obj\Release\net8.0-windows\win-x64\Gglob.genruntimeconfig.cache
 D:\develoment\cursos\UniServerZ\www\erpGglob\app_desk\Gglob\obj\Release\net8.0-windows\win-x64\ref\Gglob.dll
+D:\develoment\cursos\UniServerZ\www\erpGglob\app_desk\Gglob\bin\Release\net8.0-windows\win-x64\ClosedXML.dll
+D:\develoment\cursos\UniServerZ\www\erpGglob\app_desk\Gglob\bin\Release\net8.0-windows\win-x64\ClosedXML.Parser.dll
+D:\develoment\cursos\UniServerZ\www\erpGglob\app_desk\Gglob\bin\Release\net8.0-windows\win-x64\DocumentFormat.OpenXml.dll
+D:\develoment\cursos\UniServerZ\www\erpGglob\app_desk\Gglob\bin\Release\net8.0-windows\win-x64\DocumentFormat.OpenXml.Framework.dll
+D:\develoment\cursos\UniServerZ\www\erpGglob\app_desk\Gglob\bin\Release\net8.0-windows\win-x64\ExcelNumberFormat.dll
+D:\develoment\cursos\UniServerZ\www\erpGglob\app_desk\Gglob\bin\Release\net8.0-windows\win-x64\RBush.dll
+D:\develoment\cursos\UniServerZ\www\erpGglob\app_desk\Gglob\bin\Release\net8.0-windows\win-x64\SixLabors.Fonts.dll
+D:\develoment\cursos\UniServerZ\www\erpGglob\app_desk\Gglob\bin\Release\net8.0-windows\win-x64\System.IO.Packaging.dll

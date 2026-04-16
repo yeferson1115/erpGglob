@@ -30,7 +30,15 @@ D:\develoment\cursos\UniServerZ\www\erpGglob\app_desk\Gglob\bin\Debug\net8.0-win
 D:\develoment\cursos\UniServerZ\www\erpGglob\app_desk\Gglob\bin\Debug\net8.0-windows\Gglob.runtimeconfig.json
 D:\develoment\cursos\UniServerZ\www\erpGglob\app_desk\Gglob\bin\Debug\net8.0-windows\Gglob.dll
 D:\develoment\cursos\UniServerZ\www\erpGglob\app_desk\Gglob\bin\Debug\net8.0-windows\Gglob.pdb
+D:\develoment\cursos\UniServerZ\www\erpGglob\app_desk\Gglob\bin\Debug\net8.0-windows\ClosedXML.dll
+D:\develoment\cursos\UniServerZ\www\erpGglob\app_desk\Gglob\bin\Debug\net8.0-windows\ClosedXML.Parser.dll
+D:\develoment\cursos\UniServerZ\www\erpGglob\app_desk\Gglob\bin\Debug\net8.0-windows\DocumentFormat.OpenXml.dll
+D:\develoment\cursos\UniServerZ\www\erpGglob\app_desk\Gglob\bin\Debug\net8.0-windows\DocumentFormat.OpenXml.Framework.dll
+D:\develoment\cursos\UniServerZ\www\erpGglob\app_desk\Gglob\bin\Debug\net8.0-windows\ExcelNumberFormat.dll
 D:\develoment\cursos\UniServerZ\www\erpGglob\app_desk\Gglob\bin\Debug\net8.0-windows\QRCoder.dll
+D:\develoment\cursos\UniServerZ\www\erpGglob\app_desk\Gglob\bin\Debug\net8.0-windows\RBush.dll
+D:\develoment\cursos\UniServerZ\www\erpGglob\app_desk\Gglob\bin\Debug\net8.0-windows\SixLabors.Fonts.dll
+D:\develoment\cursos\UniServerZ\www\erpGglob\app_desk\Gglob\bin\Debug\net8.0-windows\System.IO.Packaging.dll
 D:\develoment\cursos\UniServerZ\www\erpGglob\app_desk\Gglob\obj\Debug\net8.0-windows\MainWindow.baml
 D:\develoment\cursos\UniServerZ\www\erpGglob\app_desk\Gglob\obj\Debug\net8.0-windows\Gglob.g.resources
 D:\develoment\cursos\UniServerZ\www\erpGglob\app_desk\Gglob\obj\Debug\net8.0-windows\Gglob.GeneratedMSBuildEditorConfig.editorconfig

@@ -7,12 +7,12 @@
       "RelativeMoniker": "D:0:0:{C0A78F10-6322-425B-B3E9-224CAEC92513}|Gglob\\Gglob.csproj|solutionrelative:gglob\\mainwindow.xaml.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
     },
     {
-      "AbsoluteMoniker": "D:0:0:{C0A78F10-6322-425B-B3E9-224CAEC92513}|Gglob\\Gglob.csproj|d:\\develoment\\cursos\\uniserverz\\www\\erpgglob\\app_desk\\gglob\\mainwindow.xaml||{F11ACC28-31D1-4C80-A34B-F4E09D3D753C}",
-      "RelativeMoniker": "D:0:0:{C0A78F10-6322-425B-B3E9-224CAEC92513}|Gglob\\Gglob.csproj|solutionrelative:gglob\\mainwindow.xaml||{F11ACC28-31D1-4C80-A34B-F4E09D3D753C}"
-    },
-    {
       "AbsoluteMoniker": "D:0:0:{C0A78F10-6322-425B-B3E9-224CAEC92513}|Gglob\\Gglob.csproj|d:\\develoment\\cursos\\uniserverz\\www\\erpgglob\\app_desk\\gglob\\gglob.csproj||{FA3CD31E-987B-443A-9B81-186104E8DAC1}|",
       "RelativeMoniker": "D:0:0:{C0A78F10-6322-425B-B3E9-224CAEC92513}|Gglob\\Gglob.csproj|solutionrelative:gglob\\gglob.csproj||{FA3CD31E-987B-443A-9B81-186104E8DAC1}|"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{C0A78F10-6322-425B-B3E9-224CAEC92513}|Gglob\\Gglob.csproj|d:\\develoment\\cursos\\uniserverz\\www\\erpgglob\\app_desk\\gglob\\mainwindow.xaml||{F11ACC28-31D1-4C80-A34B-F4E09D3D753C}",
+      "RelativeMoniker": "D:0:0:{C0A78F10-6322-425B-B3E9-224CAEC92513}|Gglob\\Gglob.csproj|solutionrelative:gglob\\mainwindow.xaml||{F11ACC28-31D1-4C80-A34B-F4E09D3D753C}"
     },
     {
       "AbsoluteMoniker": "D:0:0:{C0A78F10-6322-425B-B3E9-224CAEC92513}|Gglob\\Gglob.csproj|d:\\develoment\\cursos\\uniserverz\\www\\erpgglob\\app_desk\\gglob\\mainwindow.management.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
@@ -31,19 +31,11 @@
       "RelativeMoniker": "D:0:0:{C0A78F10-6322-425B-B3E9-224CAEC92513}|Gglob\\Gglob.csproj|solutionrelative:gglob\\assemblyinfo.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
     },
     {
-      "AbsoluteMoniker": "D:0:0:{C0A78F10-6322-425B-B3E9-224CAEC92513}|Gglob\\Gglob.csproj|d:\\develoment\\cursos\\uniserverz\\www\\erpgglob\\app_desk\\gglob\\app.xaml||{F11ACC28-31D1-4C80-A34B-F4E09D3D753C}",
-      "RelativeMoniker": "D:0:0:{C0A78F10-6322-425B-B3E9-224CAEC92513}|Gglob\\Gglob.csproj|solutionrelative:gglob\\app.xaml||{F11ACC28-31D1-4C80-A34B-F4E09D3D753C}"
-    },
-    {
       "AbsoluteMoniker": "D:0:0:{C0A78F10-6322-425B-B3E9-224CAEC92513}|Gglob\\Gglob.csproj|d:\\develoment\\cursos\\uniserverz\\www\\erpgglob\\app_desk\\gglob\\views\\loginview.xaml.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
       "RelativeMoniker": "D:0:0:{C0A78F10-6322-425B-B3E9-224CAEC92513}|Gglob\\Gglob.csproj|solutionrelative:gglob\\views\\loginview.xaml.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
     },
     {
       "AbsoluteMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|C:\\Users\\ysossa\\AppData\\Local\\Temp\\.vsdbgsrc\\07562dd9ba86a0a5fead5117dd68e3c724f52eea01f79d4441c442c042cad972\\XamlReader.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
-    },
-    {
-      "AbsoluteMoniker": "D:0:0:{C0A78F10-6322-425B-B3E9-224CAEC92513}|Gglob\\Gglob.csproj|d:\\develoment\\cursos\\uniserverz\\www\\erpgglob\\app_desk\\gglob\\gglob.csproj||{04B8AB82-A572-4FEF-95CE-5222444B6B64}|",
-      "RelativeMoniker": "D:0:0:{C0A78F10-6322-425B-B3E9-224CAEC92513}|Gglob\\Gglob.csproj|solutionrelative:gglob\\gglob.csproj||{04B8AB82-A572-4FEF-95CE-5222444B6B64}|"
     }
   ],
   "DocumentGroupContainers": [
@@ -57,16 +49,15 @@
           "Children": [
             {
               "$type": "Document",
-              "DocumentIndex": 2,
-              "Title": "Gglob",
+              "DocumentIndex": 1,
+              "Title": "Gglob.csproj",
               "DocumentMoniker": "D:\\develoment\\cursos\\UniServerZ\\www\\erpGglob\\app_desk\\Gglob\\Gglob.csproj",
               "RelativeDocumentMoniker": "Gglob\\Gglob.csproj",
               "ToolTip": "D:\\develoment\\cursos\\UniServerZ\\www\\erpGglob\\app_desk\\Gglob\\Gglob.csproj",
               "RelativeToolTip": "Gglob\\Gglob.csproj",
-              "ViewState": "AgIAAAcAAAAAAAAAAAAAAAsAAAAkAAAAAAAAAA==",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000758|",
-              "WhenOpened": "2026-04-07T15:34:03.623Z",
-              "EditorCaption": ""
+              "WhenOpened": "2026-04-07T15:34:03.623Z"
             },
             {
               "$type": "Document",
@@ -76,7 +67,7 @@
               "RelativeDocumentMoniker": "Gglob\\MainWindow.xaml.cs",
               "ToolTip": "D:\\develoment\\cursos\\UniServerZ\\www\\erpGglob\\app_desk\\Gglob\\MainWindow.xaml.cs",
               "RelativeToolTip": "Gglob\\MainWindow.xaml.cs",
-              "ViewState": "AgIAAMcAAAAAAAAAAAAYwNAAAAANAAAAAAAAAA==",
+              "ViewState": "AgIAAD8DAAAAAAAAAAAQwEoDAAAMAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
               "WhenOpened": "2026-03-27T14:45:26.979Z",
               "EditorCaption": ""
@@ -95,15 +86,14 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 1,
+              "DocumentIndex": 2,
               "Title": "MainWindow.xaml",
               "DocumentMoniker": "D:\\develoment\\cursos\\UniServerZ\\www\\erpGglob\\app_desk\\Gglob\\MainWindow.xaml",
               "RelativeDocumentMoniker": "Gglob\\MainWindow.xaml",
               "ToolTip": "D:\\develoment\\cursos\\UniServerZ\\www\\erpGglob\\app_desk\\Gglob\\MainWindow.xaml",
               "RelativeToolTip": "Gglob\\MainWindow.xaml",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.003549|",
-              "WhenOpened": "2026-03-20T19:49:15.889Z",
-              "EditorCaption": ""
+              "WhenOpened": "2026-03-20T19:49:15.889Z"
             },
             {
               "$type": "Document",
@@ -127,12 +117,11 @@
               "RelativeToolTip": "Gglob\\MainWindow.Management.cs",
               "ViewState": "AgIAADcHAAAAAAAAAAAIwDwHAAAdAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2026-03-20T18:56:29.724Z",
-              "EditorCaption": ""
+              "WhenOpened": "2026-03-20T18:56:29.724Z"
             },
             {
               "$type": "Document",
-              "DocumentIndex": 8,
+              "DocumentIndex": 7,
               "Title": "LoginView.xaml.cs",
               "DocumentMoniker": "D:\\develoment\\cursos\\UniServerZ\\www\\erpGglob\\app_desk\\Gglob\\Views\\LoginView.xaml.cs",
               "RelativeDocumentMoniker": "Gglob\\Views\\LoginView.xaml.cs",
@@ -151,42 +140,17 @@
               "ToolTip": "D:\\develoment\\cursos\\UniServerZ\\www\\erpGglob\\app_desk\\Gglob\\Views\\LoginView.xaml",
               "RelativeToolTip": "Gglob\\Views\\LoginView.xaml",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.003549|",
-              "WhenOpened": "2026-03-20T18:56:01.083Z",
-              "EditorCaption": ""
+              "WhenOpened": "2026-03-20T18:56:01.083Z"
             },
             {
               "$type": "Document",
-              "DocumentIndex": 9,
+              "DocumentIndex": 8,
               "Title": "XamlReader.cs",
               "DocumentMoniker": "C:\\Users\\ysossa\\AppData\\Local\\Temp\\.vsdbgsrc\\07562dd9ba86a0a5fead5117dd68e3c724f52eea01f79d4441c442c042cad972\\XamlReader.cs",
               "ToolTip": "C:\\Users\\ysossa\\AppData\\Local\\Temp\\.vsdbgsrc\\07562dd9ba86a0a5fead5117dd68e3c724f52eea01f79d4441c442c042cad972\\XamlReader.cs",
               "ViewState": "AgIAAHUBAAAAAAAAAAAUwIgBAAACAAAAAQAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
               "WhenOpened": "2026-03-20T18:46:03.356Z"
-            },
-            {
-              "$type": "Document",
-              "DocumentIndex": 10,
-              "Title": "Gglob",
-              "DocumentMoniker": "D:\\develoment\\cursos\\UniServerZ\\www\\erpGglob\\app_desk\\Gglob\\Gglob.csproj",
-              "RelativeDocumentMoniker": "Gglob\\Gglob.csproj",
-              "ToolTip": "D:\\develoment\\cursos\\UniServerZ\\www\\erpGglob\\app_desk\\Gglob\\Gglob.csproj",
-              "RelativeToolTip": "Gglob\\Gglob.csproj",
-              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000758|",
-              "WhenOpened": "2026-03-17T19:21:54.255Z",
-              "EditorCaption": ""
-            },
-            {
-              "$type": "Document",
-              "DocumentIndex": 7,
-              "Title": "App.xaml",
-              "DocumentMoniker": "D:\\develoment\\cursos\\UniServerZ\\www\\erpGglob\\app_desk\\Gglob\\App.xaml",
-              "RelativeDocumentMoniker": "Gglob\\App.xaml",
-              "ToolTip": "D:\\develoment\\cursos\\UniServerZ\\www\\erpGglob\\app_desk\\Gglob\\App.xaml",
-              "RelativeToolTip": "Gglob\\App.xaml",
-              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.003549|",
-              "WhenOpened": "2026-03-17T19:04:34.077Z",
-              "EditorCaption": ""
             }
           ]
         }
