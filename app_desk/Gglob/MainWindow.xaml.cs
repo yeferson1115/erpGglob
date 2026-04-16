@@ -1,5 +1,4 @@
 using System.Collections.ObjectModel;
-using System.Diagnostics;
 using System.Globalization;
 using System.IO;
 using System.Net.Http;
@@ -1186,15 +1185,113 @@ namespace Gglob
             ShowStatus("Sesión cerrada.", isError: false);
         }
 
-        private void LoginViewControl_RegisterRequested(object sender, RoutedEventArgs e)
+        private async void LoginViewControl_RegisterRequested(object sender, RoutedEventArgs e)
         {
-            const string url = "http://localhost:81/registro-negocio";
+            var data = LoginViewControl.RegistrationData;
 
-            Process.Start(new ProcessStartInfo
+            if (string.IsNullOrWhiteSpace(data.CompanyName)
+                || string.IsNullOrWhiteSpace(data.Nit)
+                || string.IsNullOrWhiteSpace(data.CompanyEmail)
+                || string.IsNullOrWhiteSpace(data.Address)
+                || string.IsNullOrWhiteSpace(data.OwnerName)
+                || string.IsNullOrWhiteSpace(data.OwnerLastName)
+                || string.IsNullOrWhiteSpace(data.OwnerEmail)
+                || string.IsNullOrWhiteSpace(data.Password)
+                || string.IsNullOrWhiteSpace(data.PasswordConfirmation))
             {
-                FileName = url,
-                UseShellExecute = true
-            });
+                ShowStatus("Completa todos los campos obligatorios del registro.", isError: true, isWarning: true);
+                return;
+            }
+
+            LoginViewControl.SetLoginEnabled(false);
+            ShowStatus("Registrando negocio...", isError: false);
+
+            try
+            {
+                var payload = JsonSerializer.Serialize(new
+                {
+                    company_name = data.CompanyName,
+                    nit = data.Nit,
+                    company_email = data.CompanyEmail,
+                    address = data.Address,
+                    owner_name = data.OwnerName,
+                    owner_last_name = data.OwnerLastName,
+                    owner_phone = string.IsNullOrWhiteSpace(data.OwnerPhone) ? null : data.OwnerPhone,
+                    owner_email = data.OwnerEmail,
+                    password = data.Password,
+                    password_confirmation = data.PasswordConfirmation,
+                });
+
+                using var content = new StringContent(payload, Encoding.UTF8, "application/json");
+                using var response = await HttpClient.PostAsync($"{ApiBaseUrl}/business/register", content);
+
+                if (!response.IsSuccessStatusCode)
+                {
+                    var body = await response.Content.ReadAsStringAsync();
+                    var apiError = ParseValidationErrors(body);
+                    ShowStatus(string.IsNullOrWhiteSpace(apiError)
+                        ? $"No se pudo registrar el negocio ({(int)response.StatusCode})."
+                        : apiError, isError: true);
+                    return;
+                }
+
+                LoginViewControl.ClearRegistrationForm();
+                LoginViewControl.SwitchToLogin();
+                ShowStatus("Registro exitoso. Ahora inicia sesión con el correo del dueño.", isError: false);
+            }
+            catch (Exception ex)
+            {
+                ShowStatus($"No se pudo completar el registro: {ex.Message}", isError: true, isWarning: true);
+            }
+            finally
+            {
+                LoginViewControl.SetLoginEnabled(true);
+            }
+        }
+
+        private static string? ParseValidationErrors(string body)
+        {
+            if (string.IsNullOrWhiteSpace(body))
+            {
+                return null;
+            }
+
+            try
+            {
+                using var document = JsonDocument.Parse(body);
+                if (document.RootElement.ValueKind != JsonValueKind.Object)
+                {
+                    return null;
+                }
+
+                if (document.RootElement.TryGetProperty("message", out var message) && message.ValueKind == JsonValueKind.String)
+                {
+                    return message.GetString();
+                }
+
+                var errors = new List<string>();
+                foreach (var property in document.RootElement.EnumerateObject())
+                {
+                    if (property.Value.ValueKind != JsonValueKind.Array)
+                    {
+                        continue;
+                    }
+
+                    foreach (var item in property.Value.EnumerateArray())
+                    {
+                        if (item.ValueKind == JsonValueKind.String && !string.IsNullOrWhiteSpace(item.GetString()))
+                        {
+                            errors.Add(item.GetString()!);
+                        }
+                    }
+                }
+
+                return errors.Count > 0 ? string.Join(" ", errors) : null;
+            }
+            catch
+            {
+                return null;
+            }
         }
     }
 
