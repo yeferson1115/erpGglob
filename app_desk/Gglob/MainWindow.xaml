@@ -342,8 +342,8 @@
                                 </WrapPanel>
                             </DockPanel>
 
-                            <TabControl Grid.Row="1">
-                                <TabItem Header="🕒 Turnos">
+                            <TabControl x:Name="PosMainTabControl" Grid.Row="1" SelectionChanged="PosMainTabControl_SelectionChanged">
+                                <TabItem x:Name="PosTurnsTabItem" Header="🕒 Turnos">
                                     <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Auto">
                                     <Grid Margin="10">
                                         <Grid.ColumnDefinitions>
@@ -392,11 +392,21 @@
                                                 </StackPanel>
                                             </Border>
                                             <TextBlock Text="Histórico de turnos" FontWeight="SemiBold" Margin="0,0,0,6" />
-                                            <DataGrid x:Name="ShiftHistoryDataGrid" AutoGenerateColumns="False" IsReadOnly="True" CanUserAddRows="False" HeadersVisibility="Column" Height="170" Margin="0,0,0,10">
+                                            <DataGrid x:Name="ShiftHistoryDataGrid"
+                                                      AutoGenerateColumns="False"
+                                                      IsReadOnly="True"
+                                                      CanUserAddRows="False"
+                                                      HeadersVisibility="Column"
+                                                      RowHeaderWidth="0"
+                                                      GridLinesVisibility="Horizontal"
+                                                      ScrollViewer.HorizontalScrollBarVisibility="Auto"
+                                                      ScrollViewer.VerticalScrollBarVisibility="Auto"
+                                                      Height="170"
+                                                      Margin="0,0,0,10">
                                                 <DataGrid.Columns>
-                                                    <DataGridTextColumn Header="Cajero" Binding="{Binding Cashier}" Width="*" />
-                                                    <DataGridTextColumn Header="Punto venta" Binding="{Binding SalesPointName}" Width="*" />
-                                                    <DataGridTextColumn Header="Caja" Binding="{Binding CashRegisterName}" Width="*" />
+                                                    <DataGridTextColumn Header="Cajero" Binding="{Binding Cashier}" Width="130" />
+                                                    <DataGridTextColumn Header="Punto venta" Binding="{Binding SalesPointName}" Width="140" />
+                                                    <DataGridTextColumn Header="Caja" Binding="{Binding CashRegisterName}" Width="130" />
                                                     <DataGridTextColumn Header="Apertura" Binding="{Binding OpenedAtLabel}" Width="140" />
                                                     <DataGridTextColumn Header="Cierre" Binding="{Binding ClosedAtLabel}" Width="140" />
                                                     <DataGridTextColumn Header="Ventas turno" Binding="{Binding TotalSalesLabel}" Width="130" />
@@ -405,13 +415,22 @@
                                             </DataGrid>
 
                                             <TextBlock Text="Movimientos de caja (usuario)" FontWeight="SemiBold" Margin="0,0,0,6" />
-                                            <DataGrid x:Name="CashMovementsDataGrid" AutoGenerateColumns="False" IsReadOnly="True" CanUserAddRows="False" HeadersVisibility="Column" Height="170">
+                                            <DataGrid x:Name="CashMovementsDataGrid"
+                                                      AutoGenerateColumns="False"
+                                                      IsReadOnly="True"
+                                                      CanUserAddRows="False"
+                                                      HeadersVisibility="Column"
+                                                      RowHeaderWidth="0"
+                                                      GridLinesVisibility="Horizontal"
+                                                      ScrollViewer.HorizontalScrollBarVisibility="Auto"
+                                                      ScrollViewer.VerticalScrollBarVisibility="Auto"
+                                                      Height="170">
                                                 <DataGrid.Columns>
                                                     <DataGridTextColumn Header="Fecha" Binding="{Binding AtLabel}" Width="140" />
-                                                    <DataGridTextColumn Header="Tipo" Binding="{Binding Type}" Width="170" />
-                                                    <DataGridTextColumn Header="Detalle" Binding="{Binding Detail}" Width="2*" />
+                                                    <DataGridTextColumn Header="Tipo" Binding="{Binding Type}" Width="180" />
+                                                    <DataGridTextColumn Header="Detalle" Binding="{Binding Detail}" Width="220" />
                                                     <DataGridTextColumn Header="Valor" Binding="{Binding AmountLabel}" Width="120" />
-                                                    <DataGridTextColumn Header="Usuario" Binding="{Binding Cashier}" Width="*" />
+                                                    <DataGridTextColumn Header="Usuario" Binding="{Binding Cashier}" Width="120" />
                                                 </DataGrid.Columns>
                                             </DataGrid>
                                         </StackPanel>
@@ -419,7 +438,7 @@
                                     </ScrollViewer>
                                 </TabItem>
 
-                                <TabItem Header="💳 Ventas">
+                                <TabItem x:Name="PosSalesTabItem" Header="💳 Ventas">
                                     <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Auto">
                                     <Grid Margin="10">
                                         <Grid.ColumnDefinitions>
@@ -466,6 +485,28 @@
 
                                         <Border Grid.Column="1" Background="#f8fbff" BorderBrush="#d9e4ff" BorderThickness="1" CornerRadius="10" Padding="12">
                                             <StackPanel>
+                                                <TextBlock Text="Ventas del día" FontWeight="SemiBold" Margin="0,0,0,6" />
+                                                <UniformGrid Columns="3" Margin="0,0,0,10">
+                                                    <Border Background="#eef2ff" BorderBrush="#c7d2fe" BorderThickness="1" CornerRadius="8" Padding="8" Margin="0,0,6,0">
+                                                        <StackPanel>
+                                                            <TextBlock Text="Total" Foreground="#475569" FontSize="11" />
+                                                            <TextBlock x:Name="PosTodayTotalTextBlock" Text="$0" FontWeight="Bold" FontSize="15" Foreground="#1e3a8a" />
+                                                        </StackPanel>
+                                                    </Border>
+                                                    <Border Background="#ecfdf5" BorderBrush="#bbf7d0" BorderThickness="1" CornerRadius="8" Padding="8" Margin="0,0,6,0">
+                                                        <StackPanel>
+                                                            <TextBlock Text="Efectivo" Foreground="#475569" FontSize="11" />
+                                                            <TextBlock x:Name="PosTodayCashTextBlock" Text="$0" FontWeight="Bold" FontSize="15" Foreground="#166534" />
+                                                        </StackPanel>
+                                                    </Border>
+                                                    <Border Background="#eff6ff" BorderBrush="#bfdbfe" BorderThickness="1" CornerRadius="8" Padding="8">
+                                                        <StackPanel>
+                                                            <TextBlock Text="Transferencia" Foreground="#475569" FontSize="11" />
+                                                            <TextBlock x:Name="PosTodayTransferTextBlock" Text="$0" FontWeight="Bold" FontSize="15" Foreground="#1d4ed8" />
+                                                        </StackPanel>
+                                                    </Border>
+                                                </UniformGrid>
+
                                                 <TextBlock Text="Tickets activos" FontWeight="SemiBold" />
                                                 <ListBox x:Name="PosTicketsListBox" Height="96" DisplayMemberPath="DisplayName" SelectionChanged="PosTicketsListBox_SelectionChanged" />
 
