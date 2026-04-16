@@ -12,8 +12,6 @@ namespace Gglob
 {
     public partial class MainWindow
     {
-        private const string PersonalCashRegisterCodePrefix = "AUTO-USER-";
-
         private string GetPosAuditCachePath()
         {
             var companyId = currentUser?.CompanyId ?? 0;
@@ -37,6 +35,7 @@ namespace Gglob
         private readonly List<SaleSnapshot> pendingSales = [];
         private readonly List<MovementSnapshot> pendingMovements = [];
         private bool legacyBackfillCompleted;
+        private bool openingFundPromptShownThisSession;
         private int posTicketSequence = 1;
         private ShiftAuditRecord? activeShift;
 
@@ -165,13 +164,24 @@ namespace Gglob
                 return;
             }
 
+            var restrictToAssignedPoint = currentUser is not null && !IsOwner(currentUser) && !IsAdmin(currentUser);
+            PosSalesPointComboBox.IsEnabled = !restrictToAssignedPoint;
+
             PosSalesPointComboBox.ItemsSource = null;
             PosSalesPointComboBox.ItemsSource = salesPointOptions;
 
-            if (PosSalesPointComboBox.SelectedItem is not SalesPointOption currentPoint)
+            if (restrictToAssignedPoint)
             {
                 PosSalesPointComboBox.SelectedItem = salesPointOptions.FirstOrDefault();
-                currentPoint = PosSalesPointComboBox.SelectedItem as SalesPointOption;
+            }
+            else if (PosSalesPointComboBox.SelectedItem is not SalesPointOption)
+            {
+                PosSalesPointComboBox.SelectedItem = salesPointOptions.FirstOrDefault();
+            }
+
+            if (PosSalesPointComboBox.SelectedItem is not SalesPointOption currentPoint)
+            {
+                currentPoint = null;
             }
 
             LoadRegistersForSalesPoint(currentPoint?.Id);
@@ -185,10 +195,6 @@ namespace Gglob
             var source = cashRegisterOptions
                 .Where(register => !salesPointId.HasValue || register.SalesPointId == salesPointId)
                 .ToList();
-
-            var salesPointName = salesPointOptions.FirstOrDefault(point => point.Id == salesPointId)?.Name
-                ?? "Sin punto de venta";
-            posShiftRegisterOptions.Add(BuildSelfManagedCashRegister(salesPointId, salesPointName));
 
             foreach (var register in source)
             {
@@ -206,27 +212,8 @@ namespace Gglob
             }
         }
 
-        private CashRegisterOption BuildSelfManagedCashRegister(int? salesPointId, string salesPointName)
-        {
-            var userId = currentUser?.Id ?? 0;
-            var userName = string.IsNullOrWhiteSpace(currentUser?.Name) ? "Usuario" : currentUser!.Name!;
-            return new CashRegisterOption(
-                -(Math.Abs(userId) + 1),
-                $"Caja de {userName}",
-                $"{PersonalCashRegisterCodePrefix}{Math.Abs(userId)}",
-                "active",
-                true,
-                salesPointId,
-                salesPointName,
-                userName,
-                1);
-        }
-
-        private static bool IsSelfManagedCashRegister(CashRegisterOption register)
-            => register.Code.StartsWith(PersonalCashRegisterCodePrefix, StringComparison.OrdinalIgnoreCase);
-
         private static int? ResolveCashRegisterIdForShift(CashRegisterOption register)
-            => IsSelfManagedCashRegister(register) ? null : register.Id;
+            => register.Id;
 
         private async void PosSalesPointComboBox_SelectionChanged(object sender, SelectionChangedEventArgs e)
         {
@@ -683,6 +670,108 @@ namespace Gglob
             PosMixedTransferTextBox.Text = string.Empty;
             PosCashReceivedTextBox.Text = string.Empty;
             _ = SyncPendingDataAsync();
+        }
+
+        private void ReloadPosAuditForCurrentUser()
+        {
+            shiftHistory.Clear();
+            cashMovements.Clear();
+            posSalesAudit.Clear();
+            pendingShiftEvents.Clear();
+            pendingSales.Clear();
+            pendingMovements.Clear();
+            activeShift = null;
+            openingFundPromptShownThisSession = false;
+            LoadPosAuditFromDisk();
+            RefreshShiftSummary();
+            ShiftHistoryDataGrid.Items.Refresh();
+            CashMovementsDataGrid.Items.Refresh();
+            PosSalesAuditDataGrid.Items.Refresh();
+        }
+
+        private void PromptShiftOpeningOnLoginIfNeeded()
+        {
+            if (openingFundPromptShownThisSession || activeShift is not null || currentUser is null)
+            {
+                return;
+            }
+
+            openingFundPromptShownThisSession = true;
+            var shouldPrepareShift = MessageBox.Show(
+                "No tienes una caja/turno activo. ¿Deseas preparar la apertura de caja ahora?",
+                "Apertura de caja",
+                MessageBoxButton.YesNo,
+                MessageBoxImage.Question);
+
+            if (shouldPrepareShift != MessageBoxResult.Yes)
+            {
+                return;
+            }
+
+            var openingFund = PromptForOpeningFund();
+            if (!openingFund.HasValue)
+            {
+                return;
+            }
+
+            ShiftOpeningFundTextBox.Text = openingFund.Value.ToString(CultureInfo.InvariantCulture);
+            SetSelectedModule("gglob_pos");
+            ShiftStatusTextBlock.Text = "Saldo inicial cargado. Selecciona caja y abre turno para iniciar ventas.";
+            ShiftStatusTextBlock.Foreground = System.Windows.Media.Brushes.DarkGreen;
+        }
+
+        private decimal? PromptForOpeningFund()
+        {
+            var owner = this;
+            var dialog = new Window
+            {
+                Title = "Saldo inicial de caja",
+                Owner = owner,
+                Width = 360,
+                Height = 180,
+                WindowStartupLocation = WindowStartupLocation.CenterOwner,
+                ResizeMode = ResizeMode.NoResize
+            };
+
+            var panel = new StackPanel { Margin = new Thickness(16) };
+            panel.Children.Add(new TextBlock
+            {
+                Text = "Ingresa el saldo inicial para preparar la apertura de caja.",
+                TextWrapping = TextWrapping.Wrap,
+                Margin = new Thickness(0, 0, 0, 8)
+            });
+
+            var input = new TextBox { Text = "0", Margin = new Thickness(0, 0, 0, 12) };
+            panel.Children.Add(input);
+
+            var buttons = new StackPanel
+            {
+                Orientation = Orientation.Horizontal,
+                HorizontalAlignment = HorizontalAlignment.Right
+            };
+            var cancelButton = new Button { Content = "Cancelar", MinWidth = 90, Margin = new Thickness(0, 0, 8, 0) };
+            var okButton = new Button { Content = "Guardar", MinWidth = 90 };
+            buttons.Children.Add(cancelButton);
+            buttons.Children.Add(okButton);
+            panel.Children.Add(buttons);
+            dialog.Content = panel;
+
+            decimal? value = null;
+            cancelButton.Click += (_, _) => dialog.DialogResult = false;
+            okButton.Click += (_, _) =>
+            {
+                var parsed = ParseMoney(input.Text);
+                if (parsed < 0)
+                {
+                    MessageBox.Show(dialog, "El saldo inicial no puede ser negativo.", "Validación", MessageBoxButton.OK, MessageBoxImage.Warning);
+                    return;
+                }
+
+                value = parsed;
+                dialog.DialogResult = true;
+            };
+
+            return dialog.ShowDialog() == true ? value : null;
         }
 
         private void RegisterCashMovement(CashMovementRecord movement)

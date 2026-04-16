@@ -388,10 +388,12 @@ namespace Gglob
             RenderPermissions(permissionsList);
             BindCashiersAndCashRegisters(user);
             ApplyConfigurationAccess(user);
+            ReloadPosAuditForCurrentUser();
 
             _ = LoadGglobPayDataFromApi();
             _ = LoadProviderSettingsFromApi();
             SetSelectedModule(null);
+            PromptShiftOpeningOnLoginIfNeeded();
 
             ShowStatus(statusMessage, isError: false);
         }
@@ -1367,6 +1369,8 @@ namespace Gglob
             DashboardRoot.Visibility = Visibility.Collapsed;
             LoginViewControl.Visibility = Visibility.Visible;
             LoginViewControl.ClearPassword();
+            currentUser = null;
+            activeShift = null;
             ShowStatus("Sesión cerrada.", isError: false);
         }
 
