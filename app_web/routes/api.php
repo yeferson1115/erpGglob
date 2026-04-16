@@ -23,6 +23,7 @@ use App\Http\Controllers\API\PosSyncController;
 
 
 Route::post('/register', [AuthController::class, 'register']);
+Route::post('/business/register', [AuthController::class, 'registerBusiness']);
 Route::post('/login', [AuthController::class, 'login']);
 Route::post('gglob-pay/webhooks/wompi', [GglobPayController::class, 'wompiWebhook']);
 Route::get('/propiedades/search', [PropiedadController::class, 'search']);

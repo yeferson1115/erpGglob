@@ -3,10 +3,14 @@
 namespace App\Http\Controllers\API;
 
 use App\Http\Controllers\Controller;
+use App\Models\Company;
+use App\Models\Plan;
 use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Validator;
+use Illuminate\Support\Facades\DB;
+use Spatie\Permission\Models\Role;
 
 class AuthController extends Controller
 {
@@ -29,6 +33,87 @@ class AuthController extends Controller
         $user->assignRole('user');
 
         return response()->json(['message' => 'User created successfully']);
+    }
+
+
+    public function registerBusiness(Request $request)
+    {
+        $validator = Validator::make($request->all(), [
+            'company_name' => ['required', 'string', 'max:255'],
+            'nit' => ['required', 'string', 'max:60', 'unique:companies,nit'],
+            'company_email' => ['required', 'email', 'max:255', 'unique:companies,email'],
+            'address' => ['required', 'string', 'max:255'],
+            'owner_name' => ['required', 'string', 'max:255'],
+            'owner_last_name' => ['required', 'string', 'max:255'],
+            'owner_phone' => ['nullable', 'string', 'max:40'],
+            'owner_email' => ['required', 'email', 'max:255', 'unique:users,email'],
+            'password' => ['required', 'confirmed', 'min:8'],
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json([
+                'message' => 'Errores de validación.',
+                'errors' => $validator->errors(),
+            ], 422);
+        }
+
+        $validated = $validator->validated();
+
+        $user = DB::transaction(function () use ($validated) {
+            $now = now();
+            $trialEndsAt = $now->copy()->addMonthsNoOverflow(2);
+
+            $plan = Plan::query()->first();
+            if (!$plan) {
+                $plan = Plan::create([
+                    'name' => 'Plan Bienvenida',
+                    'gglob_cloud_enabled' => true,
+                    'gglob_pay_enabled' => true,
+                    'gglob_pos_enabled' => true,
+                    'pos_mode' => 'mono',
+                    'pos_boxes' => 1,
+                    'gglob_accounting_enabled' => false,
+                ]);
+            }
+
+            $company = Company::create([
+                'name' => $validated['company_name'],
+                'nit' => $validated['nit'],
+                'email' => $validated['company_email'],
+                'address' => $validated['address'],
+                'contact_name' => trim($validated['owner_name'] . ' ' . $validated['owner_last_name']),
+                'plan_id' => $plan->id,
+                'plan_name' => $plan->name,
+                'service_status' => 'active',
+                'started_at' => $now->toDateString(),
+                'active_until' => $trialEndsAt->toDateString(),
+                'gglob_cloud_enabled' => true,
+                'gglob_pay_enabled' => true,
+                'gglob_pos_enabled' => true,
+            ]);
+
+            $user = User::create([
+                'name' => $validated['owner_name'],
+                'last_name' => $validated['owner_last_name'],
+                'phone' => $validated['owner_phone'] ?? null,
+                'email' => $validated['owner_email'],
+                'password' => Hash::make($validated['password']),
+                'company_id' => $company->id,
+                'business_role' => 'owner',
+            ]);
+
+            if (Role::query()->where('name', 'user')->exists()) {
+                $user->assignRole('user');
+            }
+
+            return $user;
+        });
+
+        return response()->json([
+            'message' => 'Negocio registrado correctamente.',
+            'user_id' => $user->id,
+            'company_id' => $user->company_id,
+        ], 201);
     }
 
     public function login(Request $request)
